@@ -1,0 +1,144 @@
+<project name="sora">
+
+    <property name="name" value="sora"/>
+    <property name="vendor" value="iterx.org"/>
+    <property name="version" value="SNAPSHOT"/>
+
+    <property name="debug" value="on"/>
+    <property name="optimize" value="off"/>
+
+    <property name="source.dir" value="${basedir}/src"/>
+    <property name="target.dir" value="${basedir}/target"/>
+    <property name="library.dir" value="${basedir}/lib"/>
+
+    <tstamp>
+        <format property="timestamp" pattern="yyyyMMddHHmmss"/>
+    </tstamp>
+
+    <tstamp>
+        <format property="date" pattern="yyyy-MM-dd HH:mm:ss"/>
+    </tstamp>
+
+    <target name="init">
+        <property name="java.source.dir" value="${source.dir}/main/java"/>
+        <property name="java.target.dir" value="${target.dir}/classes"/>
+        <path id="build.library.path">
+            <fileset dir="${library.dir}/dist">
+                <include name="**/*.jar"/>
+            </fileset>
+        </path>
+    </target>
+
+    <target name="clean">
+        <delete dir="${target.dir}"/>
+    </target>
+
+    <target name="build"
+            depends="init, build-java"/>
+
+    <target name="build-java"
+            depends="init">
+        <mkdir dir="${java.target.dir}"/>
+        <compile-java srcdir="${java.source.dir}"
+                destdir="${java.target.dir}">
+            <classpath>
+                <path refid="build.library.path"/>
+            </classpath>
+        </compile-java>
+    </target>
+
+    <target name="jar"
+            depends="init">
+
+        <property name="jar.name" value="${name}-${version}"/>
+        <property name="jar.source.dir" value="${java.target.dir}"/>
+        <property name="jar.target.dir" value="${target.dir}"/>
+        <property name="jar.target.file" value="${jar.target.dir}/${jar.name}.jar"/>
+
+        <jar destfile="${jar.target.file}"
+             basedir="${jar.source.dir}">
+            <manifest>
+                <attribute name="Built-By" value="${user.name}"/>
+                <attribute name="Creation-Time" value="${date}"/>
+                <attribute name="Specification-Title" value="${name}"/>
+                <attribute name="Specification-Vendor" value="${vendor}"/>
+                <attribute name="Specification-Version" value="${version}"/>
+                <attribute name="Implementation-Title" value="${name}"/>
+                <attribute name="Implementation-Vendor" value="${vendor}"/>
+                <attribute name="Implementation-Version" value="${version}"/>
+            </manifest>
+        </jar>
+    </target>
+
+
+    <target name="test:init"
+            depends="jar">
+        <property name="test.java.source.dir" value="${source.dir}/test/java"/>
+        <property name="test.java.target.dir" value="${target.dir}/test-classes"/>
+        <property name="test.java.report.dir" value="${target.dir}/test-reports"/>
+
+        <path id="test.library.path">
+            <pathelement path="${jar.target.file}"/>
+            <fileset dir="${library.dir}/dist">
+                <include name="**/*.jar"/>
+            </fileset>
+            <fileset dir="${library.dir}/test">
+                <include name="**/*.jar"/>
+            </fileset>
+        </path>
+
+    </target>
+                
+    <target name="test:unit"
+            depends="test:init, test:unit-java"/>
+
+    <target name="test:unit-java"
+            depends="test:init">
+        <mkdir dir="${test.java.target.dir}"/>
+        <compile-java srcdir="${test.java.source.dir}"
+                destdir="${test.java.target.dir}">
+            <classpath>
+                <path refid="test.library.path"/>
+            </classpath>
+        </compile-java>
+
+        <mkdir dir="${test.java.report.dir}"/>
+        <junit printsummary="yes" haltonfailure="false">
+            <formatter type="plain"/>
+            <assertions>
+                <enable/>
+            </assertions>
+            <classpath>
+                <pathelement path="${test.java.target.dir}"/>
+                <path refid="test.library.path"/>
+            </classpath>
+            <batchtest fork="yes" todir="${test.java.report.dir}">
+                <fileset dir="${test.java.source.dir}">
+                    <include name="**/*Test.java"/>
+                    <exclude name="**/AllTests.java"/>
+                </fileset>
+            </batchtest>
+        </junit>
+    </target>
+
+    <macrodef name="compile-java">
+        <attribute name="srcdir" default="."/>
+        <attribute name="destdir" default="."/>
+        <attribute name="optimize" default="off"/>
+        <attribute name="debug" default="on"/>
+        <element name="elements" implicit="true" optional="yes"/>
+        <sequential>
+            <javac srcdir="@{srcdir}"
+                   destdir="@{destdir}"
+                   optimize="@{optimize}"
+                   debug="@{debug}"
+                   includeantruntime="false">
+                <classpath>
+                    <pathelement path="@{srcdir}"/>
+                </classpath>
+                <elements/>
+            </javac>
+        </sequential>
+    </macrodef>
+
+</project>
