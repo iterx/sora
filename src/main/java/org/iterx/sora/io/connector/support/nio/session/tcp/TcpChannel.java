@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
+import java.nio.channels.SelectableChannel;
 import java.nio.channels.SocketChannel;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.locks.Condition;
@@ -20,7 +21,7 @@ import static org.iterx.sora.util.Exception.swallow;
 
 public final class TcpChannel extends AbstractChannel {
 
-    private final MultiplexorStrategy<? super SocketChannel> multiplexorStrategy;
+    private final MultiplexorStrategy<? super SelectableChannel> multiplexorStrategy;
     private final Callback<? super TcpChannel, ByteBuffer> channelCallback;
     private final SocketChannel socketChannel;
     private final SocketAddress socketAddress;
@@ -34,7 +35,7 @@ public final class TcpChannel extends AbstractChannel {
 
     private volatile int interestOps;
 
-    public TcpChannel(final MultiplexorStrategy<? super SocketChannel> multiplexorStrategy,
+    public TcpChannel(final MultiplexorStrategy<? super SelectableChannel> multiplexorStrategy,
                       final Callback<? super TcpChannel, ByteBuffer> channelCallback,
                       final SocketChannel socketChannel,
                       final SocketAddress socketAddress) {

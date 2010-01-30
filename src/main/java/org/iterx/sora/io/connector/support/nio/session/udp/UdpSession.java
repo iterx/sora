@@ -124,7 +124,7 @@ public final class UdpSession extends AbstractSession<UdpChannel>  {
             try {
                 final DatagramChannel datagramChannel = newDatagramChannel().connect(socketAddress);
 
-                return new UdpChannel(multiplexorStrategy, channelCallback, datagramChannel, socketAddress);
+                return new UdpChannel(multiplexorStrategy, channelCallback, datagramChannel);
             }
             catch(final IOException e) {
                 throw new IoException(e);
@@ -167,10 +167,7 @@ public final class UdpSession extends AbstractSession<UdpChannel>  {
         public UdpChannel newChannel(final Channel.Callback<? super UdpChannel, ByteBuffer> channelCallback) {
             final SocketAddress socketAddress = multiplexorHandler.accept();
             final DatagramChannel datagramChannel = new DatagramChannelProxy(socketAddress);
-            final UdpChannel udpChannel = new UdpChannel(multiplexorStrategyProxy,
-                                                         channelCallback,
-                                                         datagramChannel,
-                                                         socketAddress);
+            final UdpChannel udpChannel = new UdpChannel(multiplexorStrategyProxy, channelCallback, datagramChannel);
             udpChannelBySocketAddress.put(socketAddress, udpChannel);
             pollSocketAddressIterator = null;
             return udpChannel;

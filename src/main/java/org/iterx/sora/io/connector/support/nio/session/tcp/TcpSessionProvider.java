@@ -17,9 +17,9 @@ public final class TcpSessionProvider implements SessionProvider<TcpSession, Byt
 
     private static final Pattern URI_PATTERN = Pattern.compile("tcp://(/[^#]*)?(#.*)?");
 
-    private final MultiplexorStrategy<? super SocketChannel> multiplexorStrategy;
+    private final MultiplexorStrategy<? super SelectableChannel> multiplexorStrategy;
 
-    public TcpSessionProvider(final MultiplexorStrategy<? super SocketChannel> multiplexorStrategy) {
+    public TcpSessionProvider(final MultiplexorStrategy<? super SelectableChannel> multiplexorStrategy) {
         this.multiplexorStrategy = multiplexorStrategy;
     }
 

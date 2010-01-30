@@ -14,6 +14,7 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.StandardSocketOption;
 import java.nio.ByteBuffer;
+import java.nio.channels.SelectableChannel;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 
@@ -23,9 +24,9 @@ public final class TcpSession extends AbstractSession<TcpChannel> {
 
     private final TcpChannelProvider socketChannelProvider;
     private final Callback<? super TcpSession> sessionCallback;
-    private final MultiplexorStrategy<? super SocketChannel> multiplexorStrategy;
+    private final MultiplexorStrategy<? super SelectableChannel> multiplexorStrategy;
 
-    public TcpSession(final MultiplexorStrategy<? super SocketChannel> multiplexorStrategy,
+    public TcpSession(final MultiplexorStrategy<? super SelectableChannel> multiplexorStrategy,
                       final Callback<? super TcpSession> sessionCallback,
                       final AcceptorEndpoint acceptorEndpoint) {
         this.socketChannelProvider = new AcceptorTcpChannelProvider(acceptorEndpoint);
@@ -33,7 +34,7 @@ public final class TcpSession extends AbstractSession<TcpChannel> {
         this.sessionCallback = sessionCallback;
     }
 
-    public TcpSession(final MultiplexorStrategy<? super SocketChannel> multiplexorStrategy,
+    public TcpSession(final MultiplexorStrategy<? super SelectableChannel> multiplexorStrategy,
                       final Callback<? super TcpSession> sessionCallback,
                       final ConnectorEndpoint connectorEndpoint) {
         this.socketChannelProvider = new ConnectorTcpChannelProvider(connectorEndpoint);
