@@ -1,7 +1,7 @@
-package org.iterx.sora.util.collection.list;
+package org.iterx.sora.collection.list;
 
-import org.iterx.sora.util.collection.List;
-import org.iterx.sora.util.collection.Record;
+import org.iterx.sora.collection.List;
+import org.iterx.sora.collection.Record;
 
 import java.util.ArrayList;
 

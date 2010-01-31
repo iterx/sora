@@ -1,4 +1,4 @@
-package org.iterx.sora.util.collection;
+package org.iterx.sora.collection;
 
 import java.lang.reflect.Array;
 
@@ -11,7 +11,15 @@ public final class Arrays {
     public static <T> T[] newArray(final Class<?> type, final int length) {
         return (type == Object[].class)?
                (T[]) new Object[length] :
-               (T[]) Array.newInstance(type.getComponentType(), length);
+               (T[]) Array.newInstance((type.isArray())? type.getComponentType() : type, length);
+    }
+
+    @SuppressWarnings("unchecked")
+    public static <T> T[] newArray(final Class<?> type, final Object... values) {
+        final int length = values.length;
+        final T[] array = newArray(type, length);
+        for(int i = 0; i != length; i++) array[i] = (T) values[i];
+        return array;
     }
 
     public static <T> T[] add(final T[] array, T value) {

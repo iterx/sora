@@ -1,7 +1,7 @@
-package org.iterx.sora.util.collection;
+package org.iterx.sora.collection;
 
-import org.iterx.sora.util.collection.list.RandomAccessList;
-import org.iterx.sora.util.collection.set.HashSet;
+import org.iterx.sora.collection.list.RandomAccessList;
+import org.iterx.sora.collection.set.HashSet;
 
 import java.util.List;
 

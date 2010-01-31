@@ -1,4 +1,4 @@
-package org.iterx.sora.util.collection.queue;
+package org.iterx.sora.collection.queue;
 
 import java.util.Arrays;
 import java.util.Collection;

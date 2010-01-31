@@ -4,9 +4,9 @@ public interface Channel<T> {
 
     void open();
 
-    void read(T buffer);
+    void read(T value);
 
-    void write(T buffer);
+    void write(T value);
 
     void flush();
 

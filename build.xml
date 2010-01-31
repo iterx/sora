@@ -4,8 +4,11 @@
     <property name="vendor" value="iterx.org"/>
     <property name="version" value="SNAPSHOT"/>
 
-    <property name="debug" value="on"/>
-    <property name="optimize" value="off"/>
+    <property name="java.compiler.debug" value="on"/>
+    <property name="java.compiler.optimize" value="on"/>
+    <property name="java.compiler.source" value="1.7"/>
+    <property name="java.compiler.target" value="1.7"/>
+
 
     <property name="source.dir" value="${basedir}/src"/>
     <property name="target.dir" value="${basedir}/target"/>
@@ -34,7 +37,8 @@
     </target>
 
     <target name="build"
-            depends="init, build-java"/>
+            depends="init, build-java"
+            description="build project files"/>
 
     <target name="build-java"
             depends="init">
@@ -48,7 +52,8 @@
     </target>
 
     <target name="jar"
-            depends="init">
+            depends="init, build"
+            description="build project jars">
 
         <property name="jar.name" value="${name}-${version}"/>
         <property name="jar.source.dir" value="${java.target.dir}"/>
@@ -124,14 +129,14 @@
     <macrodef name="compile-java">
         <attribute name="srcdir" default="."/>
         <attribute name="destdir" default="."/>
-        <attribute name="optimize" default="off"/>
-        <attribute name="debug" default="on"/>
         <element name="elements" implicit="true" optional="yes"/>
         <sequential>
             <javac srcdir="@{srcdir}"
                    destdir="@{destdir}"
-                   optimize="@{optimize}"
-                   debug="@{debug}"
+                   optimize="${java.compiler.optimize}"
+                   debug="${java.compiler.debug}"
+                   source="${java.compiler.source}"
+                   target="${java.compiler.target}"
                    includeantruntime="false">
                 <classpath>
                     <pathelement path="@{srcdir}"/>

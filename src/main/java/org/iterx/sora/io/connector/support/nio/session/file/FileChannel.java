@@ -3,7 +3,7 @@ package org.iterx.sora.io.connector.support.nio.session.file;
 import org.iterx.sora.io.IoException;
 import org.iterx.sora.io.connector.support.nio.session.AbstractChannel;
 import org.iterx.sora.io.connector.support.nio.strategy.MultiplexorStrategy;
-import org.iterx.sora.util.collection.queue.MultiProducerSingleConsumerBlockingQueue;
+import org.iterx.sora.collection.queue.MultiProducerSingleConsumerBlockingQueue;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -101,23 +101,21 @@ public final class FileChannel extends AbstractChannel {
 
     private void flush(final BlockingQueue<ByteBuffer> blockingQueue)
     {
-        if(!blockingQueue.isEmpty()) {
-            queueLock.lock();
-            try {
-                while(!blockingQueue.isEmpty()) {
-                    emptyQueueCondition.await();
-                }
-                fileChannel.force(true);
+        queueLock.lock();
+        try {
+            while(!blockingQueue.isEmpty()) {
+                emptyQueueCondition.await();
             }
-            catch(final InterruptedException e) {
-                throw rethrow(e);
-            }
-            catch(final IOException e) {
-                throw new IoException(e);
-            }
-            finally {
-                queueLock.unlock();
-            }
+            fileChannel.force(true);
+        }
+        catch(final InterruptedException e) {
+            throw rethrow(e);
+        }
+        catch(final IOException e) {
+            throw new IoException(e);
+        }
+        finally {
+            queueLock.unlock();
         }
     }
 

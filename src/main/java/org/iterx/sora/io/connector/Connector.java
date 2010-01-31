@@ -5,8 +5,8 @@ import org.iterx.sora.io.connector.session.SessionProvider;
 import org.iterx.sora.io.connector.endpoint.ConnectorEndpoint;
 import org.iterx.sora.io.connector.endpoint.Endpoint;
 import org.iterx.sora.io.connector.endpoint.AcceptorEndpoint;
-import org.iterx.sora.util.collection.List;
-import org.iterx.sora.util.collection.list.LinkedList;
+import org.iterx.sora.collection.List;
+import org.iterx.sora.collection.list.LinkedList;
 
 public final class Connector {
 

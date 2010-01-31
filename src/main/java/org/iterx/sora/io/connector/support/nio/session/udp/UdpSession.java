@@ -7,8 +7,8 @@ import org.iterx.sora.io.connector.endpoint.ConnectorEndpoint;
 import org.iterx.sora.io.connector.session.Channel;
 import org.iterx.sora.io.connector.support.nio.session.AbstractSession;
 import org.iterx.sora.io.connector.support.nio.strategy.MultiplexorStrategy;
-import org.iterx.sora.util.collection.Map;
-import org.iterx.sora.util.collection.map.HashMap;
+import org.iterx.sora.collection.Map;
+import org.iterx.sora.collection.map.HashMap;
 
 import java.io.IOException;
 import java.net.DatagramSocket;

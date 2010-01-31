@@ -3,7 +3,7 @@ package org.iterx.sora.io.connector.support.nio.session.udp;
 import org.iterx.sora.io.IoException;
 import org.iterx.sora.io.connector.support.nio.session.AbstractChannel;
 import org.iterx.sora.io.connector.support.nio.strategy.MultiplexorStrategy;
-import org.iterx.sora.util.collection.queue.MultiProducerSingleConsumerBlockingQueue;
+import org.iterx.sora.collection.queue.MultiProducerSingleConsumerBlockingQueue;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;

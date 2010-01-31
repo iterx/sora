@@ -1,4 +1,4 @@
-package org.iterx.sora.util.collection;
+package org.iterx.sora.collection;
 
 
 public interface List<E> extends java.util.Collection<E> {
