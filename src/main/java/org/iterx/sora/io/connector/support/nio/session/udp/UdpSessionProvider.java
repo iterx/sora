@@ -30,12 +30,18 @@ public final class UdpSessionProvider implements SessionProvider<UdpSession, Byt
     public UdpSession newSession(final Connector connector,
                                  final Session.Callback<? super UdpSession> sessionCallback,
                                  final AcceptorEndpoint acceptorEndpoint) {
+        assertEndpoint(acceptorEndpoint);
         return new UdpSession(multiplexorStrategy, sessionCallback, acceptorEndpoint);
     }
 
     public UdpSession newSession(final Connector connector,
                                  final Session.Callback<? super UdpSession> sessionCallback,
                                  final ConnectorEndpoint connectorEndpoint) {
+        assertEndpoint(connectorEndpoint);
         return new UdpSession(multiplexorStrategy, sessionCallback, connectorEndpoint);
+    }
+
+    private void assertEndpoint(final Endpoint endpoint) {
+        if(!supports(endpoint)) throw new IllegalArgumentException("Invalid endpoint '" + endpoint + "'");
     }
 }

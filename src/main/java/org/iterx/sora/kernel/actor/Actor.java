@@ -224,6 +224,7 @@ public final class Actor<T> implements Sender<T> {
                     while(!Thread.currentThread().isInterrupted()) {
                         try {
                             for(T object = blockingQueue.take(); object != null; object = blockingQueue.poll()) {
+                                //TODO: change this into a pull mechanism -> i.e allow poll
                                 receiver.receive(object);
                             }
                         }

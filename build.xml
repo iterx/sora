@@ -9,8 +9,8 @@
     <property name="java.compiler.source" value="1.7"/>
     <property name="java.compiler.target" value="1.7"/>
 
-
     <property name="source.dir" value="${basedir}/src"/>
+    <property name="work.dir" value="${basedir}/work"/>
     <property name="target.dir" value="${basedir}/target"/>
     <property name="library.dir" value="${basedir}/lib"/>
 
@@ -22,68 +22,139 @@
         <format property="date" pattern="yyyy-MM-dd HH:mm:ss"/>
     </tstamp>
 
-    <target name="init">
-        <property name="java.source.dir" value="${source.dir}/main/java"/>
-        <property name="java.target.dir" value="${target.dir}/classes"/>
-        <path id="build.library.path">
+    <target name="purge">
+        <delete dir="${work.dir}"/>
+        <delete dir="${target.dir}"/>
+    </target>
+
+    <target name="clean">
+        <delete dir="${target.dir}"/>
+    </target>
+    
+    <!-- BOOTSTRAP -->
+
+    <target name="bootstrap"
+            depends="bootstrap:init, bootstrap:build, bootstrap:jar">
+        <copy todir="${library.dir}/build" file="${bootstrap.jar.target.file}"/>
+    </target>
+
+    <target name="bootstrap:init">
+        <property name="bootstrap.java.source.dir" value="${source.dir}/bootstrap/java"/>
+        <property name="bootstrap.java.work.dir" value="${work.dir}/bootstrap/java"/>
+        <property name="bootstrap.java.target.dir" value="${target.dir}/bootstrap-classes"/>
+        <property name="bootstrap.sablecc.source.dir" value="${source.dir}/bootstrap/sablecc"/>
+        <property name="bootstrap.sablecc.target.dir" value="${bootstrap.java.work.dir}"/>
+
+        <path id="bootstrap.library.path">
+            <fileset dir="${library.dir}/build">
+                <include name="**/*.jar"/>
+            </fileset>
             <fileset dir="${library.dir}/dist">
                 <include name="**/*.jar"/>
             </fileset>
         </path>
     </target>
 
-    <target name="clean">
-        <delete dir="${target.dir}"/>
+    <target name="bootstrap:build"
+            depends="bootstrap:init, bootstrap:build-sablecc, bootstrap:build-java"/>
+
+    <target name="bootstrap:build-sablecc"
+            depends="bootstrap:init">
+        <mkdir dir="${bootstrap.sablecc.target.dir}"/>
+        <!-- TODO: iterate over grammers-->
+        <compile-sablecc srcfile="${bootstrap.sablecc.source.dir}/postfix.sablecc"
+                         destdir="${bootstrap.sablecc.work.dir}">
+            <classpath>
+                <path refid="bootstrap.library.path"/>
+            </classpath>
+        </compile-sablecc>
     </target>
 
-    <target name="build"
-            depends="init, build-java"
-            description="build project files"/>
-
-    <target name="build-java"
-            depends="init">
-        <mkdir dir="${java.target.dir}"/>
-        <compile-java srcdir="${java.source.dir}"
-                destdir="${java.target.dir}">
+    <target name="bootstrap:build-java"
+            depends="bootstrap:init">
+        <mkdir dir="${bootstrap.java.target.dir}"/>
+        <compile-java srcdir="${bootstrap.java.work.dir}:${bootstrap.java.source.dir}"
+                      destdir="${bootstrap.java.target.dir}">
             <classpath>
-                <path refid="build.library.path"/>
+                <path refid="bootstrap.library.path"/>
             </classpath>
         </compile-java>
     </target>
 
-    <target name="jar"
-            depends="init, build"
-            description="build project jars">
+    <target name="bootstrap:jar"
+            depends="bootstrap:init, bootstrap:build">
+        <property name="bootstrap.jar.name" value="${name}-bootstrap"/>
+        <property name="bootstrap.jar.source.dir" value="${bootstrap.java.target.dir}"/>
+        <property name="bootstrap.jar.target.file" value="${target.dir}/${bootstrap.jar.name}.jar"/>
 
-        <property name="jar.name" value="${name}-${version}"/>
-        <property name="jar.source.dir" value="${java.target.dir}"/>
-        <property name="jar.target.dir" value="${target.dir}"/>
-        <property name="jar.target.file" value="${jar.target.dir}/${jar.name}.jar"/>
-
-        <jar destfile="${jar.target.file}"
-             basedir="${jar.source.dir}">
-            <manifest>
-                <attribute name="Built-By" value="${user.name}"/>
-                <attribute name="Creation-Time" value="${date}"/>
-                <attribute name="Specification-Title" value="${name}"/>
-                <attribute name="Specification-Vendor" value="${vendor}"/>
-                <attribute name="Specification-Version" value="${version}"/>
-                <attribute name="Implementation-Title" value="${name}"/>
-                <attribute name="Implementation-Vendor" value="${vendor}"/>
-                <attribute name="Implementation-Version" value="${version}"/>
-            </manifest>
-        </jar>
+        <generate-jar srcdir="${bootstrap.jar.source.dir}"
+                      destfile="${bootstrap.jar.target.file}"
+                      name="${bootstrap.jar.name}"/>
     </target>
 
 
+    <!-- MAIN -->
+
+    <target name="main"
+            depends="main:init, main:build, main:jar"/>
+
+
+    <target name="main:build"
+            depends="main:init, main:build-java"/>
+
+    <target name="main:init">
+        <property name="main.java.source.dir" value="${source.dir}/main/java"/>
+        <property name="main.java.target.dir" value="${target.dir}/classes"/>
+        <path id="main.build.library.path">
+            <fileset dir="${library.dir}/dist">
+                <include name="**/*.jar"/>
+            </fileset>
+        </path>
+    </target>
+
+    <!--target name="build-postfix"
+            depends="init">
+        <mkdir dir="${postfix.target.dir}"/>
+        <compile-postfix srcfile="${postfix.source.dir}/test.postfix"
+                         destfile="${postfix.target.dir}/test.java"/>
+    </target-->
+
+    <target name="main:build-java"
+            depends="main:init">
+        <mkdir dir="${main.java.target.dir}"/>
+        <compile-java srcdir="${main.java.source.dir}"
+                destdir="${main.java.target.dir}">
+            <classpath>
+                <path refid="main.build.library.path"/>
+            </classpath>
+        </compile-java>
+    </target>
+
+    <target name="main:jar"
+            depends="main:init, main:build">
+        <property name="main.jar.name" value="${name}"/>
+        <property name="main.jar.source.dir" value="${main.java.target.dir}"/>
+        <property name="main.jar.target.file" value="${target.dir}/${main.jar.name}-${version}.jar"/>
+
+        <generate-jar srcdir="${main.jar.source.dir}"
+                      destfile="${main.jar.target.file}"
+                      name="${main.jar.name}"/>
+    </target>
+
+
+    <!-- TEST -->
+
+    <target name="test"
+            depends="test:init, test:build, test:jar"/>
+
     <target name="test:init"
-            depends="jar">
+            depends="main">
         <property name="test.java.source.dir" value="${source.dir}/test/java"/>
         <property name="test.java.target.dir" value="${target.dir}/test-classes"/>
         <property name="test.java.report.dir" value="${target.dir}/test-reports"/>
 
         <path id="test.library.path">
-            <pathelement path="${jar.target.file}"/>
+            <pathelement path="${main.jar.target.file}"/>
             <fileset dir="${library.dir}/dist">
                 <include name="**/*.jar"/>
             </fileset>
@@ -93,19 +164,37 @@
         </path>
 
     </target>
-                
-    <target name="test:unit"
-            depends="test:init, test:unit-java"/>
 
-    <target name="test:unit-java"
+    <target name="test:build"
+            depends="test:init, test:build-java"/>    
+
+    <target name="test:build-java"
             depends="test:init">
         <mkdir dir="${test.java.target.dir}"/>
         <compile-java srcdir="${test.java.source.dir}"
-                destdir="${test.java.target.dir}">
+                      destdir="${test.java.target.dir}">
             <classpath>
                 <path refid="test.library.path"/>
             </classpath>
         </compile-java>
+    </target>
+
+    <target name="test:jar"
+            depends="test:init, test:build">
+        <property name="test.jar.name" value="${name}-test"/>
+        <property name="test.jar.source.dir" value="${test.java.target.dir}"/>
+        <property name="test.jar.target.file" value="${target.dir}/${test.jar.name}-${version}.jar"/>
+
+        <generate-jar srcdir="${test.jar.source.dir}"
+                      destfile="${test.jar.target.file}"
+                      name="${test.jar.name}"/>
+    </target>
+
+    <target name="test:unit"
+            depends="test:init, test:jar, test:unit-java"/>
+
+    <target name="test:unit-java"
+            depends="test:init">
 
         <mkdir dir="${test.java.report.dir}"/>
         <junit printsummary="yes" haltonfailure="false">
@@ -114,7 +203,7 @@
                 <enable/>
             </assertions>
             <classpath>
-                <pathelement path="${test.java.target.dir}"/>
+                <pathelement location="${test.jar.target.file}"/>
                 <path refid="test.library.path"/>
             </classpath>
             <batchtest fork="yes" todir="${test.java.report.dir}">
@@ -125,6 +214,41 @@
             </batchtest>
         </junit>
     </target>
+
+    <!-- HELPERS -->
+
+    <macrodef name="compile-sablecc">
+        <attribute name="srcfile" default="."/>
+        <attribute name="destdir" default="."/>
+        <element name="elements" implicit="true" optional="yes"/>
+        <sequential>
+            <java classname="org.sablecc.sablecc.launcher.SableCC">
+                <arg value="-q"/>
+                <arg value="--destination=@{destdir}"/>
+                <arg value="@{srcfile}"/>
+                <elements/>
+            </java>
+        </sequential>
+    </macrodef>
+
+    <!--macrodef name="compile-postfix">
+        <attribute name="srcfile" default="."/>
+        <attribute name="destfile" default="."/>
+        <element name="elements" implicit="true" optional="yes"/>
+        <sequential>
+            <java classname="language_postfix.Compiler">
+                <arg value="@{srcfile}"/>
+                <arg value="@{destfile}"/>
+                <classpath>
+                    <fileset dir="${library.dir}/build">
+                        <include name="**/*.jar"/>
+                    </fileset>
+                </classpath>
+                <elements/>
+            </java>
+        </sequential>
+    </macrodef-->
+
 
     <macrodef name="compile-java">
         <attribute name="srcdir" default="."/>
@@ -143,6 +267,28 @@
                 </classpath>
                 <elements/>
             </javac>
+        </sequential>
+    </macrodef>
+
+
+    <macrodef name="generate-jar">
+        <attribute name="name" default="${name}"/>
+        <attribute name="destfile" default="."/>
+        <attribute name="srcdir" default="."/>
+        <sequential>
+            <jar destfile="@{destfile}"
+                 basedir="@{srcdir}">
+                <manifest>
+                    <attribute name="Built-By" value="${user.name}"/>
+                    <attribute name="Creation-Time" value="${date}"/>
+                    <attribute name="Specification-Title" value="@{name}"/>
+                    <attribute name="Specification-Vendor" value="${vendor}"/>
+                    <attribute name="Specification-Version" value="${version}"/>
+                    <attribute name="Implementation-Title" value="@{name}"/>
+                    <attribute name="Implementation-Vendor" value="${vendor}"/>
+                    <attribute name="Implementation-Version" value="${version}"/>
+                </manifest>
+            </jar>
         </sequential>
     </macrodef>
 

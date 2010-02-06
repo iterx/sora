@@ -4,7 +4,7 @@ import org.iterx.sora.io.IoException;
 import org.iterx.sora.io.Uri;
 import org.iterx.sora.io.connector.endpoint.ConnectorEndpoint;
 import org.iterx.sora.io.connector.session.Channel;
-import org.iterx.sora.io.connector.support.nio.session.AbstractSession;
+import org.iterx.sora.io.connector.session.AbstractSession;
 import org.iterx.sora.io.connector.support.nio.strategy.MultiplexorStrategy;
 import org.iterx.sora.collection.Collections;
 
@@ -13,7 +13,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.file.StandardOpenOption;
 
-public final class FileSession extends AbstractSession<FileChannel> {
+public final class FileSession extends AbstractSession<FileChannel, ByteBuffer> {
 
     private final FileChannelProvider fileChannelProvider;
     private final Callback<? super FileSession> sessionCallback;

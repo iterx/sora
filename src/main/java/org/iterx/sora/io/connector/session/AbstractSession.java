@@ -1,19 +1,19 @@
-package org.iterx.sora.io.connector.support.nio.session;
+package org.iterx.sora.io.connector.session;
 
 import org.iterx.sora.io.connector.session.Channel;
+import org.iterx.sora.io.connector.session.Session;
 
 import static org.iterx.sora.util.Exception.swallow;
 
-import java.nio.ByteBuffer;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-public abstract class AbstractChannel implements Channel<ByteBuffer> {
+public abstract class AbstractSession<C extends Channel<T>, T> implements Session<C, T> {
 
     private final Lock stateLock;
     private volatile State state;
 
-    protected AbstractChannel() {
+    protected AbstractSession() {
         this.stateLock = new ReentrantLock();
         this.state = State.CLOSED;
     }
@@ -81,8 +81,8 @@ public abstract class AbstractChannel implements Channel<ByteBuffer> {
             }
 
             @Override
-            public State run(final AbstractChannel channel, final Object... arguments) {
-                return channel.onClosed();
+            public State run(final AbstractSession session, final Object... arguments) {
+                return session.onClosed();
             }
         },
         OPENING {
@@ -92,8 +92,8 @@ public abstract class AbstractChannel implements Channel<ByteBuffer> {
             }
 
             @Override
-            public State run(final AbstractChannel channel, final Object... arguments) {
-                return channel.onOpening();
+            public State run(final AbstractSession session, final Object... arguments) {
+                return session.onOpening();
             }
         },
         OPEN {
@@ -103,8 +103,8 @@ public abstract class AbstractChannel implements Channel<ByteBuffer> {
             }
 
             @Override
-            public State run(final AbstractChannel channel, final Object... arguments) {
-                return channel.onOpen();
+            public State run(final AbstractSession session, final Object... arguments) {
+                return session.onOpen();
             }
         },
         CLOSING {
@@ -114,8 +114,8 @@ public abstract class AbstractChannel implements Channel<ByteBuffer> {
             }
 
             @Override
-            public State run(final AbstractChannel channel, final Object... arguments) {
-                return channel.onClosing();
+            public State run(final AbstractSession session, final Object... arguments) {
+                return session.onClosing();
             }
         },
         ABORTING {
@@ -125,8 +125,8 @@ public abstract class AbstractChannel implements Channel<ByteBuffer> {
             }
 
             @Override
-            public State run(final AbstractChannel channel, final Object... arguments) {
-                return channel.onAbort((Throwable) arguments[0]);
+            public State run(final AbstractSession session, final Object... arguments) {
+                return session.onAbort((Throwable) arguments[0]);
             }
 
         },
@@ -143,7 +143,7 @@ public abstract class AbstractChannel implements Channel<ByteBuffer> {
             throw new IllegalStateException("Invalid state transition from '" + name() + "' to '" + newState.name() + "'");
         }
 
-        protected State run(final AbstractChannel channel, final Object... arguments) {
+        protected State run(final AbstractSession session, final Object... arguments) {
             return this;
         }
 

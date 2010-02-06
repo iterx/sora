@@ -1,6 +1,6 @@
 package org.iterx.sora.io;
 
-public final class IoException extends RuntimeException {
+public class IoException extends RuntimeException {
 
     public IoException() {
     }

@@ -1,7 +1,7 @@
 package org.iterx.sora.io.connector.support.nio.session.udp;
 
 import org.iterx.sora.io.IoException;
-import org.iterx.sora.io.connector.support.nio.session.AbstractChannel;
+import org.iterx.sora.io.connector.session.AbstractChannel;
 import org.iterx.sora.io.connector.support.nio.strategy.MultiplexorStrategy;
 import org.iterx.sora.collection.queue.MultiProducerSingleConsumerBlockingQueue;
 
@@ -17,7 +17,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import static org.iterx.sora.util.Exception.rethrow;
 import static org.iterx.sora.util.Exception.swallow;
 
-public final class UdpChannel extends AbstractChannel {
+public final class UdpChannel extends AbstractChannel<ByteBuffer> {
 
     private final MultiplexorStrategy<? super DatagramChannel> multiplexorStrategy;
     private final Callback<? super UdpChannel, ByteBuffer> channelCallback;

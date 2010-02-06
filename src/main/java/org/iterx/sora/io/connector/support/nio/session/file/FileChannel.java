@@ -1,7 +1,7 @@
 package org.iterx.sora.io.connector.support.nio.session.file;
 
 import org.iterx.sora.io.IoException;
-import org.iterx.sora.io.connector.support.nio.session.AbstractChannel;
+import org.iterx.sora.io.connector.session.AbstractChannel;
 import org.iterx.sora.io.connector.support.nio.strategy.MultiplexorStrategy;
 import org.iterx.sora.collection.queue.MultiProducerSingleConsumerBlockingQueue;
 
@@ -16,7 +16,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import static org.iterx.sora.util.Exception.rethrow;
 import static org.iterx.sora.util.Exception.swallow;
 
-public final class FileChannel extends AbstractChannel {
+public final class FileChannel extends AbstractChannel<ByteBuffer> {
 
     private final MultiplexorStrategy<? super java.nio.channels.FileChannel> multiplexorStrategy;
     private final Callback<? super FileChannel, ByteBuffer> channelCallback;

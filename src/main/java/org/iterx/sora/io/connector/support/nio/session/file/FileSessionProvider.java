@@ -34,6 +34,11 @@ public final class FileSessionProvider implements SessionProvider<FileSession, B
     public FileSession newSession(final Connector connector,
                                   final Session.Callback<? super FileSession> sessionCallback,
                                   final ConnectorEndpoint connectorEndpoint) {
+        assertEndpoint(connectorEndpoint);
         return new FileSession(multiplexorStrategy, sessionCallback, connectorEndpoint);
+    }
+
+    private void assertEndpoint(final Endpoint endpoint) {
+        if(!supports(endpoint)) throw new IllegalArgumentException("Invalid endpoint '" + endpoint + "'");
     }
 }

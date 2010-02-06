@@ -5,7 +5,7 @@ import org.iterx.sora.io.Uri;
 import org.iterx.sora.io.connector.endpoint.AcceptorEndpoint;
 import org.iterx.sora.io.connector.endpoint.ConnectorEndpoint;
 import org.iterx.sora.io.connector.session.Channel;
-import org.iterx.sora.io.connector.support.nio.session.AbstractSession;
+import org.iterx.sora.io.connector.session.AbstractSession;
 import org.iterx.sora.io.connector.support.nio.strategy.MultiplexorStrategy;
 import org.iterx.sora.collection.queue.MultiProducerSingleConsumerBlockingQueue;
 
@@ -20,7 +20,7 @@ import java.nio.channels.SocketChannel;
 
 import static org.iterx.sora.util.Exception.swallow;
 
-public final class TcpSession extends AbstractSession<TcpChannel> {
+public final class TcpSession extends AbstractSession<TcpChannel, ByteBuffer> {
 
     private final TcpChannelProvider socketChannelProvider;
     private final Callback<? super TcpSession> sessionCallback;

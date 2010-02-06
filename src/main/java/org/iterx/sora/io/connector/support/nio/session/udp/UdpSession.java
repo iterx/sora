@@ -5,7 +5,7 @@ import org.iterx.sora.io.Uri;
 import org.iterx.sora.io.connector.endpoint.AcceptorEndpoint;
 import org.iterx.sora.io.connector.endpoint.ConnectorEndpoint;
 import org.iterx.sora.io.connector.session.Channel;
-import org.iterx.sora.io.connector.support.nio.session.AbstractSession;
+import org.iterx.sora.io.connector.session.AbstractSession;
 import org.iterx.sora.io.connector.support.nio.strategy.MultiplexorStrategy;
 import org.iterx.sora.collection.Map;
 import org.iterx.sora.collection.map.HashMap;
@@ -25,7 +25,7 @@ import java.nio.channels.spi.SelectorProvider;
 import java.util.Iterator;
 import java.util.Set;
 
-public final class UdpSession extends AbstractSession<UdpChannel>  {
+public final class UdpSession extends AbstractSession<UdpChannel, ByteBuffer>  {
     
     private final MultiplexorStrategy<? super DatagramChannel> multiplexorStrategy;
     private final Callback<? super UdpSession> sessionCallback;
@@ -137,7 +137,7 @@ public final class UdpSession extends AbstractSession<UdpChannel>  {
         private final Map<SocketAddress, UdpChannel> udpChannelBySocketAddress;
 
 
-        private final MultiplexorStrategyProxy multiplexorStrategyProxy;
+        private final ProxyMultiplexorStrategy proxyMultiplexorStrategy;
         private final MultiplexorHandler multiplexorHandler;
         private final DatagramChannel datagramChannel;
 
@@ -147,7 +147,7 @@ public final class UdpSession extends AbstractSession<UdpChannel>  {
 
         private AcceptorUdpChannelProvider(final AcceptorEndpoint acceptorEndpoint) {
             this.udpChannelBySocketAddress = new HashMap<SocketAddress, UdpChannel>();
-            this.multiplexorStrategyProxy = new MultiplexorStrategyProxy();
+            this.proxyMultiplexorStrategy = new ProxyMultiplexorStrategy();
             this.multiplexorHandler = new MultiplexorHandler();
             this.localSocketAddress = toSocketAddress(acceptorEndpoint.getUri());
             this.datagramChannel = newDatagramChannel();
@@ -166,8 +166,8 @@ public final class UdpSession extends AbstractSession<UdpChannel>  {
 
         public UdpChannel newChannel(final Channel.Callback<? super UdpChannel, ByteBuffer> channelCallback) {
             final SocketAddress socketAddress = multiplexorHandler.accept();
-            final DatagramChannel datagramChannel = new DatagramChannelProxy(socketAddress);
-            final UdpChannel udpChannel = new UdpChannel(multiplexorStrategyProxy, channelCallback, datagramChannel);
+            final DatagramChannel datagramChannel = new ProxyDatagramChannel(socketAddress);
+            final UdpChannel udpChannel = new UdpChannel(proxyMultiplexorStrategy, channelCallback, datagramChannel);
             udpChannelBySocketAddress.put(socketAddress, udpChannel);
             pollSocketAddressIterator = null;
             return udpChannel;
@@ -248,7 +248,7 @@ public final class UdpSession extends AbstractSession<UdpChannel>  {
                 try {
                     remoteSocketAddress = datagramChannel.receive(readBuffer);
                     return (remoteSocketAddress != null && doAccept(remoteSocketAddress))?
-                           multiplexorStrategyProxy.getMultiplexorHandler(remoteSocketAddress, MultiplexorStrategy.READ_OP).doRead(length) :
+                           proxyMultiplexorStrategy.getMultiplexorHandler(remoteSocketAddress, MultiplexorStrategy.READ_OP).doRead(length) :
                            0;
                 }
                 catch(final IOException e) {
@@ -263,7 +263,7 @@ public final class UdpSession extends AbstractSession<UdpChannel>  {
             public int doWrite(final int length) {
                 int remaining = length;
                 for(SocketAddress socketAddress = poll(); socketAddress != null && remaining > 0; socketAddress = poll()) {
-                    remaining -= multiplexorStrategyProxy.getMultiplexorHandler(socketAddress, MultiplexorStrategy.WRITE_OP).doWrite(length);
+                    remaining -= proxyMultiplexorStrategy.getMultiplexorHandler(socketAddress, MultiplexorStrategy.WRITE_OP).doWrite(length);
                 }
                 return length - remaining;
             }
@@ -273,14 +273,14 @@ public final class UdpSession extends AbstractSession<UdpChannel>  {
             }
         }
 
-        private class MultiplexorStrategyProxy implements MultiplexorStrategy<DatagramChannel>
+        private class ProxyMultiplexorStrategy implements MultiplexorStrategy<DatagramChannel>
         {
             private final Map<SocketAddress, MultiplexorStrategy.MultiplexorHandler<? extends DatagramChannel>> readMultiplexorHandlerBySocketAddress;
             private final Map<SocketAddress, MultiplexorStrategy.MultiplexorHandler<? extends DatagramChannel>> writeMultiplexorHandlerBySocketAddress;
             private final Map<SocketAddress, MultiplexorStrategy.MultiplexorHandler<? extends DatagramChannel>> closeMultiplexorHandlerBySocketAddress;
             private final NullMultiplexorHandler nullMultiplexorHandler;
 
-            private MultiplexorStrategyProxy()
+            private ProxyMultiplexorStrategy()
             {
                 this.readMultiplexorHandlerBySocketAddress = new HashMap<SocketAddress, MultiplexorStrategy.MultiplexorHandler<? extends DatagramChannel>>();
                 this.writeMultiplexorHandlerBySocketAddress = new HashMap<SocketAddress, MultiplexorStrategy.MultiplexorHandler<? extends DatagramChannel>>();
@@ -349,11 +349,11 @@ public final class UdpSession extends AbstractSession<UdpChannel>  {
             }
         }
 
-        private class DatagramChannelProxy extends DatagramChannel {
+        private class ProxyDatagramChannel extends DatagramChannel {
 
             private final SocketAddress remoteSocketAddress;
 
-            private DatagramChannelProxy(final SocketAddress remoteSocketAddress) {
+            private ProxyDatagramChannel(final SocketAddress remoteSocketAddress) {
                 super(SelectorProvider.provider());
                 this.remoteSocketAddress = remoteSocketAddress;
             }

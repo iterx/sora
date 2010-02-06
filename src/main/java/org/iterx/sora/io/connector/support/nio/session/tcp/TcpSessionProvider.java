@@ -30,12 +30,18 @@ public final class TcpSessionProvider implements SessionProvider<TcpSession, Byt
     public TcpSession newSession(final Connector connector,
                                  final Session.Callback<? super TcpSession> sessionCallback,
                                  final AcceptorEndpoint acceptorEndpoint) {
+        assertEndpoint(acceptorEndpoint);
         return new TcpSession(multiplexorStrategy, sessionCallback, acceptorEndpoint);
     }
 
     public TcpSession newSession(final Connector connector,
                                  final Session.Callback<? super TcpSession> sessionCallback,
                                  final ConnectorEndpoint connectorEndpoint) {
+        assertEndpoint(connectorEndpoint);
         return new TcpSession(multiplexorStrategy, sessionCallback, connectorEndpoint);
+    }
+
+    private void assertEndpoint(final Endpoint endpoint) {
+        if(!supports(endpoint)) throw new IllegalArgumentException("Invalid endpoint '" + endpoint + "'");
     }
 }
