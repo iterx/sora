@@ -29,17 +29,4 @@ public interface Multiplexor<T extends Channel> {
 
         void doClose();
     }
-
-    public interface Selector<T extends Channel> {
-
-        boolean isReady();
-
-        void poll(long time, TimeUnit timeUnit);
-
-        void register(Handler<? extends T> handler, int ops);
-
-        void deregister(Handler<? extends T> handler, int ops);
-
-        void destroy();
-    }
 }
