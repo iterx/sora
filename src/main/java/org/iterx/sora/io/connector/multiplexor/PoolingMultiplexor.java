@@ -16,31 +16,30 @@ import static org.iterx.sora.util.Exception.swallow;
 
 public final class PoolingMultiplexor <T extends Channel<?>> implements Multiplexor<T> {
 
-    private final Worker openCloseWorker;
-    private final Worker writeWorker;
-    private final Worker readWorker;
+    private final Worker<T> openCloseWorker;
+    private final Worker<T> writeWorker;
+    private final Worker<T> readWorker;
 
-    private PoolingMultiplexor(final Worker openCloseWorker,
-                               final Worker writeWorker,
-                               final Worker readWorker) {
+    private PoolingMultiplexor(final Worker<T> openCloseWorker,
+                               final Worker<T> writeWorker,
+                               final Worker<T> readWorker) {
         this.openCloseWorker = openCloseWorker;
         this.writeWorker = writeWorker;
         this.readWorker = readWorker;
     }
 
-    public static PoolingMultiplexor<?> newSinglePoolingMultiplexor(final ThreadFactory threadFactory,
-                                                                    final SelectorFactory<? extends Channel<?>> selectorFactory) {
-        final Worker readWriteOpenCloseWorker = new Worker(threadFactory, selectorFactory.newSelector(), READ_OP|WRITE_OP|OPEN_OP|CLOSE_OP);
-        return new PoolingMultiplexor(readWriteOpenCloseWorker, readWriteOpenCloseWorker, readWriteOpenCloseWorker);
+    public static <T extends Channel<?>> PoolingMultiplexor<T> newSinglePoolingMultiplexor(final ThreadFactory threadFactory,
+                                                                                           final SelectorFactory<T> selectorFactory) {
+        final Worker<T> readWriteOpenCloseWorker = new Worker<T>(threadFactory, selectorFactory.newSelector(), READ_OP|WRITE_OP|OPEN_OP|CLOSE_OP);
+        return new PoolingMultiplexor<T>(readWriteOpenCloseWorker, readWriteOpenCloseWorker, readWriteOpenCloseWorker);
     }
 
-    public static PoolingMultiplexor<?> newOpenReadWritePoolingMultiplexor(final ThreadFactory threadFactory,
-                                                                           final SelectorFactory<? extends Channel<?>> selectorFactory) {
-        //TODO: need individual selector instances per worker...
-        final Worker readWorker = new Worker(threadFactory, selectorFactory.newSelector(), READ_OP);
-        final Worker writeWorker = new Worker(threadFactory, selectorFactory.newSelector(), WRITE_OP);
-        final Worker openCloseWorker = new Worker(threadFactory, selectorFactory.newSelector(), OPEN_OP|CLOSE_OP);
-        return new PoolingMultiplexor(openCloseWorker, writeWorker, readWorker);
+    public static <T extends Channel<?>> PoolingMultiplexor<T> newOpenReadWritePoolingMultiplexor(final ThreadFactory threadFactory,
+                                                                                                  final SelectorFactory<T> selectorFactory) {
+        final Worker<T> readWorker = new Worker<T>(threadFactory, selectorFactory.newSelector(), READ_OP);
+        final Worker<T> writeWorker = new Worker<T>(threadFactory, selectorFactory.newSelector(), WRITE_OP);
+        final Worker<T> openCloseWorker = new Worker<T>(threadFactory, selectorFactory.newSelector(), OPEN_OP|CLOSE_OP);
+        return new PoolingMultiplexor<T>(openCloseWorker, writeWorker, readWorker);
     }
 
     @Override
@@ -64,7 +63,7 @@ public final class PoolingMultiplexor <T extends Channel<?>> implements Multiple
         readWorker.destroy();
     }
 
-    private static final class Worker implements Runnable {
+    private static final class Worker<T extends Channel<?>> implements Runnable {
 
         private final Thread thread;
         private final CountDownLatch startSignal;
@@ -72,20 +71,20 @@ public final class PoolingMultiplexor <T extends Channel<?>> implements Multiple
         private final Lock wakeupLock;
         private final Condition wakeupCondition;
 
-        private final Selector<? extends Channel<?>>[] selectors;
+        private final Selector<T> selector;
         private final int validOps;
 
         private final long pollTime = 1000L; //TODO: read in via properties or self-tune
 
         private Worker(final ThreadFactory threadFactory,
-                       final Selector<? extends Channel<?>> selector,
+                       final Selector<T> selector,
                        final int validOps) {
             this.thread = threadFactory.newThread(this);
             this.wakeupLock = new ReentrantLock();
             this.wakeupCondition = wakeupLock.newCondition();
             this.startSignal = new CountDownLatch(1);
             this.destroySignal = new CountDownLatch(1);
-            this.selectors = new Selector[] { selector };
+            this.selector = selector;
             this.validOps = validOps;
             init();
         }
@@ -104,12 +103,10 @@ public final class PoolingMultiplexor <T extends Channel<?>> implements Multiple
             try {
                 startSignal.countDown();
                 while(!Thread.currentThread().isInterrupted()) {
-                    boolean busy = false;
-                    for(final Selector<? extends Channel<?>> selector : selectors)
-                    {
-                        if(selector.isReady()) busy |= selector.poll(pollTime, TimeUnit.MILLISECONDS);
+                    if(selector.isReady()) {
+                        if(selector.poll(pollTime, TimeUnit.MILLISECONDS)) continue;
                     }
-                    if(!busy) sleep(pollTime, TimeUnit.MILLISECONDS);
+                    sleep(pollTime, TimeUnit.MILLISECONDS);
                 }
               }
               finally {
@@ -117,15 +114,15 @@ public final class PoolingMultiplexor <T extends Channel<?>> implements Multiple
               }
         }
 
-        public void register(final Handler<? extends Channel<?>> handler, final int ops) {
+        public void register(final Handler<? extends T> multiplexorHandler, final int ops) {
             if((ops & validOps) != 0) {
-                if(getSelector(handler).register(handler, ops & validOps)) wakeup();
+                if(selector.register(multiplexorHandler, ops & validOps)) wakeup();
             }
         }
 
-        public void deregister(final Handler<? extends Channel<?>> handler, final int ops) {
+        public void deregister(final Handler<? extends T> multiplexorHandler, final int ops) {
             if((ops & validOps) != 0) {
-                getSelector(handler).deregister(handler, ops & validOps);
+                selector.deregister(multiplexorHandler, ops & validOps);
             }
         }
 
@@ -134,7 +131,7 @@ public final class PoolingMultiplexor <T extends Channel<?>> implements Multiple
                 if(destroySignal.getCount() != 0) {
                     try {
                         try {
-                            for(final Selector<? extends Channel<?>> selector : selectors) selector.destroy();
+                            selector.destroy();
                         }
                         catch(final Throwable throwable) {
                             swallow(throwable);
@@ -149,14 +146,6 @@ public final class PoolingMultiplexor <T extends Channel<?>> implements Multiple
             catch(final InterruptedException e) {
                 swallow(e);
             }
-        }
-
-        @SuppressWarnings("unchecked")
-        private <T extends Channel> Selector<T> getSelector(final Handler<?> handler) {
-            for(final Selector<? extends Channel<?>> selector : selectors) {
-                if(selector.supports(handler)) return (Selector<T>) selector;
-            }
-            throw new UnsupportedOperationException();
         }
 
         private void sleep(final long time, final TimeUnit timeUnit) {

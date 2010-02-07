@@ -5,7 +5,7 @@ import org.iterx.sora.io.connector.session.Channel;
 
 import java.util.concurrent.TimeUnit;
 
-public interface Selector<T extends Channel> {
+public interface Selector<T extends Channel<?>> {
 
     boolean supports(Multiplexor.Handler<?> multiplexorHandler);
 
