@@ -1,0 +1,98 @@
+Package abnf;
+
+Helpers
+
+    digit = ['0' .. '9'];
+    tab = 9;
+    cr = 13;
+    lf = 10;
+    eol = cr lf | cr | lf;
+
+    blank = (' ' | tab | eol)+;
+
+Tokens
+    l_par = '(';
+    r_par = ')';
+    plus = '+';
+    minus = '-';
+    mult = '*';
+    div = '/';
+    semi = ';';
+
+    blank = blank;
+    number = digit+;
+
+    one = 'one';
+    two = 'two';
+    three = 'three';
+
+    random = 'random_digit';
+
+Ignored Tokens
+
+    blank;
+
+Productions
+
+    grammar           = exp_list                    {-> New grammar ([exp_list.exp])}
+                      ;
+
+    exp_list          {-> exp*} =
+                        {list}    exp_list separator exp {-> [exp_list.exp, exp.exp] }
+                      | {single}  exp               {-> [exp.exp] }
+                      ;
+
+    exp               {-> exp} =
+                        {plus}    exp plus factor   {-> New exp.plus (exp.exp, factor.exp) }
+                      | {minus}   exp minus factor  {-> New exp.minus (exp.exp, factor.exp) }
+                      | {factor}  factor            {-> factor.exp }
+                      ;
+
+    factor            {-> exp} =
+                        {mult}    factor mult term  {-> New exp.mult (factor.exp, term.exp) }
+                      | {div}     factor div term   {-> New exp.div (factor.exp, term.exp) }
+                      | {term}    term              {-> term.exp }
+                      ;
+
+    term              {-> exp} =
+                        {number}  number            {-> New exp.number(number) }
+                      | {exp}     l_par exp r_par   {-> exp.exp }
+                      | {textual} textual+          {-> New exp.textual ([textual]) }
+                      | {random_x2} random_x2       {-> New exp.random_x2 (random_x2.ran1, random_x2.ran2) }
+                      ;
+
+    textual           =
+                        {t1}      one
+                      | {t2}      two
+                      | {t3}      three
+                      ;
+
+    random_x2         {-> [ran1]:random [ran2]:random} =
+                        [ran1]:random [ran2]:random {-> ran1 ran2 }
+                      ;
+
+    separator  {-> } =
+                        {semicolon} semi {-> }
+                      ;
+
+
+Abstract Syntax Tree
+
+    grammar           = exp+
+                      ;
+
+    exp               =
+                        {plus}    [l]:exp  [r]:exp |
+                        {minus}   [l]:exp  [r]:exp |
+                        {div}     [l]:exp  [r]:exp |
+                        {mult}    [l]:exp  [r]:exp |
+                        {textual} textual+ |
+                        {random_x2} [r1]:random [r2]:random |
+                        {number}  number
+                      ;
+
+    textual            =
+                        {t1}      one
+                      | {t2}      two
+                      | {t3}      three
+                      ;

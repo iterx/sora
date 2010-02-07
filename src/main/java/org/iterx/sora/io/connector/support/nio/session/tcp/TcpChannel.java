@@ -1,15 +1,15 @@
 package org.iterx.sora.io.connector.support.nio.session.tcp;
 
 import org.iterx.sora.io.IoException;
+import org.iterx.sora.io.connector.Multiplexor;
 import org.iterx.sora.io.connector.session.AbstractChannel;
-import org.iterx.sora.io.connector.support.nio.strategy.MultiplexorStrategy;
 import org.iterx.sora.collection.queue.MultiProducerSingleConsumerBlockingQueue;
+import org.iterx.sora.io.connector.support.nio.session.NioChannel;
 
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
-import java.nio.channels.SelectableChannel;
 import java.nio.channels.SocketChannel;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.locks.Condition;
@@ -19,13 +19,13 @@ import java.util.concurrent.locks.ReentrantLock;
 import static org.iterx.sora.util.Exception.rethrow;
 import static org.iterx.sora.util.Exception.swallow;
 
-public final class TcpChannel extends AbstractChannel<ByteBuffer> {
+public final class TcpChannel extends AbstractChannel<ByteBuffer> implements NioChannel<SocketChannel> {
 
-    private final MultiplexorStrategy<? super SelectableChannel> multiplexorStrategy;
+    private final Multiplexor<? super NioChannel<SocketChannel>> multiplexor;
     private final Callback<? super TcpChannel, ByteBuffer> channelCallback;
     private final SocketChannel socketChannel;
     private final SocketAddress socketAddress;
-    private final MultiplexorHandler multiplexorHandler;
+    private final Handler multiplexorHandler;
 
     private final MultiProducerSingleConsumerBlockingQueue<ByteBuffer> readBlockingQueue;
     private final MultiProducerSingleConsumerBlockingQueue<ByteBuffer> writeBlockingQueue;
@@ -35,7 +35,7 @@ public final class TcpChannel extends AbstractChannel<ByteBuffer> {
 
     private volatile int interestOps;
 
-    public TcpChannel(final MultiplexorStrategy<? super SelectableChannel> multiplexorStrategy,
+    public TcpChannel(final Multiplexor<? super NioChannel<SocketChannel>> multiplexor,
                       final Callback<? super TcpChannel, ByteBuffer> channelCallback,
                       final SocketChannel socketChannel,
                       final SocketAddress socketAddress) {
@@ -43,22 +43,26 @@ public final class TcpChannel extends AbstractChannel<ByteBuffer> {
         this.writeBlockingQueue = new MultiProducerSingleConsumerBlockingQueue<ByteBuffer>(128);
         this.queueLock = new ReentrantLock();
         this.emptyQueueCondition = queueLock.newCondition();
-        this.multiplexorHandler = new MultiplexorHandler();
+        this.multiplexorHandler = new Handler();
 
-        this.multiplexorStrategy = multiplexorStrategy;
+        this.multiplexor = multiplexor;
         this.channelCallback = channelCallback;
         this.socketChannel = socketChannel;
         this.socketAddress = socketAddress;
     }
 
+    public SocketChannel getChannel() {
+        return socketChannel;
+    }
+
     public void read(final ByteBuffer buffer) {
         assertState(State.OPEN);
-        enqueue(readBlockingQueue, buffer, MultiplexorStrategy.READ_OP);
+        enqueue(readBlockingQueue, buffer, Multiplexor.READ_OP);
     }
 
     public void write(final ByteBuffer buffer) {
         assertState(State.OPEN);
-        enqueue(writeBlockingQueue, buffer, MultiplexorStrategy.WRITE_OP);
+        enqueue(writeBlockingQueue, buffer, Multiplexor.WRITE_OP);
     }
 
     public void flush() {
@@ -73,7 +77,7 @@ public final class TcpChannel extends AbstractChannel<ByteBuffer> {
                 queueLock.lock();
                 try {
                     if(!blockingQueue.isEmpty() && (interestOps & ops) == 0) {
-                        multiplexorStrategy.register(multiplexorHandler, interestOps ^ ops);
+                        multiplexor.register(multiplexorHandler, interestOps ^ ops);
                         interestOps |= ops;
                     }
                 }
@@ -93,7 +97,7 @@ public final class TcpChannel extends AbstractChannel<ByteBuffer> {
             queueLock.lock();
             try {
                 if(blockingQueue.isEmpty() && (interestOps & ops) != 0) {
-                    multiplexorStrategy.deregister(multiplexorHandler, interestOps & ops);
+                    multiplexor.deregister(multiplexorHandler, interestOps & ops);
                     interestOps ^= ops;
                     emptyQueueCondition.signalAll();
                 }
@@ -128,13 +132,13 @@ public final class TcpChannel extends AbstractChannel<ByteBuffer> {
         try {
             if(socketChannel.isOpen()) {
                 if(socketChannel.isConnected()) {
-                    multiplexorStrategy.register(multiplexorHandler, MultiplexorStrategy.CLOSE_OP);
-                    interestOps |= MultiplexorStrategy.CLOSE_OP;
+                    multiplexor.register(multiplexorHandler, Multiplexor.CLOSE_OP);
+                    interestOps |= Multiplexor.CLOSE_OP;
                     return State.OPEN;
                 }
                 else if(!socketChannel.isConnectionPending()) {
-                    multiplexorStrategy.register(multiplexorHandler, MultiplexorStrategy.OPEN_OP|MultiplexorStrategy.CLOSE_OP);
-                    interestOps |= MultiplexorStrategy.OPEN_OP|MultiplexorStrategy.CLOSE_OP;
+                    multiplexor.register(multiplexorHandler, Multiplexor.OPEN_OP| Multiplexor.CLOSE_OP);
+                    interestOps |= Multiplexor.OPEN_OP| Multiplexor.CLOSE_OP;
                     socketChannel.connect(socketAddress);
                 }
                 return State.OPENING;
@@ -151,8 +155,8 @@ public final class TcpChannel extends AbstractChannel<ByteBuffer> {
         try {
             socketChannel.finishConnect();
             channelCallback.onOpen(this);
-            multiplexorStrategy.deregister(multiplexorHandler, MultiplexorStrategy.OPEN_OP);
-            interestOps ^= MultiplexorStrategy.OPEN_OP;
+            multiplexor.deregister(multiplexorHandler, Multiplexor.OPEN_OP);
+            interestOps ^= Multiplexor.OPEN_OP;
             return super.onOpen();
         }
         catch(final IOException e) {
@@ -192,10 +196,10 @@ public final class TcpChannel extends AbstractChannel<ByteBuffer> {
         channelCallback.onWrite(this, buffer);
     }
 
-    private class MultiplexorHandler implements MultiplexorStrategy.MultiplexorHandler<SocketChannel> {
+    private class Handler implements Multiplexor.Handler<TcpChannel> {
 
-        public SocketChannel getChannel() {
-            return socketChannel;
+        public TcpChannel getChannel() {
+            return TcpChannel.this;
         }
 
         public void doOpen() {
@@ -218,7 +222,7 @@ public final class TcpChannel extends AbstractChannel<ByteBuffer> {
                         }
                     }
                     if(buffer.position() != 0) {
-                        TcpChannel.this.doRead(dequeue(readBlockingQueue, MultiplexorStrategy.READ_OP));
+                        TcpChannel.this.doRead(dequeue(readBlockingQueue, Multiplexor.READ_OP));
                         if(!buffer.hasRemaining() && (remaining > 0)) continue;
                     }
                     break;
@@ -247,7 +251,7 @@ public final class TcpChannel extends AbstractChannel<ByteBuffer> {
                         }
                     }
                     if(buffer.position() != 0) {
-                        TcpChannel.this.doWrite(dequeue(writeBlockingQueue, MultiplexorStrategy.WRITE_OP));
+                        TcpChannel.this.doWrite(dequeue(writeBlockingQueue, Multiplexor.WRITE_OP));
                         if(!buffer.hasRemaining() && (remaining > 0)) continue;
                     }
                     break;

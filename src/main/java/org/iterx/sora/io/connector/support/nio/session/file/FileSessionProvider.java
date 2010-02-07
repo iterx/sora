@@ -1,12 +1,12 @@
 package org.iterx.sora.io.connector.support.nio.session.file;
 
 import org.iterx.sora.io.connector.Connector;
+import org.iterx.sora.io.connector.Multiplexor;
 import org.iterx.sora.io.connector.endpoint.AcceptorEndpoint;
 import org.iterx.sora.io.connector.endpoint.ConnectorEndpoint;
 import org.iterx.sora.io.connector.endpoint.Endpoint;
 import org.iterx.sora.io.connector.session.Session;
 import org.iterx.sora.io.connector.session.SessionProvider;
-import org.iterx.sora.io.connector.support.nio.strategy.MultiplexorStrategy;
 
 import java.nio.ByteBuffer;
 import java.util.regex.Pattern;
@@ -15,10 +15,10 @@ public final class FileSessionProvider implements SessionProvider<FileSession, B
 
     private static final Pattern URI_PATTERN = Pattern.compile("(file:)?//(/[^#]*)?(#.*)?");
 
-    private final MultiplexorStrategy<? super java.nio.channels.FileChannel> multiplexorStrategy;
+    private final Multiplexor<? super FileChannel> multiplexor;
 
-    public FileSessionProvider(final MultiplexorStrategy<? super java.nio.channels.FileChannel> multiplexorStrategy) {
-        this.multiplexorStrategy = multiplexorStrategy;
+    public FileSessionProvider(final Multiplexor<? super FileChannel> multiplexor) {
+        this.multiplexor = multiplexor;
     }
 
     public boolean supports(final Endpoint endpoint) {
@@ -35,7 +35,7 @@ public final class FileSessionProvider implements SessionProvider<FileSession, B
                                   final Session.Callback<? super FileSession> sessionCallback,
                                   final ConnectorEndpoint connectorEndpoint) {
         assertEndpoint(connectorEndpoint);
-        return new FileSession(multiplexorStrategy, sessionCallback, connectorEndpoint);
+        return new FileSession(multiplexor, sessionCallback, connectorEndpoint);
     }
 
     private void assertEndpoint(final Endpoint endpoint) {

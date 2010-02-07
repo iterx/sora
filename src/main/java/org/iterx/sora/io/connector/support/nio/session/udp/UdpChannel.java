@@ -1,9 +1,10 @@
 package org.iterx.sora.io.connector.support.nio.session.udp;
 
 import org.iterx.sora.io.IoException;
+import org.iterx.sora.io.connector.Multiplexor;
 import org.iterx.sora.io.connector.session.AbstractChannel;
-import org.iterx.sora.io.connector.support.nio.strategy.MultiplexorStrategy;
 import org.iterx.sora.collection.queue.MultiProducerSingleConsumerBlockingQueue;
+import org.iterx.sora.io.connector.support.nio.session.NioChannel;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -17,12 +18,12 @@ import java.util.concurrent.locks.ReentrantLock;
 import static org.iterx.sora.util.Exception.rethrow;
 import static org.iterx.sora.util.Exception.swallow;
 
-public final class UdpChannel extends AbstractChannel<ByteBuffer> {
+public final class UdpChannel extends AbstractChannel<ByteBuffer> implements NioChannel<DatagramChannel> {
 
-    private final MultiplexorStrategy<? super DatagramChannel> multiplexorStrategy;
+    private final Multiplexor<? super NioChannel<DatagramChannel>> multiplexor;
     private final Callback<? super UdpChannel, ByteBuffer> channelCallback;
     private final DatagramChannel datagramChannel;
-    private final MultiplexorHandler multiplexorHandler;
+    private final Handler multiplexorHandler;
 
     private final MultiProducerSingleConsumerBlockingQueue<ByteBuffer> readBlockingQueue;
     private final MultiProducerSingleConsumerBlockingQueue<ByteBuffer> writeBlockingQueue;
@@ -32,28 +33,32 @@ public final class UdpChannel extends AbstractChannel<ByteBuffer> {
 
     private volatile int interestOps;
 
-    public UdpChannel(final MultiplexorStrategy<? super DatagramChannel> multiplexorStrategy,
+    public UdpChannel(final Multiplexor<? super NioChannel<DatagramChannel>> multiplexor,
                       final Callback<? super UdpChannel, ByteBuffer> channelCallback,
                       final DatagramChannel datagramChannel) {
         this.readBlockingQueue = new MultiProducerSingleConsumerBlockingQueue<ByteBuffer>(128);
         this.writeBlockingQueue = new MultiProducerSingleConsumerBlockingQueue<ByteBuffer>(128);
         this.queueLock = new ReentrantLock();
         this.emptyQueueCondition = queueLock.newCondition();
-        this.multiplexorHandler = new MultiplexorHandler();
+        this.multiplexorHandler = new Handler();
 
-        this.multiplexorStrategy = multiplexorStrategy;
+        this.multiplexor = multiplexor;
         this.channelCallback = channelCallback;
         this.datagramChannel = datagramChannel;
     }
 
+    public DatagramChannel getChannel() {
+        return datagramChannel;
+    }
+
     public void read(final ByteBuffer buffer) {
         assertState(State.OPEN);
-        enqueue(readBlockingQueue, buffer, MultiplexorStrategy.READ_OP);
+        enqueue(readBlockingQueue, buffer, Multiplexor.READ_OP);
     }
 
     public void write(final ByteBuffer buffer) {
         assertState(State.OPEN);
-        enqueue(writeBlockingQueue, buffer, MultiplexorStrategy.WRITE_OP);
+        enqueue(writeBlockingQueue, buffer, Multiplexor.WRITE_OP);
     }
 
     public void flush() {
@@ -69,7 +74,7 @@ public final class UdpChannel extends AbstractChannel<ByteBuffer> {
                 queueLock.lock();
                 try {
                     if(!blockingQueue.isEmpty() && (interestOps & ops) == 0) {
-                        multiplexorStrategy.register(multiplexorHandler, interestOps ^ ops);
+                        multiplexor.register(multiplexorHandler, interestOps ^ ops);
                         interestOps |= ops;
                     }
                 }
@@ -89,7 +94,7 @@ public final class UdpChannel extends AbstractChannel<ByteBuffer> {
             queueLock.lock();
             try {
                 if(blockingQueue.isEmpty() && (interestOps & ops) != 0) {
-                    multiplexorStrategy.deregister(multiplexorHandler, interestOps & ops);
+                    multiplexor.deregister(multiplexorHandler, interestOps & ops);
                     interestOps ^= ops;
                     emptyQueueCondition.signalAll();
                 }
@@ -122,8 +127,8 @@ public final class UdpChannel extends AbstractChannel<ByteBuffer> {
     @Override
     protected State onOpening() {
         if(datagramChannel.isOpen()) {
-            multiplexorStrategy.register(multiplexorHandler, MultiplexorStrategy.CLOSE_OP);
-            interestOps |= MultiplexorStrategy.CLOSE_OP;
+            multiplexor.register(multiplexorHandler, Multiplexor.CLOSE_OP);
+            interestOps |= Multiplexor.CLOSE_OP;
             return State.OPEN;
         }
         return State.CLOSING;
@@ -166,10 +171,10 @@ public final class UdpChannel extends AbstractChannel<ByteBuffer> {
         channelCallback.onWrite(this, buffer);
     }
 
-    private class MultiplexorHandler implements MultiplexorStrategy.MultiplexorHandler<DatagramChannel> {
+    private class Handler implements Multiplexor.Handler<UdpChannel> {
 
-        public DatagramChannel getChannel() {
-            return datagramChannel;
+        public UdpChannel getChannel() {
+            return UdpChannel.this;
         }
 
         public void doOpen() {
@@ -192,7 +197,7 @@ public final class UdpChannel extends AbstractChannel<ByteBuffer> {
                         }
                     }
                     if(buffer.position() != 0) {
-                        UdpChannel.this.doRead(dequeue(readBlockingQueue, MultiplexorStrategy.READ_OP));
+                        UdpChannel.this.doRead(dequeue(readBlockingQueue, Multiplexor.READ_OP));
                         if(!buffer.hasRemaining() && (remaining > 0)) continue;
                     }
                     break;
@@ -221,7 +226,7 @@ public final class UdpChannel extends AbstractChannel<ByteBuffer> {
                         }
                     }
                     if(buffer.position() != 0) {
-                        UdpChannel.this.doWrite(dequeue(writeBlockingQueue, MultiplexorStrategy.WRITE_OP));
+                        UdpChannel.this.doWrite(dequeue(writeBlockingQueue, Multiplexor.WRITE_OP));
                         if(!buffer.hasRemaining() && (remaining > 0)) continue;
                     }
                     break;

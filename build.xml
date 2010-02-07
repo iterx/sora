@@ -21,6 +21,16 @@
     <tstamp>
         <format property="date" pattern="yyyy-MM-dd HH:mm:ss"/>
     </tstamp>
+    
+    <taskdef resource="net/sf/antcontrib/antlib.xml">
+        <classpath>
+            <fileset dir="${library.dir}/build">
+                <include name="**/*.jar"/>
+            </fileset>
+        </classpath>
+    </taskdef>
+
+    <!-- TARGETS -->
 
     <target name="purge">
         <delete dir="${work.dir}"/>
@@ -30,7 +40,8 @@
     <target name="clean">
         <delete dir="${target.dir}"/>
     </target>
-    
+
+
     <!-- BOOTSTRAP -->
 
     <target name="bootstrap"
@@ -61,13 +72,19 @@
     <target name="bootstrap:build-sablecc"
             depends="bootstrap:init">
         <mkdir dir="${bootstrap.sablecc.target.dir}"/>
-        <!-- TODO: iterate over grammers-->
-        <compile-sablecc srcfile="${bootstrap.sablecc.source.dir}/postfix.sablecc"
-                         destdir="${bootstrap.sablecc.work.dir}">
-            <classpath>
-                <path refid="bootstrap.library.path"/>
-            </classpath>
-        </compile-sablecc>
+        <for param="file">
+            <path>
+                <fileset dir="${bootstrap.sablecc.source.dir}" includes="**/*.sablecc"/>
+            </path>
+            <sequential>
+                <compile-sablecc srcfile="@{file}"
+                                 destdir="${bootstrap.sablecc.target.dir}">
+                    <classpath>
+                        <path refid="bootstrap.library.path"/>
+                    </classpath>
+                </compile-sablecc>
+            </sequential>
+        </for>
     </target>
 
     <target name="bootstrap:build-java"
@@ -222,9 +239,9 @@
         <attribute name="destdir" default="."/>
         <element name="elements" implicit="true" optional="yes"/>
         <sequential>
-            <java classname="org.sablecc.sablecc.launcher.SableCC">
-                <arg value="-q"/>
-                <arg value="--destination=@{destdir}"/>
+            <java classname="org.sablecc.sablecc.SableCC">
+                <arg value="-d"/>
+                <arg value="@{destdir}"/>
                 <arg value="@{srcfile}"/>
                 <elements/>
             </java>

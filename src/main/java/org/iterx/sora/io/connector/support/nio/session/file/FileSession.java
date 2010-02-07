@@ -5,7 +5,7 @@ import org.iterx.sora.io.Uri;
 import org.iterx.sora.io.connector.endpoint.ConnectorEndpoint;
 import org.iterx.sora.io.connector.session.Channel;
 import org.iterx.sora.io.connector.session.AbstractSession;
-import org.iterx.sora.io.connector.support.nio.strategy.MultiplexorStrategy;
+import org.iterx.sora.io.connector.Multiplexor;
 import org.iterx.sora.collection.Collections;
 
 import java.io.File;
@@ -17,13 +17,13 @@ public final class FileSession extends AbstractSession<FileChannel, ByteBuffer> 
 
     private final FileChannelProvider fileChannelProvider;
     private final Callback<? super FileSession> sessionCallback;
-    private final MultiplexorStrategy<? super java.nio.channels.FileChannel> multiplexorStrategy;
+    private final Multiplexor<? super FileChannel> multiplexor;
 
-    public FileSession(final MultiplexorStrategy<? super java.nio.channels.FileChannel> multiplexorStrategy,
+    public FileSession(final Multiplexor<? super FileChannel> multiplexor,
                        final Callback<? super FileSession> sessionCallback,
                        final ConnectorEndpoint connectorEndpoint) {
         this.fileChannelProvider = new ConnectorFileChannelProvider(connectorEndpoint);
-        this.multiplexorStrategy = multiplexorStrategy;
+        this.multiplexor = multiplexor;
         this.sessionCallback = sessionCallback;
     }
 
@@ -86,7 +86,7 @@ public final class FileSession extends AbstractSession<FileChannel, ByteBuffer> 
         }
 
         public FileChannel newChannel(final Channel.Callback<? super FileChannel, ByteBuffer> channelCallback) {
-            return new FileChannel(multiplexorStrategy, channelCallback, newFileChannel());
+            return new FileChannel(multiplexor, channelCallback, newFileChannel());
         }
 
         private java.nio.channels.FileChannel newFileChannel() {

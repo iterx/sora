@@ -1,10 +1,13 @@
-package org.iterx.sora.io.connector.support.nio.strategy;
+package org.iterx.sora.io.connector.support.nio.multiplexor;
 
 import org.iterx.sora.io.IoException;
 import org.iterx.sora.collection.Arrays;
+import org.iterx.sora.io.connector.session.Channel;
+import org.iterx.sora.io.connector.Multiplexor;
+import org.iterx.sora.io.connector.support.nio.session.NioChannel;
 
 import java.io.IOException;
-import java.nio.channels.Channel;
+import java.nio.channels.FileChannel;
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
@@ -19,45 +22,44 @@ import java.util.concurrent.locks.ReentrantLock;
 import static org.iterx.sora.util.Exception.rethrow;
 import static org.iterx.sora.util.Exception.swallow;
 
-
-public final class PoolingMultiplexorStrategy<T extends Channel> implements MultiplexorStrategy<T> {
+public final class PoolingMultiplexor<T extends NioChannel> implements Multiplexor<T> {
 
     private final Worker openCloseWorker;
     private final Worker writeWorker;
     private final Worker readWorker;
 
-    public PoolingMultiplexorStrategy(final Worker openCloseWorker,
-                                      final Worker writeWorker,
-                                      final Worker readWorker) {
+    public PoolingMultiplexor(final Worker openCloseWorker,
+                              final Worker writeWorker,
+                              final Worker readWorker) {
         this.openCloseWorker = openCloseWorker;
         this.writeWorker = writeWorker;
         this.readWorker = readWorker;
     }
 
-    public static PoolingMultiplexorStrategy<?> newSinglePoolMultiplexorStrategy(final ThreadFactory threadFactory) {
+    public static PoolingMultiplexor<?> newSinglePoolMultiplexorStrategy(final ThreadFactory threadFactory) {
         final Worker readWriteOpenCloseWorker = new Worker(threadFactory, READ_OP|WRITE_OP|OPEN_OP|CLOSE_OP);
-        return new PoolingMultiplexorStrategy(readWriteOpenCloseWorker, readWriteOpenCloseWorker, readWriteOpenCloseWorker);
+        return new PoolingMultiplexor(readWriteOpenCloseWorker, readWriteOpenCloseWorker, readWriteOpenCloseWorker);
     }
 
-    public static PoolingMultiplexorStrategy<?> newOpenReadWritePoolMultiplexorStrategy(final ThreadFactory threadFactory) {
+    public static PoolingMultiplexor<?> newOpenReadWritePoolMultiplexorStrategy(final ThreadFactory threadFactory) {
         final Worker readWorker = new Worker(threadFactory, READ_OP);
         final Worker writeWorker = new Worker(threadFactory, WRITE_OP);
         final Worker openCloseWorker = new Worker(threadFactory, OPEN_OP|CLOSE_OP);
-        return new PoolingMultiplexorStrategy(openCloseWorker, writeWorker, readWorker);
+        return new PoolingMultiplexor(openCloseWorker, writeWorker, readWorker);
     }
 
     @Override
-    public void register(final MultiplexorHandler<? extends T> multiplexorHandler, final int ops) {
-        if((ops & READ_OP) != 0) readWorker.register(multiplexorHandler, READ_OP);
-        if((ops & WRITE_OP) != 0) writeWorker.register(multiplexorHandler, WRITE_OP);
-        if((ops & OPEN_OP) != 0 || (ops & CLOSE_OP) != 0) openCloseWorker.register(multiplexorHandler, OPEN_OP|CLOSE_OP);
+    public void register(final Handler<? extends T> handler, final int ops) {
+        if((ops & READ_OP) != 0) readWorker.register(handler, READ_OP);
+        if((ops & WRITE_OP) != 0) writeWorker.register(handler, WRITE_OP);
+        if((ops & OPEN_OP) != 0 || (ops & CLOSE_OP) != 0) openCloseWorker.register(handler, OPEN_OP|CLOSE_OP);
     }
 
     @Override
-    public void deregister(final MultiplexorHandler<? extends T> multiplexorHandler, final int ops) {
-        if((ops & OPEN_OP) != 0 || (ops & CLOSE_OP) != 0) openCloseWorker.deregister(multiplexorHandler, OPEN_OP);
-        if((ops & WRITE_OP) != 0) writeWorker.deregister(multiplexorHandler, READ_OP);
-        if((ops & READ_OP) != 0 ) readWorker.deregister(multiplexorHandler, WRITE_OP);
+    public void deregister(final Handler<? extends T> handler, final int ops) {
+        if((ops & OPEN_OP) != 0 || (ops & CLOSE_OP) != 0) openCloseWorker.deregister(handler, OPEN_OP);
+        if((ops & WRITE_OP) != 0) writeWorker.deregister(handler, READ_OP);
+        if((ops & READ_OP) != 0 ) readWorker.deregister(handler, WRITE_OP);
     }
 
     @Override
@@ -118,12 +120,12 @@ public final class PoolingMultiplexorStrategy<T extends Channel> implements Mult
               }
         }
 
-        public void register(final MultiplexorHandler<? extends Channel> multiplexorHandler, final int ops) {
-            getMultiplexor(multiplexorHandler).register(multiplexorHandler, ops);
+        public void register(final Handler<? extends Channel> handler, final int ops) {
+            getMultiplexor(handler).register(handler, ops);
         }
 
-        public void deregister(final MultiplexorHandler<? extends Channel> multiplexorHandler, final int ops) {
-            getMultiplexor(multiplexorHandler).deregister(multiplexorHandler, ops);
+        public void deregister(final Handler<? extends Channel> handler, final int ops) {
+            getMultiplexor(handler).deregister(handler, ops);
         }
 
         public void destroy() {
@@ -149,9 +151,9 @@ public final class PoolingMultiplexorStrategy<T extends Channel> implements Mult
         }
 
         @SuppressWarnings("unchecked")
-        private <T extends Channel> Multiplexor<T> getMultiplexor(final MultiplexorHandler<?> multiplexorHandler) {
+        private <T extends Channel> Multiplexor<T> getMultiplexor(final Handler<?> handler) {
             for(final Multiplexor<? extends Channel> multiplexor : multiplexors) {
-                if(multiplexor.supports(multiplexorHandler)) return (Multiplexor<T>) multiplexor;
+                if(multiplexor.supports(handler)) return (Multiplexor<T>) multiplexor;
             }
             throw new UnsupportedOperationException();
         }
@@ -168,44 +170,47 @@ public final class PoolingMultiplexorStrategy<T extends Channel> implements Mult
 
     private static abstract class Multiplexor<T extends Channel> {
 
-        abstract boolean supports(MultiplexorHandler<?> multiplexorHandler);
+        abstract boolean supports(Handler<?> handler);
 
         abstract boolean isReady();
 
         abstract void poll(long time, TimeUnit timeUnit);
 
-        abstract void register(MultiplexorHandler<? extends T> multiplexorHandler, int ops);
+        abstract void register(Handler<? extends T> handler, int ops);
 
-        abstract void deregister(MultiplexorHandler<? extends T> multiplexorHandler, int ops);
+        abstract void deregister(Handler<? extends T> handler, int ops);
 
         abstract void destroy();
     }
 
-    private static final class FileChannelMultiplexor extends Multiplexor<java.nio.channels.FileChannel> {
+    private static final class FileChannelMultiplexor extends Multiplexor<NioChannel<FileChannel>> {
 
         private final int validOps;
         private final Lock lock;
 
-        private volatile MultiplexorHandler<? extends java.nio.channels.FileChannel>[] readMultiplexorHandlers;
-        private volatile MultiplexorHandler<? extends java.nio.channels.FileChannel>[] writeMultiplexorHandlers;
+        private volatile Handler<? extends NioChannel<FileChannel>>[] readHandlers;
+        private volatile Handler<? extends NioChannel<FileChannel>>[] writeHandlers;
 
         public FileChannelMultiplexor(final int validOps) {
-            this.readMultiplexorHandlers = Arrays.newArray(MultiplexorHandler.class, 0);
-            this.writeMultiplexorHandlers = Arrays.newArray(MultiplexorHandler.class, 0);
+            this.readHandlers = Arrays.newArray(Handler.class, 0);
+            this.writeHandlers = Arrays.newArray(Handler.class, 0);
             this.lock = new ReentrantLock();
             this.validOps = validOps;
         }
 
-        public boolean supports(final MultiplexorHandler<?> multiplexorHandler) {
-            return multiplexorHandler.getChannel() instanceof java.nio.channels.FileChannel;
+        public boolean supports(final Handler<?> handler) {
+            final Channel channel = handler.getChannel();
+            return channel instanceof NioChannel &&
+                   ((NioChannel) channel).getChannel() instanceof FileChannel;
         }
 
         public boolean isReady() {
-            if(writeMultiplexorHandlers.length == 0) {
-                if(readMultiplexorHandlers.length != 0) {
-                    for(final MultiplexorHandler<? extends java.nio.channels.FileChannel> readMultiplexorHandler : readMultiplexorHandlers) {
+            if(writeHandlers.length == 0) {
+                if(readHandlers.length != 0) {
+                    for(final Handler<? extends NioChannel<FileChannel>> readHandler : readHandlers) {
                         try {
-                            final java.nio.channels.FileChannel fileChannel = readMultiplexorHandler.getChannel();
+                            final NioChannel<FileChannel> channel = readHandler.getChannel();
+                            final java.nio.channels.FileChannel fileChannel = channel.getChannel();
                             if(fileChannel.position() < fileChannel.size()) return true;
                         }
                         catch(final IOException e) {
@@ -223,12 +228,12 @@ public final class PoolingMultiplexorStrategy<T extends Channel> implements Mult
             doRead();
         }
 
-        public void register(final MultiplexorHandler<? extends java.nio.channels.FileChannel> multiplexorHandler, final int ops) {
+        public void register(final Handler<? extends NioChannel<FileChannel>> handler, final int ops) {
             if((ops & validOps) != 0) {
                 lock.lock();
                 try {
-                    if((ops & READ_OP) != 0) readMultiplexorHandlers = Arrays.add(readMultiplexorHandlers, multiplexorHandler);
-                    if((ops & WRITE_OP) != 0) writeMultiplexorHandlers = Arrays.add(writeMultiplexorHandlers, multiplexorHandler);
+                    if((ops & READ_OP) != 0) readHandlers = Arrays.add(readHandlers, handler);
+                    if((ops & WRITE_OP) != 0) writeHandlers = Arrays.add(writeHandlers, handler);
                 }
                 finally {
                     lock.unlock();
@@ -236,12 +241,12 @@ public final class PoolingMultiplexorStrategy<T extends Channel> implements Mult
             }
         }
 
-        public void deregister(final MultiplexorHandler<? extends java.nio.channels.FileChannel> multiplexorHandler, final int ops) {
+        public void deregister(final Handler<? extends NioChannel<FileChannel>> handler, final int ops) {
             if((ops & validOps) != 0) {
                 lock.lock();
                 try {
-                    if((ops & READ_OP) != 0) readMultiplexorHandlers = Arrays.remove(readMultiplexorHandlers, multiplexorHandler);
-                    if((ops & WRITE_OP) != 0) writeMultiplexorHandlers = Arrays.remove(writeMultiplexorHandlers, multiplexorHandler);
+                    if((ops & READ_OP) != 0) readHandlers = Arrays.remove(readHandlers, handler);
+                    if((ops & WRITE_OP) != 0) writeHandlers = Arrays.remove(writeHandlers, handler);
                 }
                 finally {
                     lock.unlock();
@@ -252,8 +257,8 @@ public final class PoolingMultiplexorStrategy<T extends Channel> implements Mult
         public void destroy() {
             lock.lock();
             try {
-                readMultiplexorHandlers = Arrays.newArray(MultiplexorHandler.class, 0);
-                writeMultiplexorHandlers = Arrays.newArray(MultiplexorHandler.class, 0);
+                readHandlers = Arrays.newArray(Handler.class, 0);
+                writeHandlers = Arrays.newArray(Handler.class, 0);
             }
             finally {
                 lock.unlock();
@@ -261,17 +266,17 @@ public final class PoolingMultiplexorStrategy<T extends Channel> implements Mult
         }
 
         private void doRead() {
-            final MultiplexorHandler[] multiplexorHandlers = readMultiplexorHandlers;
-            for(final MultiplexorHandler multiplexorHandler : multiplexorHandlers) multiplexorHandler.doRead(1024);
+            final Handler[] handlers = readHandlers;
+            for(final Handler handler : handlers) handler.doRead(1024);
         }
 
         private void doWrite() {
-            final MultiplexorHandler[] multiplexorHandlers = writeMultiplexorHandlers;
-            for(final MultiplexorHandler multiplexorHandler : multiplexorHandlers) multiplexorHandler.doWrite(1024);
+            final Handler[] handlers = writeHandlers;
+            for(final Handler handler : handlers) handler.doWrite(1024);
         }
     }
 
-    private static final class SelectableChannelMultiplexor extends Multiplexor<SelectableChannel> {
+    private static final class SelectableChannelMultiplexor extends Multiplexor<NioChannel<? extends SelectableChannel>> {
 
         private static final int OP_CLOSE = 2;
 
@@ -294,8 +299,10 @@ public final class PoolingMultiplexorStrategy<T extends Channel> implements Mult
             }
         }
 
-        public boolean supports(final MultiplexorHandler<?> multiplexorHandler) {
-            return multiplexorHandler.getChannel() instanceof SelectableChannel;
+        public boolean supports(final Handler<?> handler) {
+            final Channel channel = handler.getChannel();
+            return channel instanceof NioChannel &&
+                   ((NioChannel) channel).getChannel() instanceof SelectableChannel;
         }
 
         public boolean isReady() {
@@ -310,17 +317,17 @@ public final class PoolingMultiplexorStrategy<T extends Channel> implements Mult
                         selectionKeyIterator.hasNext();) {
                         try {
                             final SelectionKey selectionKey = selectionKeyIterator.next();
-                            final MultiplexorHandler<SelectableChannel> multiplexorHandler = (MultiplexorHandler<SelectableChannel>) selectionKey.attachment();
+                            final Handler<? extends SelectableChannel> handler = (Handler<? extends SelectableChannel>) selectionKey.attachment();
                             final SelectableChannel selectableChannel = selectionKey.channel();
                             if(selectableChannel.isOpen()) {
                                 final int readyOps = selectionKey.readyOps() & selectorOps;
-                                if((readyOps & SelectionKey.OP_CONNECT) != 0) multiplexorHandler.doOpen();
-                                if((readyOps & SelectionKey.OP_ACCEPT) != 0) multiplexorHandler.doOpen();
-                                if((readyOps & SelectionKey.OP_READ) != 0) multiplexorHandler.doRead(readPollSize);
-                                if((readyOps & SelectionKey.OP_WRITE) != 0) multiplexorHandler.doWrite(writePollSize);
+                                if((readyOps & SelectionKey.OP_CONNECT) != 0) handler.doOpen();
+                                if((readyOps & SelectionKey.OP_ACCEPT) != 0) handler.doOpen();
+                                if((readyOps & SelectionKey.OP_READ) != 0) handler.doRead(readPollSize);
+                                if((readyOps & SelectionKey.OP_WRITE) != 0) handler.doWrite(writePollSize);
                             }
                             else  {
-                                if((selectorOps & OP_CLOSE) == 0) multiplexorHandler.doClose();
+                                if((selectorOps & OP_CLOSE) == 0) handler.doClose();
                                 selectionKey.cancel();
                             }
                         }
@@ -336,12 +343,13 @@ public final class PoolingMultiplexorStrategy<T extends Channel> implements Mult
             }
         }
 
-        public void register(final MultiplexorHandler<? extends SelectableChannel> multiplexorHandler, final int ops) {
+        public void register(final Handler<? extends NioChannel<? extends SelectableChannel>> handler, final int ops) {
             try {
-                final SelectableChannel selectableChannel = multiplexorHandler.getChannel();
+                final NioChannel<? extends SelectableChannel> channel = handler.getChannel();
+                final SelectableChannel selectableChannel = channel.getChannel();
                 final int interestOps = toSelectorOps(ops) & selectorOps & selectableChannel.validOps();
                 if(interestOps != 0) {
-                     SelectionKey selectionKey = selectableChannel.keyFor(selector);
+                    final SelectionKey selectionKey = selectableChannel.keyFor(selector);
                     if(selectionKey != null && selectionKey.isValid()) {
                         selectionKey.interestOps(selectionKey.interestOps() | interestOps);
                     }
@@ -349,7 +357,7 @@ public final class PoolingMultiplexorStrategy<T extends Channel> implements Mult
                         pendingRegister.incrementAndGet();
                         try {
                             selector.wakeup();
-                            selectableChannel.register(selector, interestOps, multiplexorHandler);
+                            selectableChannel.register(selector, interestOps, handler);
                         }
                         finally {
                             pendingRegister.decrementAndGet();
@@ -362,8 +370,9 @@ public final class PoolingMultiplexorStrategy<T extends Channel> implements Mult
             }
         }
 
-        public void deregister(final MultiplexorHandler<? extends SelectableChannel> multiplexorHandler, final int ops) {
-            final SelectableChannel selectableChannel = multiplexorHandler.getChannel();
+        public void deregister(final Handler<? extends NioChannel<? extends SelectableChannel>> handler, final int ops) {
+            final NioChannel<? extends SelectableChannel> channel = handler.getChannel();
+            final SelectableChannel selectableChannel = channel.getChannel();
             final SelectionKey selectionKey = selectableChannel.keyFor(selector);
             if(selectionKey != null && selectionKey.isValid()) {
                 final int interestOps = (toSelectorOps(ops) & selectorOps & selectableChannel.validOps()) ^ selectionKey.interestOps();
