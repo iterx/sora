@@ -5,7 +5,7 @@ import org.iterx.sora.io.connector.endpoint.AcceptorEndpoint;
 import org.iterx.sora.io.connector.endpoint.ConnectorEndpoint;
 import org.iterx.sora.io.connector.endpoint.Endpoint;
 
-public interface SessionProvider<S extends Session<?, T>, T> {
+public interface SessionFactory<S extends Session<?, T>, T> {
 
     boolean supports(Endpoint endpoint);
 

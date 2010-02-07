@@ -1,23 +1,23 @@
 package org.iterx.sora.io.connector.support.nio.session.file;
 
 import org.iterx.sora.io.connector.Connector;
-import org.iterx.sora.io.connector.Multiplexor;
+import org.iterx.sora.io.connector.multiplexor.Multiplexor;
 import org.iterx.sora.io.connector.endpoint.AcceptorEndpoint;
 import org.iterx.sora.io.connector.endpoint.ConnectorEndpoint;
 import org.iterx.sora.io.connector.endpoint.Endpoint;
 import org.iterx.sora.io.connector.session.Session;
-import org.iterx.sora.io.connector.session.SessionProvider;
+import org.iterx.sora.io.connector.session.SessionFactory;
 
 import java.nio.ByteBuffer;
 import java.util.regex.Pattern;
 
-public final class FileSessionProvider implements SessionProvider<FileSession, ByteBuffer> {
+public final class FileSessionFactory implements SessionFactory<FileSession, ByteBuffer> {
 
     private static final Pattern URI_PATTERN = Pattern.compile("(file:)?//(/[^#]*)?(#.*)?");
 
     private final Multiplexor<? super FileChannel> multiplexor;
 
-    public FileSessionProvider(final Multiplexor<? super FileChannel> multiplexor) {
+    public FileSessionFactory(final Multiplexor<? super FileChannel> multiplexor) {
         this.multiplexor = multiplexor;
     }
 

@@ -1,7 +1,7 @@
 package org.iterx.sora.io.connector.support.nio.session.udp;
 
 import org.iterx.sora.io.IoException;
-import org.iterx.sora.io.connector.Multiplexor;
+import org.iterx.sora.io.connector.multiplexor.Multiplexor;
 import org.iterx.sora.io.connector.session.AbstractChannel;
 import org.iterx.sora.collection.queue.MultiProducerSingleConsumerBlockingQueue;
 import org.iterx.sora.io.connector.support.nio.session.NioChannel;
@@ -23,7 +23,7 @@ public final class UdpChannel extends AbstractChannel<ByteBuffer> implements Nio
     private final Multiplexor<? super NioChannel<DatagramChannel>> multiplexor;
     private final Callback<? super UdpChannel, ByteBuffer> channelCallback;
     private final DatagramChannel datagramChannel;
-    private final Handler multiplexorHandler;
+    private final MultiplexorHandler multiplexorHandler;
 
     private final MultiProducerSingleConsumerBlockingQueue<ByteBuffer> readBlockingQueue;
     private final MultiProducerSingleConsumerBlockingQueue<ByteBuffer> writeBlockingQueue;
@@ -40,7 +40,7 @@ public final class UdpChannel extends AbstractChannel<ByteBuffer> implements Nio
         this.writeBlockingQueue = new MultiProducerSingleConsumerBlockingQueue<ByteBuffer>(128);
         this.queueLock = new ReentrantLock();
         this.emptyQueueCondition = queueLock.newCondition();
-        this.multiplexorHandler = new Handler();
+        this.multiplexorHandler = new MultiplexorHandler();
 
         this.multiplexor = multiplexor;
         this.channelCallback = channelCallback;
@@ -171,7 +171,7 @@ public final class UdpChannel extends AbstractChannel<ByteBuffer> implements Nio
         channelCallback.onWrite(this, buffer);
     }
 
-    private class Handler implements Multiplexor.Handler<UdpChannel> {
+    private class MultiplexorHandler implements Multiplexor.Handler<UdpChannel> {
 
         public UdpChannel getChannel() {
             return UdpChannel.this;

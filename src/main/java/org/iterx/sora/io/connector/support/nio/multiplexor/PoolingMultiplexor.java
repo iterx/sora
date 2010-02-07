@@ -2,15 +2,14 @@ package org.iterx.sora.io.connector.support.nio.multiplexor;
 
 import org.iterx.sora.io.IoException;
 import org.iterx.sora.collection.Arrays;
+import org.iterx.sora.io.connector.multiplexor.Multiplexor;
 import org.iterx.sora.io.connector.session.Channel;
-import org.iterx.sora.io.connector.Multiplexor;
 import org.iterx.sora.io.connector.support.nio.session.NioChannel;
 
 import java.io.IOException;
 import java.nio.channels.FileChannel;
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
-import java.nio.channels.Selector;
 import java.util.Iterator;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadFactory;
@@ -28,20 +27,20 @@ public final class PoolingMultiplexor<T extends NioChannel> implements Multiplex
     private final Worker writeWorker;
     private final Worker readWorker;
 
-    public PoolingMultiplexor(final Worker openCloseWorker,
-                              final Worker writeWorker,
-                              final Worker readWorker) {
+    private PoolingMultiplexor(final Worker openCloseWorker,
+                               final Worker writeWorker,
+                               final Worker readWorker) {
         this.openCloseWorker = openCloseWorker;
         this.writeWorker = writeWorker;
         this.readWorker = readWorker;
     }
 
-    public static PoolingMultiplexor<?> newSinglePoolMultiplexorStrategy(final ThreadFactory threadFactory) {
+    public static PoolingMultiplexor<?> newSinglePoolingMultiplexor(final ThreadFactory threadFactory) {
         final Worker readWriteOpenCloseWorker = new Worker(threadFactory, READ_OP|WRITE_OP|OPEN_OP|CLOSE_OP);
         return new PoolingMultiplexor(readWriteOpenCloseWorker, readWriteOpenCloseWorker, readWriteOpenCloseWorker);
     }
 
-    public static PoolingMultiplexor<?> newOpenReadWritePoolMultiplexorStrategy(final ThreadFactory threadFactory) {
+    public static PoolingMultiplexor<?> newOpenReadWritePoolingMultiplexor(final ThreadFactory threadFactory) {
         final Worker readWorker = new Worker(threadFactory, READ_OP);
         final Worker writeWorker = new Worker(threadFactory, WRITE_OP);
         final Worker openCloseWorker = new Worker(threadFactory, OPEN_OP|CLOSE_OP);
@@ -280,7 +279,7 @@ public final class PoolingMultiplexor<T extends NioChannel> implements Multiplex
 
         private static final int OP_CLOSE = 2;
 
-        private final Selector selector;
+        private final java.nio.channels.Selector selector;
         private final int selectorOps;
 
         private final int readPollSize = 4096; //TODO: read in via properties.... or self tune???
@@ -291,7 +290,7 @@ public final class PoolingMultiplexor<T extends NioChannel> implements Multiplex
         public SelectableChannelMultiplexor(final int validOps) {
             try {
                 this.pendingRegister = new AtomicInteger();
-                this.selector = Selector.open();
+                this.selector = java.nio.channels.Selector.open();
                 this.selectorOps = toSelectorOps(validOps);
             }
             catch(final IOException e) {

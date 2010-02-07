@@ -2,7 +2,7 @@ package org.iterx.sora.io.connector.support.nio.session.tcp;
 
 import org.iterx.sora.io.IoException;
 import org.iterx.sora.io.Uri;
-import org.iterx.sora.io.connector.Multiplexor;
+import org.iterx.sora.io.connector.multiplexor.Multiplexor;
 import org.iterx.sora.io.connector.endpoint.AcceptorEndpoint;
 import org.iterx.sora.io.connector.endpoint.ConnectorEndpoint;
 import org.iterx.sora.io.connector.session.Channel;
@@ -175,11 +175,11 @@ public final class TcpSession extends AbstractSession<TcpChannel, ByteBuffer> {
 
             private final ServerSocketChannel serverSocketChannel;
             private final SocketAddress socketAddress;
-            private final Handler multiplexorHandler;
+            private final MultiplexorHandler multiplexorHandler;
 
             private AcceptorTcpChannel(final ServerSocketChannel serverSocketChannel,
                                        final SocketAddress socketAddress) {
-                this.multiplexorHandler = new Handler();
+                this.multiplexorHandler = new MultiplexorHandler();
                 this.serverSocketChannel = serverSocketChannel;
                 this.socketAddress = socketAddress;
 
@@ -225,7 +225,7 @@ public final class TcpSession extends AbstractSession<TcpChannel, ByteBuffer> {
                 }
             }
 
-            private class Handler implements Multiplexor.Handler<AcceptorTcpChannel> {
+            private class MultiplexorHandler implements Multiplexor.Handler<AcceptorTcpChannel> {
 
                 public AcceptorTcpChannel getChannel() {
                     return AcceptorTcpChannel.this;

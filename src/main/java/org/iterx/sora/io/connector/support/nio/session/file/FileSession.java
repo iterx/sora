@@ -3,9 +3,9 @@ package org.iterx.sora.io.connector.support.nio.session.file;
 import org.iterx.sora.io.IoException;
 import org.iterx.sora.io.Uri;
 import org.iterx.sora.io.connector.endpoint.ConnectorEndpoint;
+import org.iterx.sora.io.connector.multiplexor.Multiplexor;
 import org.iterx.sora.io.connector.session.Channel;
 import org.iterx.sora.io.connector.session.AbstractSession;
-import org.iterx.sora.io.connector.Multiplexor;
 import org.iterx.sora.collection.Collections;
 
 import java.io.File;

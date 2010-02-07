@@ -4,9 +4,9 @@ import org.iterx.sora.io.IoException;
 import org.iterx.sora.io.Uri;
 import org.iterx.sora.io.connector.endpoint.AcceptorEndpoint;
 import org.iterx.sora.io.connector.endpoint.ConnectorEndpoint;
+import org.iterx.sora.io.connector.multiplexor.Multiplexor;
 import org.iterx.sora.io.connector.session.Channel;
 import org.iterx.sora.io.connector.session.AbstractSession;
-import org.iterx.sora.io.connector.Multiplexor;
 import org.iterx.sora.collection.Map;
 import org.iterx.sora.collection.map.HashMap;
 import org.iterx.sora.io.connector.support.nio.session.NioChannel;
@@ -197,12 +197,12 @@ public final class UdpSession extends AbstractSession<UdpChannel, ByteBuffer>  {
 
             private final DatagramChannel datagramChannel;
             private final SocketAddress localSocketAddress;
-            private final Handler multiplexorHandler;
+            private final MultiplexorHandler multiplexorHandler;
 
             private AcceptorUdpChannel(final DatagramChannel datagramChannel,
                                        final SocketAddress socketAddress) {
 
-                this.multiplexorHandler = new Handler();
+                this.multiplexorHandler = new MultiplexorHandler();
                 this.datagramChannel = datagramChannel;
                 this.localSocketAddress = socketAddress;
             }
@@ -247,13 +247,13 @@ public final class UdpSession extends AbstractSession<UdpChannel, ByteBuffer>  {
                 }
             }
 
-            private class Handler implements Multiplexor.Handler<AcceptorUdpChannel> {
+            private class MultiplexorHandler implements Multiplexor.Handler<AcceptorUdpChannel> {
 
                 private final ByteBuffer readBuffer;
 
                 private volatile SocketAddress remoteSocketAddress;
 
-                private Handler() {
+                private MultiplexorHandler() {
                     this.readBuffer =  ByteBuffer.allocate(4096); //TODO: size by packet
                 }
 

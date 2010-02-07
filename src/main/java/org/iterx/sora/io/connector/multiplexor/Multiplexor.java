@@ -1,6 +1,8 @@
-package org.iterx.sora.io.connector;
+package org.iterx.sora.io.connector.multiplexor;
 
 import org.iterx.sora.io.connector.session.Channel;
+
+import java.util.concurrent.TimeUnit;
 
 public interface Multiplexor<T extends Channel> {
 
@@ -26,5 +28,18 @@ public interface Multiplexor<T extends Channel> {
         int doWrite(int length);
 
         void doClose();
+    }
+
+    public interface Selector<T extends Channel> {
+
+        boolean isReady();
+
+        void poll(long time, TimeUnit timeUnit);
+
+        void register(Handler<? extends T> handler, int ops);
+
+        void deregister(Handler<? extends T> handler, int ops);
+
+        void destroy();
     }
 }

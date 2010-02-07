@@ -1,7 +1,7 @@
 package org.iterx.sora.io.connector.support.nio.session.file;
 
 import org.iterx.sora.io.IoException;
-import org.iterx.sora.io.connector.Multiplexor;
+import org.iterx.sora.io.connector.multiplexor.Multiplexor;
 import org.iterx.sora.io.connector.session.AbstractChannel;
 import org.iterx.sora.collection.queue.MultiProducerSingleConsumerBlockingQueue;
 import org.iterx.sora.io.connector.support.nio.session.NioChannel;
@@ -22,7 +22,7 @@ public final class FileChannel extends AbstractChannel<ByteBuffer> implements Ni
     private final Multiplexor<? super FileChannel> multiplexor;
     private final Callback<? super FileChannel, ByteBuffer> channelCallback;
     private final java.nio.channels.FileChannel fileChannel;
-    private final Handler multiplexorHandler;
+    private final MultiplexorHandler multiplexorHandler;
 
     private final MultiProducerSingleConsumerBlockingQueue<ByteBuffer> readBlockingQueue;
     private final MultiProducerSingleConsumerBlockingQueue<ByteBuffer> writeBlockingQueue;
@@ -39,7 +39,7 @@ public final class FileChannel extends AbstractChannel<ByteBuffer> implements Ni
         this.writeBlockingQueue = new MultiProducerSingleConsumerBlockingQueue<ByteBuffer>(128);
         this.queueLock = new ReentrantLock();
         this.emptyQueueCondition = queueLock.newCondition();
-        this.multiplexorHandler = new Handler();
+        this.multiplexorHandler = new MultiplexorHandler();
 
         this.multiplexor = multiplexor;
         this.channelCallback = channelCallback;
@@ -158,7 +158,6 @@ public final class FileChannel extends AbstractChannel<ByteBuffer> implements Ni
         return super.onClosed();
     }
 
-
     private void doRead(final ByteBuffer buffer) {
         channelCallback.onRead(this, buffer);
     }
@@ -167,7 +166,7 @@ public final class FileChannel extends AbstractChannel<ByteBuffer> implements Ni
         channelCallback.onWrite(this, buffer);
     }
 
-    private class Handler implements Multiplexor.Handler<FileChannel> {
+    private class MultiplexorHandler implements Multiplexor.Handler<FileChannel> {
 
         public FileChannel getChannel() {
             return FileChannel.this;
