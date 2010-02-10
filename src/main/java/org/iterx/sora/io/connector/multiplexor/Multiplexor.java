@@ -1,9 +1,11 @@
 package org.iterx.sora.io.connector.multiplexor;
 
 import org.iterx.sora.io.connector.session.Channel;
+import org.iterx.sora.util.Concurrent;
 
 import java.util.concurrent.TimeUnit;
 
+@Concurrent
 public interface Multiplexor<T extends Channel> {
 
     public static final int OPEN_OP = 0x1;

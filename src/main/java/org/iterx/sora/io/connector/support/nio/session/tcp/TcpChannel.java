@@ -1,5 +1,6 @@
 package org.iterx.sora.io.connector.support.nio.session.tcp;
 
+import org.iterx.sora.collection.queue.SingleProducerSingleConsumerBlockingQueue;
 import org.iterx.sora.io.IoException;
 import org.iterx.sora.io.connector.multiplexor.Multiplexor;
 import org.iterx.sora.io.connector.session.AbstractChannel;
@@ -27,8 +28,8 @@ public final class TcpChannel extends AbstractChannel<ByteBuffer> implements Nio
     private final SocketAddress socketAddress;
     private final MultiplexorHandler multiplexorHandler;
 
-    private final MultiProducerSingleConsumerBlockingQueue<ByteBuffer> readBlockingQueue;
-    private final MultiProducerSingleConsumerBlockingQueue<ByteBuffer> writeBlockingQueue;
+    private final BlockingQueue<ByteBuffer> readBlockingQueue;
+    private final BlockingQueue<ByteBuffer> writeBlockingQueue;
 
     private final Lock queueLock;
     private final Condition emptyQueueCondition;
@@ -39,8 +40,8 @@ public final class TcpChannel extends AbstractChannel<ByteBuffer> implements Nio
                       final Callback<? super TcpChannel, ByteBuffer> channelCallback,
                       final SocketChannel socketChannel,
                       final SocketAddress socketAddress) {
-        this.readBlockingQueue = new MultiProducerSingleConsumerBlockingQueue<ByteBuffer>(128);
-        this.writeBlockingQueue = new MultiProducerSingleConsumerBlockingQueue<ByteBuffer>(128);
+        this.readBlockingQueue = new SingleProducerSingleConsumerBlockingQueue<ByteBuffer>(128);
+        this.writeBlockingQueue = new SingleProducerSingleConsumerBlockingQueue<ByteBuffer>(128);
         this.queueLock = new ReentrantLock();
         this.emptyQueueCondition = queueLock.newCondition();
         this.multiplexorHandler = new MultiplexorHandler();

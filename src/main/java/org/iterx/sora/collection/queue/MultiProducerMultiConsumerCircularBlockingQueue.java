@@ -9,17 +9,19 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 @Concurrent
-public final class MultiProducerMultiConsumerBlockingQueue<T> extends AbstractBlockingQueue<T> {
+public final class MultiProducerMultiConsumerCircularBlockingQueue<T> extends AbstractCircularBlockingQueue<T> {
 
     private final Lock lock;
 
-    public MultiProducerMultiConsumerBlockingQueue(final int capacity) {
-        this(new ReentrantLock(), capacity);
+    public MultiProducerMultiConsumerCircularBlockingQueue(final int capacity,
+                                                           final boolean overwrite) {
+        this(new ReentrantLock(), capacity, overwrite);
     }
 
-    private MultiProducerMultiConsumerBlockingQueue(final Lock lock,
-                                                    final int capacity) {
-        super(lock, lock, capacity);
+    private MultiProducerMultiConsumerCircularBlockingQueue(final Lock lock,
+                                                            final int capacity,
+                                                            final boolean overwrite) {
+        super(lock, lock, capacity, overwrite);
         this.lock = lock;
     }
 
@@ -44,6 +46,7 @@ public final class MultiProducerMultiConsumerBlockingQueue<T> extends AbstractBl
             lock.unlock();
         }
     }
+
 
     @Override
     public void put(final T value) throws InterruptedException {
@@ -88,6 +91,29 @@ public final class MultiProducerMultiConsumerBlockingQueue<T> extends AbstractBl
             lock.unlock();
         }
     }
+
+    @Override
+    public T get(final long index) {
+        lock.lock();
+        try {
+            return super.get(index);
+        }
+        finally {
+            lock.unlock();
+        }
+    }
+
+    @Override
+    public void rewind(final long index) {
+        lock.lock();
+        try {
+            super.rewind(index);
+        }
+        finally {
+            lock.unlock();
+        }
+    }
+
 
     @Override
     public T poll() {

@@ -6,18 +6,19 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-public final class MultiProducerSingleConsumerBlockingQueue<T> extends AbstractBlockingQueue<T> {
+public final class MultiProducerSingleConsumerCircularBlockingQueue<T> extends AbstractCircularBlockingQueue<T> {
 
     private final Lock enqueueLock;
 
-    public MultiProducerSingleConsumerBlockingQueue(final int capacity) {
-        this(new ReentrantLock(), new ReentrantLock(), capacity);
+    public MultiProducerSingleConsumerCircularBlockingQueue(final int capacity, final boolean overwrite) {
+        this(new ReentrantLock(), new ReentrantLock(), capacity, overwrite);
     }
 
-    private MultiProducerSingleConsumerBlockingQueue(final Lock enqueueLock,
-                                                    final Lock dequeueLock,
-                                                    final int capacity) {
-        super(enqueueLock, dequeueLock, capacity);
+    private MultiProducerSingleConsumerCircularBlockingQueue(final Lock enqueueLock,
+                                                             final Lock dequeueLock,
+                                                             final int capacity,
+                                                             final boolean overwrite) {
+        super(enqueueLock, dequeueLock, capacity, overwrite);
         this.enqueueLock = enqueueLock;
     }
 

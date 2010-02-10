@@ -1,5 +1,6 @@
 package org.iterx.sora.io.connector.support.nio.session.file;
 
+import org.iterx.sora.collection.queue.SingleProducerSingleConsumerBlockingQueue;
 import org.iterx.sora.io.IoException;
 import org.iterx.sora.io.connector.multiplexor.Multiplexor;
 import org.iterx.sora.io.connector.session.AbstractChannel;
@@ -24,8 +25,8 @@ public final class FileChannel extends AbstractChannel<ByteBuffer> implements Ni
     private final java.nio.channels.FileChannel fileChannel;
     private final MultiplexorHandler multiplexorHandler;
 
-    private final MultiProducerSingleConsumerBlockingQueue<ByteBuffer> readBlockingQueue;
-    private final MultiProducerSingleConsumerBlockingQueue<ByteBuffer> writeBlockingQueue;
+    private final BlockingQueue<ByteBuffer> readBlockingQueue;
+    private final BlockingQueue<ByteBuffer> writeBlockingQueue;
 
     private final Lock queueLock;
     private final Condition emptyQueueCondition;
@@ -35,8 +36,8 @@ public final class FileChannel extends AbstractChannel<ByteBuffer> implements Ni
     public FileChannel(final Multiplexor<? super FileChannel> multiplexor,
                        final Callback<? super FileChannel, ByteBuffer> channelCallback,
                        final java.nio.channels.FileChannel fileChannel) {
-        this.readBlockingQueue = new MultiProducerSingleConsumerBlockingQueue<ByteBuffer>(128);
-        this.writeBlockingQueue = new MultiProducerSingleConsumerBlockingQueue<ByteBuffer>(128);
+        this.readBlockingQueue = new SingleProducerSingleConsumerBlockingQueue<ByteBuffer>(128);
+        this.writeBlockingQueue = new SingleProducerSingleConsumerBlockingQueue<ByteBuffer>(128);
         this.queueLock = new ReentrantLock();
         this.emptyQueueCondition = queueLock.newCondition();
         this.multiplexorHandler = new MultiplexorHandler();

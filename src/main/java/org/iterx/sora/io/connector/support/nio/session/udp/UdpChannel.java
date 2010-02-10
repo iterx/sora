@@ -1,5 +1,6 @@
 package org.iterx.sora.io.connector.support.nio.session.udp;
 
+import org.iterx.sora.collection.queue.SingleProducerSingleConsumerBlockingQueue;
 import org.iterx.sora.io.IoException;
 import org.iterx.sora.io.connector.multiplexor.Multiplexor;
 import org.iterx.sora.io.connector.session.AbstractChannel;
@@ -25,8 +26,8 @@ public final class UdpChannel extends AbstractChannel<ByteBuffer> implements Nio
     private final DatagramChannel datagramChannel;
     private final MultiplexorHandler multiplexorHandler;
 
-    private final MultiProducerSingleConsumerBlockingQueue<ByteBuffer> readBlockingQueue;
-    private final MultiProducerSingleConsumerBlockingQueue<ByteBuffer> writeBlockingQueue;
+    private final BlockingQueue<ByteBuffer> readBlockingQueue;
+    private final BlockingQueue<ByteBuffer> writeBlockingQueue;
 
     private final Lock queueLock;
     private final Condition emptyQueueCondition;
@@ -36,8 +37,8 @@ public final class UdpChannel extends AbstractChannel<ByteBuffer> implements Nio
     public UdpChannel(final Multiplexor<? super NioChannel<DatagramChannel>> multiplexor,
                       final Callback<? super UdpChannel, ByteBuffer> channelCallback,
                       final DatagramChannel datagramChannel) {
-        this.readBlockingQueue = new MultiProducerSingleConsumerBlockingQueue<ByteBuffer>(128);
-        this.writeBlockingQueue = new MultiProducerSingleConsumerBlockingQueue<ByteBuffer>(128);
+        this.readBlockingQueue = new SingleProducerSingleConsumerBlockingQueue<ByteBuffer>(128);
+        this.writeBlockingQueue = new SingleProducerSingleConsumerBlockingQueue<ByteBuffer>(128);
         this.queueLock = new ReentrantLock();
         this.emptyQueueCondition = queueLock.newCondition();
         this.multiplexorHandler = new MultiplexorHandler();

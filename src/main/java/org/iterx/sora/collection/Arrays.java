@@ -40,6 +40,11 @@ public final class Arrays {
         return array;
     }
 
+    public static <T> T[] clear(final T[] array) {
+        java.util.Arrays.fill(array, null);
+        return array; 
+    }
+
     public static <T> int indexOf(final T[] array, final T value){
         for(int i = 0, length = array.length; i != length; i++) if(array[i] == value) return i;
         return -1;
