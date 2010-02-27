@@ -6,58 +6,41 @@ import org.iterx.sora.tool.meta.Type;
 
 import java.util.Arrays;
 
-public final class ClassDeclaration implements Declaration<ClassDeclaration> {
+public final class InterfaceDeclaration implements Declaration<InterfaceDeclaration> {
 
     public static final Type[] EMPTY_INTERFACES = new Type[0];
-    public static final Modifier[] EMPTY_MODIFIERS = new Modifier[0];
 
     public enum Access implements Declaration.Access {  PUBLIC, PROTECTED, PRIVATE, DEFAULT }
-    public enum Modifier implements Declaration.Modifier { ABSTRACT, FINAL }
+    public enum Modifier implements Declaration.Modifier { ABSTRACT }
 
     private final Set<FieldDeclaration> fieldDeclarations;
-    private final Set<ConstructorDeclaration> constructorDeclarations;
     private final Set<MethodDeclaration> methodDeclarations;
     private final Type type;
     private Access access;
-    private Modifier[] modifiers;
-    private Type superType;
     private Type[] interfaceTypes;
 
-    private ClassDeclaration(final Type type) {
+    private InterfaceDeclaration(final Type type) {
         this.fieldDeclarations = new HashSet<FieldDeclaration>();
-        this.constructorDeclarations = new HashSet<ConstructorDeclaration>();
         this.methodDeclarations = new HashSet<MethodDeclaration>();
-        this.superType = Type.OBJECT_TYPE;
-        this.interfaceTypes = EMPTY_INTERFACES;
         this.access = Access.PUBLIC;
-        this.modifiers = EMPTY_MODIFIERS;
+        this.interfaceTypes = EMPTY_INTERFACES;
         this.type = type;
     }
 
-    public static ClassDeclaration newClassDeclaration(final Type type) {
+    public static InterfaceDeclaration newInterfaceDeclaration(final Type type) {
         assertType(type);
-        return new ClassDeclaration(type);
+        return new InterfaceDeclaration(type);
     }
 
     public Type getType() {
         return type;
     }
 
-    public Type getSuperType() {
-        return superType;
-    }
-
-    public ClassDeclaration setSuperType(final Type superType) {
-        assertType(superType);
-        this.superType = superType;
-        return this;
-    }
-
     public Type[] getInterfaceTypes() {
         return interfaceTypes;
     }
 
-    public ClassDeclaration setInterfaceTypes(final Type... interfaceTypes) {
+    public InterfaceDeclaration setInterfaceTypes(final Type... interfaceTypes) {
         assertType(interfaceTypes);
         this.interfaceTypes = interfaceTypes;
         return this;
@@ -67,20 +50,14 @@ public final class ClassDeclaration implements Declaration<ClassDeclaration> {
         return access;
     }
 
-    public ClassDeclaration setAccess(final Access access) {
+    public InterfaceDeclaration setAccess(final Access access) {
         assertAccess(access);
         this.access = access;
         return this;
     }
 
     public Modifier[] getModifiers() {
-        return modifiers;
-    }
-
-    public ClassDeclaration setModifiers(final Modifier... modifiers) {
-        assertModifiers(modifiers);
-        this.modifiers = modifiers;
-        return this;
+        return new Modifier[] { Modifier.ABSTRACT };
     }
 
     public FieldDeclaration[] getFieldDeclarations() {
@@ -94,17 +71,6 @@ public final class ClassDeclaration implements Declaration<ClassDeclaration> {
         throw new RuntimeException(new NoSuchFieldException());
     }
 
-    public ConstructorDeclaration[] getConstructorDeclarations() {
-        return constructorDeclarations.toArray(new ConstructorDeclaration[constructorDeclarations.size()]);
-    }
-
-    public ConstructorDeclaration getConstructorDeclaration(final Type... constructorTypes) {
-        for(final ConstructorDeclaration constructorDeclaration : constructorDeclarations) {
-            if(Arrays.equals(constructorDeclaration.getConstructorTypes(), constructorTypes)) return constructorDeclaration;
-        }
-        throw new RuntimeException(new NoSuchMethodException());
-    }
-    
     public MethodDeclaration[] getMethodDeclarations() {
         return methodDeclarations.toArray(new MethodDeclaration[methodDeclarations.size()]);
     }
@@ -117,46 +83,34 @@ public final class ClassDeclaration implements Declaration<ClassDeclaration> {
         throw new RuntimeException(new NoSuchMethodException());
     }
 
-    public ClassDeclaration add(final FieldDeclaration fieldDeclaration) {
+    
+    public InterfaceDeclaration add(final FieldDeclaration fieldDeclaration) {
         assertFieldDeclaration(fieldDeclaration);
         add(fieldDeclarations, fieldDeclaration);
         return this;
     }
 
-    public ClassDeclaration remove(final FieldDeclaration fieldDeclaration) {
+    public InterfaceDeclaration remove(final FieldDeclaration fieldDeclaration) {
         remove(fieldDeclarations, fieldDeclaration);
         return this;
     }
 
-    public ClassDeclaration add(final ConstructorDeclaration constructorDeclaration) {
-        assertConstructorDeclaration(constructorDeclaration);
-        add(constructorDeclarations, constructorDeclaration);
-        return this;
-    }
-
-    public ClassDeclaration remove(final ConstructorDeclaration constructorDeclaration) {
-        remove(constructorDeclarations, constructorDeclaration);
-        return this;
-    }
-    
-    public ClassDeclaration add(final MethodDeclaration methodDeclaration) {
+    public InterfaceDeclaration add(final MethodDeclaration methodDeclaration) {
         assertMethodDeclaration(methodDeclaration);
         add(methodDeclarations, methodDeclaration);
         return this;
     }
 
-    public ClassDeclaration remove(final MethodDeclaration methodDeclaration) {
+    public InterfaceDeclaration remove(final MethodDeclaration methodDeclaration) {
         remove(methodDeclarations, methodDeclaration);
         return this;
     }
 
-    public ClassDeclaration add(final Declarations declarations) {
+    public InterfaceDeclaration add(final Declarations declarations) {
         assertDeclarations(declarations);
         for(final Declaration declaration : declarations) {
-            //TODO: fix this...
             if(DeclarationType.FIELD.isa(declaration)) add(DeclarationType.FIELD.cast(declaration));
             else if(DeclarationType.METHOD.isa(declaration)) add(DeclarationType.METHOD.cast(declaration));
-            else if(DeclarationType.CONSTRUCTOR.isa(declaration)) add(DeclarationType.CONSTRUCTOR.cast(declaration));
             else throw new IllegalStateException();
         }
         return this;
@@ -170,16 +124,21 @@ public final class ClassDeclaration implements Declaration<ClassDeclaration> {
     @Override
     public boolean equals(final Object object) {
         return (this ==  object) ||
-               (object != null && object.getClass() == getClass() && type.equals(((ClassDeclaration) object).type));
+               (object != null && object.getClass() == getClass() && type.equals(((InterfaceDeclaration) object).type));
     }
 
     @Override
     public String toString() {
         return new StringBuilder().
-                append("ClassDeclaration: ").
-                append(type).
-                toString();
+                append("InterfaceDeclaration\n{\n").
+                append("access = ").append(access).append(",\n").
+                append("type = ").append(type).append(",\n").
+                append("interfaceTypes = ").append(Arrays.toString(interfaceTypes)).append(",\n").
+                append("fields = ").append(fieldDeclarations).append(",\n").
+                append("methods = ").append(methodDeclarations).append("\n").
+                append("}").toString();
     }
+
 
     private static <T> void add(final Set<T> declarations, final T declaration) {
         if(declarations.contains(declaration)) throw new IllegalStateException();
@@ -198,11 +157,8 @@ public final class ClassDeclaration implements Declaration<ClassDeclaration> {
     }
 
     private static void assertAccess(final Access access) {
-        if(access == null) throw new IllegalArgumentException("access == null");
-    }
-
-    private static void assertModifiers(final Modifier... modifiers) {
-        if(modifiers == null) throw new IllegalArgumentException("modifiers == null");
+        if(access != Access.DEFAULT && access != Access.PUBLIC)
+            throw new IllegalArgumentException("Unsupported access '" + access + "'");
     }
 
     private static void assertDeclarations(final Declarations declarations) {
@@ -218,11 +174,6 @@ public final class ClassDeclaration implements Declaration<ClassDeclaration> {
         //TODO: check that newField is static final
     }
 
-    private static void assertConstructorDeclaration(final ConstructorDeclaration constructorDeclaration) {
-        if(constructorDeclaration == null) throw new IllegalArgumentException("constructorDeclaration == null");
-        //TODO: check that method is abstract or static
-    }
-    
     private static void assertMethodDeclaration(final MethodDeclaration methodDeclaration) {
         if(methodDeclaration == null) throw new IllegalArgumentException("methodDeclaration == null");
         //TODO: check that method is abstract or static

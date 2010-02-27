@@ -1,192 +1,160 @@
 package org.iterx.sora.tool.meta.support.asm;
 
+import org.iterx.sora.tool.meta.Type;
 import org.iterx.sora.tool.meta.declaration.ClassDeclaration;
 import org.iterx.sora.tool.meta.declaration.ConstructorDeclaration;
 import org.iterx.sora.tool.meta.declaration.Declaration;
 import org.iterx.sora.tool.meta.declaration.FieldDeclaration;
+import org.iterx.sora.tool.meta.declaration.InterfaceDeclaration;
 import org.iterx.sora.tool.meta.declaration.MethodDeclaration;
-import org.iterx.sora.tool.meta.statement.AssignStatement;
-import org.iterx.sora.tool.meta.statement.GetFieldStatement;
-import org.iterx.sora.tool.meta.statement.InvokeInitStatement;
-import org.iterx.sora.tool.meta.statement.PutFieldStatement;
-import org.iterx.sora.tool.meta.statement.ReturnVariableStatement;
-import org.iterx.sora.tool.meta.statement.Statement;
-import org.objectweb.asm.ClassVisitor;
+import org.iterx.sora.tool.meta.util.DeclarationReader;
+import org.iterx.sora.tool.meta.util.DeclarationVisitor;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.MethodVisitor;
-import org.objectweb.asm.Type;
 
-import java.lang.reflect.Method;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
+import java.lang.reflect.Field;
 
+import static org.objectweb.asm.Opcodes.V1_7;
+import static org.objectweb.asm.Opcodes.ACC_INTERFACE;
+import static org.objectweb.asm.Opcodes.RETURN;
 
-public abstract class AsmCompiler<V, C, T> {
+public final class AsmCompiler {
 
-    private static final Map<Class, Dispatcher> DISPATCHERS = new HashMap<Class, Dispatcher>();
+    private AsmCompiler() {}
 
-    static
-    {
-        register(new ClassDeclaration.ClassDeclarationAsmCompiler());
-        register(new ConstructorDeclaration.ConstructorDeclarationCompiler());
-        register(new MethodDeclaration.MethodDeclarationAsmCompiler());
-        register(new FieldDeclaration.FieldDeclarationAsmCompiler());
-        register(new GetFieldStatement.GetFieldStatementAsmCompiler());
-        register(new PutFieldStatement.PutFieldStatementAsmCompiler());
-        register(new InvokeInitStatement.InvokeSuperStatementAsmCompiler());
-        register(new AssignStatement.AssignStatementAsmCompiler());
-        register(new ReturnVariableStatement.ReturnStatementAsmCompiler());
+    public static byte[] compile(final Declaration<?> declaration) {
+        final DeclarationReader declarationReader = new DeclarationReader(declaration);
+        final CompilerDeclarationVisitor compilerDeclarationVisitor = new CompilerDeclarationVisitor();
+
+        declarationReader.accept(compilerDeclarationVisitor);
+        return compilerDeclarationVisitor.getBytes();
     }
 
-    public static byte[] compile(final Declaration declaration) {
-        final ClassWriter classWriter = new ClassWriter(ClassWriter.COMPUTE_MAXS);
-        loadDispatcher(declaration).compile(classWriter, new DeclarationContext<Declaration>(declaration));
-        return classWriter.toByteArray();
-    }
+    private static class CompilerDeclarationVisitor implements DeclarationVisitor {
 
-    private final Class contextClass;
-    private final Class<V> visitorClass;
-    private final Class<T> targetClass;
+        private final ClassWriter classWriter;
 
-    protected AsmCompiler(final Class<V> visitorClass,
-                          final Class<T> targetClass) {
-        this.contextClass = (Statement.class.isAssignableFrom(targetClass))? 
-                            StatementContext.class :
-                            DeclarationContext.class;
-        this.visitorClass = visitorClass;
-        this.targetClass = targetClass;
-    }
-
-    public abstract void compile(final V visitor, final C context);
-
-    public <S extends Declaration> void compile(final ClassVisitor visitor, final DeclarationContext<?> context, final S declaration)  {
-        loadDispatcher(declaration).compile(visitor, new DeclarationContext<S>(context, declaration));
-    }
-
-    public  void compile(final MethodVisitor visitor,
-                         final DeclarationContext<?> context,
-                         final Collection<? extends Statement> statements)  {
-        final StatementContext statementContext = new StatementContext(context, null);
-        for(final Statement<?> statement : statements) compile(visitor, statementContext, statement);
-        //loadDispatcher(statement).compile(visitor, new StatementContext<S>(context, statement));
-    }
-
-    public <S extends Statement> void compile(final MethodVisitor visitor, final StatementContext<?> context, final S statement)  {
-        loadDispatcher(statement).compile(visitor, new StatementContext<S>(context, statement));
-    }
-
-    public static class Context<T> {
-    }
-
-    public static class StatementContext<T extends Statement> {
-
-        private final DeclarationContext<? extends Declaration> declarationContext;
-        private final T statement;
-        private final Stack stack;
-
-        private StatementContext(final StatementContext<? extends Statement> statementContext,
-                                 final T statement) {
-            this.stack = statementContext.stack;
-            this.declarationContext = statementContext.declarationContext;
-            this.statement = statement;
+        private CompilerDeclarationVisitor() {
+            this.classWriter = new ClassWriter(ClassWriter.COMPUTE_MAXS);
         }
 
-        private StatementContext(final DeclarationContext<? extends Declaration> declarationContext,
-                                 final T statement) {
-
-            this.stack = newStack(declarationContext.getDeclaration());
-            this.declarationContext = declarationContext;
-            this.statement = statement;
+        public byte[] getBytes() {
+            return classWriter.toByteArray();
         }
 
-        public DeclarationContext<? extends Declaration> getDeclarationContext() {
-            return declarationContext;
+        public void startClassDeclaration(final ClassDeclaration classDeclaration) {
+            classWriter.visit(V1_7,
+                              toAccess(classDeclaration.getAccess()) | toModifier(classDeclaration.getModifiers()),
+                              toName(classDeclaration.getType()),
+                              null,
+                              toName(classDeclaration.getSuperType()),
+                              toNames(classDeclaration.getInterfaceTypes()));
         }
 
-        public T getStatement() {
-            return statement;
+        public void startInterfaceDeclaration(final InterfaceDeclaration interfaceDeclaration) {
+            classWriter.visit(V1_7,
+                              ACC_INTERFACE | toAccess(interfaceDeclaration.getAccess()) | toModifier(interfaceDeclaration.getModifiers()),
+                              toName(interfaceDeclaration.getType()),
+                              null,
+                              toName(Type.OBJECT_TYPE),
+                              toNames(interfaceDeclaration.getInterfaceTypes()));
         }
 
-        public Stack getStack() {
-            return stack;
+        public void fieldDeclaration(final FieldDeclaration fieldDeclaration) {
+
         }
 
-        private Stack newStack(final Declaration declaration) {
-            final Type[] types = (declaration.getClass() == MethodDeclaration.class)?
-                                 ((MethodDeclaration) declaration).getArgumentTypes() :
-                                 (declaration.getClass() == ConstructorDeclaration.class)?
-                                 ((ConstructorDeclaration) declaration).getConstructorTypes() :
-                                 new Type[0];
-            final Stack stack = new Stack();
-            for(int i = 0, length = types.length; i != length; i++) stack.push("arg" + i, types[i]);
-            return stack;
+        public void constructorDeclaration(final ConstructorDeclaration constructorDeclaration) {
+            final MethodVisitor methodVisitor = classWriter.visitMethod(toAccess(constructorDeclaration.getAccess()) | toModifier(constructorDeclaration.getModifiers()),
+                                                                        "<init>",
+                                                                        toMethodDescription(Type.VOID_TYPE, constructorDeclaration.getConstructorTypes()),
+                                                                        null,
+                                                                        null);
+            methodVisitor.visitCode();
+            //compile(methodVisitor, context, constructorDeclaration.getStatements());
+            methodVisitor.visitInsn(RETURN);
+            methodVisitor.visitMaxs(0, 0);
+            methodVisitor.visitEnd();
         }
 
-    }
-
-    public static class DeclarationContext<T extends Declaration> {
-
-        private final DeclarationContext<?> parent;
-        private final T declaration;
-
-        private DeclarationContext(final T declaration) {
-            this.parent = null;
-            this.declaration = declaration;
+        public void methodDeclaration(final MethodDeclaration methodDeclaration) {
+            final MethodVisitor methodVisitor = classWriter.visitMethod(toAccess(methodDeclaration.getAccess()) | toModifier(methodDeclaration.getModifiers()),
+                                                                        methodDeclaration.getMethodName(),
+                                                                        toMethodDescription(methodDeclaration.getReturnType(), methodDeclaration.getArgumentTypes()),
+                                                                        null,
+                                                                        null);
+            methodVisitor.visitCode();
+            // compile(methodVisitor, context, methodDeclaration.getStatements());
+            if(methodDeclaration.getReturnType() == Type.VOID_TYPE) methodVisitor.visitInsn(RETURN);
+            methodVisitor.visitMaxs(0, 0);
+            methodVisitor.visitEnd();
         }
 
-        private DeclarationContext(final DeclarationContext<?> parent, final T declaration) {
-            this.parent = parent;
-            this.declaration = declaration;
+        public void endClassDeclaration() {
+            classWriter.visitEnd();
         }
 
-        @SuppressWarnings("unchecked")
-        public <T extends Declaration> DeclarationContext<T> getParent(final Class<T> declarationClass) {
-            if(parent == null) throw new IllegalStateException();
-            return (parent.getDeclaration().getClass() == declarationClass)?
-                   (DeclarationContext<T>) parent :
-                   getParent(declarationClass);
-        }
-
-        public T getDeclaration() {
-            return declaration;
+        public void endInterfaceDeclaration() {
+            classWriter.visitEnd();
         }
     }
 
+    private static int toAccess(final Declaration.Access access) {
+        return getAsmOpcode("ACC_" + access.name());
+    }
 
-    private static class Dispatcher {
+    private static int toModifier(final Declaration.Modifier... modifiers) {
+        int access = 0;
+        for(final Declaration.Modifier modifier : modifiers) access |= getAsmOpcode("ACC_" + modifier.name());
+        return access;
+    }
 
-        private final AsmCompiler asmCompiler;
-        private final Method compile;
-
-        private Dispatcher(final AsmCompiler asmCompiler) {
-            try {
-                this.asmCompiler = asmCompiler;
-                this.compile = asmCompiler.getClass().getDeclaredMethod("compile", asmCompiler.visitorClass, asmCompiler.contextClass);
-            }
-            catch(final NoSuchMethodException e) {
-                throw new RuntimeException(e);
-            }
+    private static String toMethodDescription(final Type type, final Type... types) {
+        final org.objectweb.asm.Type returnType = getAsmType(type);
+        if(types != null) {
+            final org.objectweb.asm.Type[] argumentTypes = new org.objectweb.asm.Type[types.length];
+            for(int i = argumentTypes.length; i-- != 0;) argumentTypes[i] = getAsmType(types[i]);
+            return org.objectweb.asm.Type.getMethodDescriptor(returnType, argumentTypes);
         }
+        return org.objectweb.asm.Type.getMethodDescriptor(returnType, new org.objectweb.asm.Type[0]);
+    }
 
-        private void compile(final Object visitor, final Object context)  {
-            try {
-                compile.invoke(asmCompiler, visitor, context);
-            }
-            catch(final Exception e) {
-                throw new RuntimeException(e);
-            }
+    private static String toName(final Type type) {
+        return getAsmType(type).getInternalName();
+    }
+
+    private static String[] toNames(final Type... types) {
+        if(types != null) {
+            final String[] names = new String[types.length];
+            for(int i = names.length; i-- != 0;) names[i] = toName(types[i]);
+            return names;
+        }
+        return null;
+    }
+
+    private static int getAsmOpcode(final String name) {
+        try {
+            final Field field = org.objectweb.asm.Opcodes.class.getField(name);
+            return (Integer) field.get(org.objectweb.asm.Opcodes.class);
+        }
+        catch(final Exception e) {
+            return 0;
         }
     }
 
-    private static Dispatcher loadDispatcher(final Declaration declaration) {
-        final Dispatcher dispatcher = DISPATCHERS.get(declaration.getClass());
-        if(dispatcher != null) return dispatcher;
-        throw new IllegalArgumentException("Unsupported Declaration '" + declaration + "'");
-    }
-
-    private static void register(final AsmCompiler asmCompiler) {
-        DISPATCHERS.put(asmCompiler.targetClass, new Dispatcher(asmCompiler));
-    }
-
+    private static org.objectweb.asm.Type getAsmType(final Type type) {
+        final String name = type.getName();
+        if(name.equals("void")) return org.objectweb.asm.Type.VOID_TYPE;
+        else if(name.equals("boolean")) return org.objectweb.asm.Type.BOOLEAN_TYPE;
+        else if(name.equals("byte")) return org.objectweb.asm.Type.BYTE_TYPE;
+        else if(name.equals("char")) return org.objectweb.asm.Type.CHAR_TYPE;
+        else if(name.equals("short")) return org.objectweb.asm.Type.SHORT_TYPE;
+        else if(name.equals("int")) return org.objectweb.asm.Type.INT_TYPE;
+        else if(name.equals("long")) return org.objectweb.asm.Type.LONG_TYPE;
+        else if(name.equals("float")) return org.objectweb.asm.Type.FLOAT_TYPE;
+        else if(name.equals("double")) return org.objectweb.asm.Type.DOUBLE_TYPE;
+        else return org.objectweb.asm.Type.getObjectType(name.replace('.', '/'));
+    }   
 }
+
+

@@ -1,48 +1,37 @@
 package org.iterx.sora.tool.meta.declaration;
 
-import org.iterx.sora.tool.meta.statement.Statement;
-import org.iterx.sora.tool.meta.statement.Statements;
-import org.iterx.sora.tool.meta.support.asm.AsmCompiler;
-import org.iterx.sora.tool.meta.Types;
-import org.objectweb.asm.ClassVisitor;
-import org.objectweb.asm.MethodVisitor;
-import org.objectweb.asm.Type;
+import org.iterx.sora.tool.meta.Type;
 
-import java.util.Collection;
+import java.util.Arrays;
 
-import static org.objectweb.asm.Opcodes.ACC_FINAL;
-import static org.objectweb.asm.Opcodes.ACC_PRIVATE;
-import static org.objectweb.asm.Opcodes.ACC_PROTECTED;
-import static org.objectweb.asm.Opcodes.ACC_PUBLIC;
-import static org.objectweb.asm.Opcodes.RETURN;
+public final class MethodDeclaration implements Declaration<MethodDeclaration> {
 
-public class MethodDeclaration extends AbstractDeclaration<MethodDeclaration> {
+    public static final Type[] EMPTY_ARGUMENT_TYPES = new Type[0];
+    public static final Modifier[] EMPTY_MODIFIERS = new Modifier[0];
+
+    public enum Access implements Declaration.Access {  PUBLIC, PROTECTED, PRIVATE, DEFAULT }
+    public enum Modifier implements Declaration.Modifier { ABSTRACT, FINAL }
 
     private final String methodName;
-    private final Type returnType;
     private final Type[] argumentTypes;
+    private Type returnType;
+    private Access access;
+    private Modifier[] modifiers;
 
-    private final Statements statements;
+    private MethodDeclaration(final String methodName,
+                              final Type... argumentTypes) {
 
-/*
-    public MethodDeclaration() {
-        //TODO: reflect -> based on inlined body of extending class
-        this(null, null, null);
-    }
-*/
-
-    public MethodDeclaration(final Type returnType,
-                             final String methodName,
-                             final Type[] argumentTypes) {
-        super(ACC_PUBLIC|ACC_PROTECTED|ACC_PRIVATE|ACC_FINAL, ACC_PUBLIC);
-        this.statements = new Statements();
+        this.returnType = Type.VOID_TYPE;
+        this.access = Access.PUBLIC;
+        this.modifiers = EMPTY_MODIFIERS;
         this.methodName = methodName;
-        this.returnType = returnType;
         this.argumentTypes = argumentTypes;
     }
 
-    public Type getReturnType() {
-        return returnType;
+    public static MethodDeclaration newMethodDeclaration(final String methodName, final Type... argumentTypes) {
+        assertMethodName(methodName);
+        assertType(argumentTypes);
+        return new MethodDeclaration(methodName, argumentTypes);
     }
 
     public String getMethodName() {
@@ -53,10 +42,80 @@ public class MethodDeclaration extends AbstractDeclaration<MethodDeclaration> {
         return argumentTypes;
     }
 
-    public boolean isInterface() {
-        return true;
+    public Type getReturnType() {
+        return returnType;
     }
 
+    public MethodDeclaration setReturnType(final Type returnType) {
+        assertType(returnType);
+        this.returnType = returnType;
+        return this;
+    }
+
+    public Access getAccess() {
+        return access;
+    }
+
+    public MethodDeclaration setAccess(final Access access) {
+        assertAccess(access);
+        this.access = access;
+        return this;
+    }
+
+    public Modifier[] getModifiers() {
+        return modifiers;
+    }
+
+    public MethodDeclaration setModifiers(final Modifier... modifiers) {
+        assertModifiers(modifiers);
+        this.modifiers = modifiers;
+        return this;
+    }
+
+
+    @Override
+    public int hashCode() {
+        return 31 * methodName.hashCode() +  Arrays.hashCode(argumentTypes);
+
+    }
+
+    @Override
+    public boolean equals(final Object object) {
+        return (this ==  object) ||
+               (object != null && object.getClass() == getClass() &&
+                methodName.equals(((MethodDeclaration) object).methodName) &&
+                Arrays.equals(argumentTypes, ((MethodDeclaration) object).argumentTypes));
+    }
+
+    @Override
+    public String toString() {
+        return new StringBuilder().
+                append("MethodDeclaration: ").
+                append(methodName).
+                append(Arrays.toString(argumentTypes)).
+                toString();
+    }
+
+
+    private static void assertMethodName(final String methodName) {
+        if(methodName == null) throw new IllegalArgumentException("methodName == null");
+    }
+
+    private static void assertType(final Type... types) {
+        if(types == null) throw new IllegalArgumentException("type == null");
+        for(Type type : types) if(type == null) throw new IllegalArgumentException("type == null");
+    }
+
+    private static void assertAccess(final Access access) {
+        if(access == null) throw new IllegalArgumentException("access == null");
+    }
+
+    private static void assertModifiers(final Modifier... modifiers) {
+        if(modifiers == null) throw new IllegalArgumentException("modifiers == null");
+    }
+
+        
+/*
     public Collection<Statement> getStatements() {
         return statements.statements;
     }
@@ -93,9 +152,10 @@ public class MethodDeclaration extends AbstractDeclaration<MethodDeclaration> {
                                                                         null);
             methodVisitor.visitCode();
             compile(methodVisitor, context, methodDeclaration.getStatements());
-            if(methodDeclaration.getReturnType() == Types.VOID_TYPE) methodVisitor.visitInsn(RETURN);
+            if(methodDeclaration.getReturnType() == Type.VOID_TYPE) methodVisitor.visitInsn(RETURN);
             methodVisitor.visitMaxs(0, 0);
             methodVisitor.visitEnd();
         }
     }
+*/
 }
