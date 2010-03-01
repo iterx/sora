@@ -2,7 +2,7 @@ package org.iterx.sora.tool.meta.declaration;
 
 import org.iterx.sora.collection.Set;
 import org.iterx.sora.collection.set.HashSet;
-import org.iterx.sora.tool.meta.Type;
+import org.iterx.sora.tool.meta.type.Type;
 
 import java.util.Arrays;
 
@@ -27,7 +27,7 @@ public final class InterfaceDeclaration implements Declaration<InterfaceDeclarat
         this.type = type;
     }
 
-    public static InterfaceDeclaration newInterfaceDeclaration(final Type type) {
+    public static InterfaceDeclaration newInterfaceDeclaration(final Type<Type.InterfaceMetaType> type) {
         assertType(type);
         return new InterfaceDeclaration(type);
     }
@@ -83,7 +83,6 @@ public final class InterfaceDeclaration implements Declaration<InterfaceDeclarat
         throw new RuntimeException(new NoSuchMethodException());
     }
 
-    
     public InterfaceDeclaration add(final FieldDeclaration fieldDeclaration) {
         assertFieldDeclaration(fieldDeclaration);
         add(fieldDeclarations, fieldDeclaration);
@@ -108,11 +107,8 @@ public final class InterfaceDeclaration implements Declaration<InterfaceDeclarat
 
     public InterfaceDeclaration add(final Declarations declarations) {
         assertDeclarations(declarations);
-        for(final Declaration declaration : declarations) {
-            if(DeclarationType.FIELD.isa(declaration)) add(DeclarationType.FIELD.cast(declaration));
-            else if(DeclarationType.METHOD.isa(declaration)) add(DeclarationType.METHOD.cast(declaration));
-            else throw new IllegalStateException();
-        }
+        fieldDeclarations.addAll(declarations.fieldDeclarations);
+        methodDeclarations.addAll(declarations.methodDeclarations);
         return this;
     }
 
@@ -163,10 +159,7 @@ public final class InterfaceDeclaration implements Declaration<InterfaceDeclarat
 
     private static void assertDeclarations(final Declarations declarations) {
         if(declarations == null) throw new IllegalArgumentException("declarations == null");
-        for(final Declaration declaration : declarations) {
-            if(DeclarationType.FIELD.isa(declaration) || DeclarationType.METHOD.isa(declaration)) continue;
-            throw new IllegalArgumentException("Unsupported declaration '" + declaration +"'");
-        }
+        if(!declarations.constructorDeclarations.isEmpty()) throw new IllegalArgumentException("Unsupported declarations '" + declarations.constructorDeclarations +"'");
     }
 
     private static void assertFieldDeclaration(final FieldDeclaration fieldDeclaration) {

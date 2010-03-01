@@ -1,6 +1,6 @@
 package org.iterx.sora.tool.meta.support.asm;
 
-import org.iterx.sora.tool.meta.Type;
+import org.iterx.sora.tool.meta.type.Type;
 import org.iterx.sora.tool.meta.declaration.ClassDeclaration;
 import org.iterx.sora.tool.meta.declaration.ConstructorDeclaration;
 import org.iterx.sora.tool.meta.declaration.Declaration;
@@ -35,7 +35,6 @@ public final class AsmExtractor {
 
         private AbstractExtractorClassVisitor classVisitor;
 
-        @Override
         public Declaration<?> getDeclaration() {
             return getClassVisitor().getDeclaration();
         }
@@ -186,7 +185,6 @@ public final class AsmExtractor {
             return null;
         }
 
-        @Override
         public MethodVisitor visitMethod(final int access, final String name, final String description, final String signature, final String[] exceptions) {
             if(isConstructor(name)) {
                 classDeclaration.add(ConstructorDeclaration.newConstructorDeclaration(toTypes(org.objectweb.asm.Type.getArgumentTypes(description))).
@@ -249,12 +247,11 @@ public final class AsmExtractor {
         }
 
         public void visitEnd() {}
-
-
     }
 
     private static Type toType(final org.objectweb.asm.Type type) {
-        return Type.getType(type.getClassName());
+        //TODO: fix this....
+        return Type.getType(type.getClassName(), null);
     }
 
     private static Type toType(final String name) {
@@ -304,118 +301,4 @@ public final class AsmExtractor {
             return 0;
         }
     }
-/*
-
-        private static boolean isConstructor(final String name) {
-            return "<init>".equals(name);
-        }
-        private static Type[] getObjectTypes(final String[] names) {
-            final Type[] types = new Type[names.length];
-            for(int i = types.length; i-- != 0;) types[i] = Type.getObjectType(names[i]);
-            return types;
-        }
-
-        private static <T extends Declaration> T setAccess(final T declaration, final int access) {
-*/
-/*
-            if((access & ACC_PUBLIC ) == 0) declaration.setPublic();
-            if((access & ACC_PROTECTED ) == 0) declaration.setProtected();
-            if((access & ACC_PRIVATE ) == 0) declaration.setPrivate();
-            declaration.setFinal((access & ACC_FINAL) == 0);
-            declaration.setAbstract((access & ACC_ABSTRACT) == 0);
-*//*
-
-            return declaration;
-        }
-*/
-
-/*
-
-        private static abstract class DeclarationHandler<T extends Declaration> {
-
-            public static DeclarationHandler<?> newDeclarationHandler(final int access, final String name, final String superName, final String... interfaceNames) {
-                final Type type = toType(name);
-                final Type superType = toType(superName);
-                final Type[] interfaceTypes = toTypes(interfaceNames);
-
-                return (isInterface(access))?
-                       new InterfaceDeclarationHandler(access, type, superType, interfaceTypes) :
-                       new ClassDeclarationHandler(access, type, superType, interfaceTypes);
-            }
-
-            public abstract T getDeclaration();
-
-            public abstract DeclarationHandler<?> newField(int access, String fieldName, String fieldType);
-
-            protected static Type toType(final String name) {
-                return Type.getType(org.objectweb.asm.Type.getObjectType(name).getClassName());
-            }
-
-            protected static Type[] toTypes(final String... names) {
-                final Type[] types = new Type[names.length];
-                for(int i = types.length; i-- != 0; ) types[i] = toType(names[i]);
-                return types;
-            }
-
-            protected static Declaration.Access toAccess(final int access) {
-                if((ACC_PUBLIC & access) != 0) return Declaration.Access.PUBLIC;
-                else if((ACC_PROTECTED & access) != 0) return Declaration.Access.PROTECTED;
-                else if((ACC_PRIVATE & access) != 0) return Declaration.Access.PRIVATE;
-                else return Declaration.Access.DEFAULT;
-            }
-
-            protected static Declaration.Modifier toModifier(final int access) {
-                if((ACC_FINAL & access) != 0) return Declaration.Modifier.FINAL;
-                else if((ACC_ABSTRACT & access) != 0) return Declaration.Modifier.ABSTRACT;
-                else return Declaration.Modifier.DEFAULT;
-            }
-
-            protected static boolean isInterface(final int access) {
-                return (ACC_INTERFACE & access) != 0;
-            }
-        }
-
-        private static class InterfaceDeclarationHandler extends DeclarationHandler<InterfaceDeclaration> {
-
-            private InterfaceDeclaration interfaceDeclaration;
-
-            public InterfaceDeclarationHandler(final int access, final Type type, final Type superType, final Type... interfaceTypes) {
-                interfaceDeclaration =  InterfaceDeclaration.newInterfaceDeclaration(type, superType, interfaceTypes).
-                        setAccess(toAccess(access));
-
-
-            }
-
-            public InterfaceDeclaration getDeclaration() {
-                return interfaceDeclaration;
-            }
-
-            public DeclarationHandler<?> newField(final int access, final String fieldName, final String fieldType) {
-                //interfaceDeclaration.add(FieldDeclaration.)
-                return this;
-            }
-        }
-
-        private static class ClassDeclarationHandler extends DeclarationHandler<ClassDeclaration> {
-
-            private ClassDeclaration classDeclaration;
-
-            private ClassDeclarationHandler(final int access, final Type type, final Type superType, final Type... interfaceTypes) {
-                classDeclaration =  ClassDeclaration.newClassDeclaration(type, superType, interfaceTypes).
-                        setAccess(toAccess(access)).
-                        setModifiers(toModifier(access));
-            }
-
-            public ClassDeclaration getDeclaration() {
-                return classDeclaration;
-            }
-
-            public DeclarationHandler<?> newField(final int access, final String fieldName, final String fieldType) {
-                //interfaceDeclaration.add(FieldDeclaration.)
-                return this;
-            }
-        }
-
-    }
-*/
 }

@@ -1,6 +1,6 @@
 package org.iterx.sora.tool.meta.support.asm;
 
-import org.iterx.sora.tool.meta.Type;
+import org.iterx.sora.tool.meta.type.Type;
 import org.iterx.sora.tool.meta.declaration.ClassDeclaration;
 import org.iterx.sora.tool.meta.declaration.ConstructorDeclaration;
 import org.iterx.sora.tool.meta.declaration.Declaration;

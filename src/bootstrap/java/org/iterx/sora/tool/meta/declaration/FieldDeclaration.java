@@ -1,6 +1,6 @@
 package org.iterx.sora.tool.meta.declaration;
 
-import org.iterx.sora.tool.meta.Type;
+import org.iterx.sora.tool.meta.type.Type;
 
 
 public final class FieldDeclaration implements Declaration<FieldDeclaration> {
