@@ -1,5 +1,7 @@
 package org.iterx.sora.tool.meta.support.asm;
 
+import org.iterx.sora.tool.meta.type.ClassMetaType;
+import org.iterx.sora.tool.meta.type.InterfaceMetaType;
 import org.iterx.sora.tool.meta.type.Type;
 import org.iterx.sora.tool.meta.declaration.ClassDeclaration;
 import org.iterx.sora.tool.meta.declaration.ConstructorDeclaration;
@@ -25,18 +27,46 @@ public final class AsmExtractor {
 
     public static Declaration<?> extract(final byte[] bytes) {
         final ClassReader classReader = new ClassReader(bytes);
-        final ExtractorClassVisitor extractorClassVisitor = new ExtractorClassVisitor();
+        final DeclarationExtractorClassVisitor declarationExtractorClassVisitor = new DeclarationExtractorClassVisitor();
 
-        classReader.accept(extractorClassVisitor, ClassReader.SKIP_DEBUG|ClassReader.SKIP_FRAMES);
-        return extractorClassVisitor.getDeclaration();
+        classReader.accept(declarationExtractorClassVisitor, ClassReader.SKIP_DEBUG|ClassReader.SKIP_FRAMES);
+        return declarationExtractorClassVisitor.getDeclaration();
     }
 
-    private static class ExtractorClassVisitor extends AbstractExtractorClassVisitor {
+    public static Type<?> getType(final byte[] bytes) {
+        final ClassReader classReader = new ClassReader(bytes);
+        final MetaTypeClassVisitor metaTypeClassVisitor = new MetaTypeClassVisitor();
+        classReader.accept(metaTypeClassVisitor,  ClassReader.SKIP_DEBUG|ClassReader.SKIP_FRAMES|ClassReader.SKIP_CODE);
+        return metaTypeClassVisitor.getMetaType();
+    }
 
-        private AbstractExtractorClassVisitor classVisitor;
+    private static class MetaTypeClassVisitor extends DefaultClassVisitor {
+
+        private Type<?> metaType;
+
+        public Type<?> getMetaType() {
+            if(metaType == null) throw new IllegalStateException();
+            return metaType;
+        }
+
+        public void visit(final int version,
+                          final int access,
+                          final String name,
+                          final String signature,
+                          final String superName,
+                          final String[] interfaceNames) {
+            final String className = org.objectweb.asm.Type.getObjectType(name).getClassName();
+            metaType = hasAsmOpcodes(access, ACC_INTERFACE)? InterfaceMetaType.newType(className) :
+                       ClassMetaType.newType(className);
+        }
+    }
+
+    private static class DeclarationExtractorClassVisitor extends DefaultClassVisitor {
+
+        private DeclarationExtractorClassVisitor classVisitor;
 
         public Declaration<?> getDeclaration() {
-            return getClassVisitor().getDeclaration();
+            return classVisitor.getDeclaration();
         }
 
         public void visit(final int version,
@@ -55,7 +85,6 @@ public final class AsmExtractor {
         public void visitOuterClass(final String owner,
                                     final String name,
                                     final String description) {
-
             getClassVisitor().visitOuterClass(owner, name, description);
         }
 
@@ -94,12 +123,12 @@ public final class AsmExtractor {
             getClassVisitor().visitEnd();
         }
 
-        private AbstractExtractorClassVisitor getClassVisitor() {
+        protected ClassVisitor getClassVisitor() {
             if(classVisitor == null) throw new IllegalStateException();
             return classVisitor;
         }
 
-        private AbstractExtractorClassVisitor newClassVisitor(final int access,
+        private DeclarationExtractorClassVisitor newClassVisitor(final int access,
                                                                  final String name,
                                                                  final String signature,
                                                                  final String superName,
@@ -111,8 +140,7 @@ public final class AsmExtractor {
         }
     }
 
-    private static class InterfaceDeclarationExtractorClassVisitor extends AbstractExtractorClassVisitor {
-
+    private static class InterfaceDeclarationExtractorClassVisitor extends DeclarationExtractorClassVisitor {
         private InterfaceDeclaration interfaceDeclaration;
 
         public InterfaceDeclarationExtractorClassVisitor(final int access,
@@ -121,9 +149,9 @@ public final class AsmExtractor {
                                                          final String superName,
                                                          final String[] interfaceNames) {
 
-            interfaceDeclaration = InterfaceDeclaration.newInterfaceDeclaration(toType(name)).
-                    setInterfaceTypes(toTypes(interfaceNames)).
+            interfaceDeclaration = InterfaceDeclaration.newInterfaceDeclaration(toInterfaceType(org.objectweb.asm.Type.getObjectType(name))).
                     setAccess(toAccess(access, InterfaceDeclaration.Access.values()));
+            if(interfaceNames != null) interfaceDeclaration.setInterfaceTypes(toInterfaceTypes(toObjectTypes(interfaceNames)));
         }
 
         public Declaration<InterfaceDeclaration> getDeclaration() {
@@ -131,32 +159,48 @@ public final class AsmExtractor {
         }
 
         @Override
-        public FieldVisitor visitField(final int access, final String name, final String description, final String signature, final Object value) {
+        protected ClassVisitor getClassVisitor() {
+            return DefaultClassVisitor.INSTANCE;
+        }
+
+        @Override
+        public FieldVisitor visitField(final int access,
+                                       final String name,
+                                       final String description,
+                                       final String signature,
+                                       final Object value) {
             //TODO: add support for value
-            interfaceDeclaration.add(FieldDeclaration.newFieldDeclaration(name, toType(description)).
+            interfaceDeclaration.add(FieldDeclaration.newFieldDeclaration(name, toType(org.objectweb.asm.Type.getType(description))).
                     setAccess(toAccess(access, FieldDeclaration.Access.values())).
                     setModifiers(toModifiers(access, FieldDeclaration.Modifier.values())));
             return null;
         }
 
         @Override
-        public MethodVisitor visitMethod(final int access, final String name, final String description, final String signature, final String[] exceptions) {
+        public MethodVisitor visitMethod(final int access,
+                                         final String name,
+                                         final String description,
+                                         final String signature,
+                                         final String[] exceptions) {
             //TODO: add support for exceptions & generics
-            assertMethod(name);
-            interfaceDeclaration.add(MethodDeclaration.newMethodDeclaration(name, toTypes(org.objectweb.asm.Type.getArgumentTypes(description))).
-                    setReturnType(toType(org.objectweb.asm.Type.getReturnType(description))).
-                    setAccess(toAccess(access, MethodDeclaration.Access.values())).
-                    setModifiers(toModifiers(access, MethodDeclaration.Modifier.values())));
-
+            if("<clinit>".equals(name)) {
+                System.err.println("<clinit> not supported for " + interfaceDeclaration.getType());
+            }
+            else if("<init>".equals(name)) {
+                throw new IllegalArgumentException();
+            }
+            else {
+                interfaceDeclaration.add(MethodDeclaration.newMethodDeclaration(name, toTypes(org.objectweb.asm.Type.getArgumentTypes(description))).
+                        setReturnType(toType(org.objectweb.asm.Type.getReturnType(description))).
+                        setExceptionTypes(toTypes(toObjectTypes(exceptions))).
+                        setAccess(toAccess(access, MethodDeclaration.Access.values())).
+                        setModifiers(toModifiers(access, MethodDeclaration.Modifier.values())));
+            }
             return null;
-        }
-
-        private void assertMethod(final String name) {
-            if(isConstructor(name)) throw new IllegalArgumentException();
         }
     }
 
-    private static class ClassDeclarationExtractorClassVisitor extends AbstractExtractorClassVisitor {
+    private static class ClassDeclarationExtractorClassVisitor extends DeclarationExtractorClassVisitor {
 
         private ClassDeclaration classDeclaration;
 
@@ -165,35 +209,53 @@ public final class AsmExtractor {
                                                      final String signature,
                                                      final String superName,
                                                      final String[] interfaceNames) {
-            classDeclaration = ClassDeclaration.newClassDeclaration(toType(name)).
-                    setSuperType(toType(superName)).
-                    setInterfaceTypes(toTypes(interfaceNames)).
+            classDeclaration = ClassDeclaration.newClassDeclaration(toClassType(org.objectweb.asm.Type.getObjectType(name))).
                     setAccess(toAccess(access, ClassDeclaration.Access.values())).
                     setModifiers(toModifiers(access, ClassDeclaration.Modifier.values()));
+            if(superName != null) classDeclaration.setSuperType(toClassType(org.objectweb.asm.Type.getObjectType(superName)));
+            if(interfaceNames != null) classDeclaration.setInterfaceTypes(toInterfaceTypes(toObjectTypes(interfaceNames)));
         }
 
         public Declaration<ClassDeclaration> getDeclaration() {
             return classDeclaration;
         }
+        
+        @Override
+        protected ClassVisitor getClassVisitor() {
+            return DefaultClassVisitor.INSTANCE;
+        }
 
         @Override
-        public FieldVisitor visitField(final int access, final String name, final String description, final String signature, final Object value) {
+        public FieldVisitor visitField(final int access,
+                                       final String name,
+                                       final String description,
+                                       final String signature,
+                                       final Object value) {
             //TODO: add support for value
-            classDeclaration.add(FieldDeclaration.newFieldDeclaration(name, toType(description)).
+            classDeclaration.add(FieldDeclaration.newFieldDeclaration(name, toType(org.objectweb.asm.Type.getType(description))).
                     setAccess(toAccess(access, FieldDeclaration.Access.values())).
                     setModifiers(toModifiers(access, FieldDeclaration.Modifier.values())));
             return null;
         }
 
-        public MethodVisitor visitMethod(final int access, final String name, final String description, final String signature, final String[] exceptions) {
-            if(isConstructor(name)) {
+        public MethodVisitor visitMethod(final int access,
+                                         final String name,
+                                         final String description,
+                                         final String signature,
+                                         final String[] exceptions) {
+            if("<clinit>".equals(name)) {
+                System.err.println("<clinit> not supported for " + classDeclaration.getType());
+            }
+            else if("<init>".equals(name)) {
                 classDeclaration.add(ConstructorDeclaration.newConstructorDeclaration(toTypes(org.objectweb.asm.Type.getArgumentTypes(description))).
+                        setExceptionTypes(toTypes(toObjectTypes(exceptions))).
                         setAccess(toAccess(access, ConstructorDeclaration.Access.values())).
                         setModifiers(toModifiers(access, ConstructorDeclaration.Modifier.values())));
             }
             else {
                 classDeclaration.add(MethodDeclaration.newMethodDeclaration(name, toTypes(org.objectweb.asm.Type.getArgumentTypes(description))).
                         setReturnType(toType(org.objectweb.asm.Type.getReturnType(description))).
+                        setExceptionTypes(toTypes(toObjectTypes(exceptions))).
                         setAccess(toAccess(access, MethodDeclaration.Access.values())).
                         setModifiers(toModifiers(access, MethodDeclaration.Modifier.values())));
             }
@@ -202,9 +264,9 @@ public final class AsmExtractor {
 
     }
 
-    private static abstract class AbstractExtractorClassVisitor implements ClassVisitor {
+    private static class DefaultClassVisitor implements ClassVisitor {
 
-        public abstract Declaration<?> getDeclaration();
+        private static final DefaultClassVisitor INSTANCE = new DefaultClassVisitor(){};
 
         public void visit(final int version,
                           final int access,
@@ -249,25 +311,46 @@ public final class AsmExtractor {
         public void visitEnd() {}
     }
 
+    private static org.objectweb.asm.Type[] toObjectTypes(final String... names) {
+        final org.objectweb.asm.Type[] types = (names != null)? new org.objectweb.asm.Type[names.length] : new org.objectweb.asm.Type[0];
+        for(int i = types.length; i-- != 0; ) types[i] = org.objectweb.asm.Type.getObjectType(names[i]);
+        return types;
+    }
+
+
     private static Type toType(final org.objectweb.asm.Type type) {
-        //TODO: fix this....
-        return Type.getType(type.getClassName(), null);
+        try {
+            return Type.getType(type.getClassName());
+        }
+        catch(final ClassNotFoundException e) {
+            throw new RuntimeException(e);
+        }
     }
 
-    private static Type toType(final String name) {
-        return toType(org.objectweb.asm.Type.getObjectType(name));
+    private static Type[] toTypes(final org.objectweb.asm.Type... types) {
+        final Type[] instanceTypes = new Type[types.length];
+        for(int i = instanceTypes.length; i-- != 0; ) instanceTypes[i] = toType(types[i]);
+        return instanceTypes;
     }
 
-    private static Type[] toTypes(final org.objectweb.asm.Type... type) {
-        final Type[] types = new Type[type.length];
-        for(int i = types.length; i-- != 0; ) types[i] = toType(type[i]);
-        return types;
+    private static InterfaceMetaType toInterfaceType(final org.objectweb.asm.Type type) {
+        return InterfaceMetaType.newType(type.getClassName());
     }
 
-    private static Type[] toTypes(final String... names) {
-        final Type[] types = new Type[names.length];
-        for(int i = types.length; i-- != 0; ) types[i] = toType(names[i]);
-        return types;
+    public static InterfaceMetaType[] toInterfaceTypes(final org.objectweb.asm.Type... types) {
+        final InterfaceMetaType[] interfaceTypes = new InterfaceMetaType[types.length];
+        for(int i = interfaceTypes.length; i-- != 0; ) interfaceTypes[i] = toInterfaceType(types[i]);
+        return interfaceTypes;
+    }
+
+    public static ClassMetaType toClassType(final org.objectweb.asm.Type type) {
+        return ClassMetaType.newType(type.getClassName());
+    }
+
+    public static ClassMetaType[] toClassTypes(final org.objectweb.asm.Type... types) {
+        final ClassMetaType[] classTypes = new ClassMetaType[types.length];
+        for(int i = classTypes.length; i-- != 0; ) classTypes[i] = toClassType(types[i]);
+        return classTypes;
     }
 
     private static <T extends Declaration.Access> T toAccess(final int value, final T... accesses) {
@@ -282,10 +365,6 @@ public final class AsmExtractor {
         final T[] values = Arrays.copyOf(modifiers, modifiers.length);
         for(final T modifier : modifiers) if((value & getAsmOpcode("ACC_" + modifier)) != 0) values[matches++] = modifier;
         return Arrays.copyOf(values, matches);
-    }
-
-    private static boolean isConstructor(final String name) {
-        return name.startsWith("<") && name.endsWith(">");
     }
 
     private static boolean hasAsmOpcodes(final int access, final int opcodes) {

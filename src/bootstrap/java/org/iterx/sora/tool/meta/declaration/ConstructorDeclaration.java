@@ -1,18 +1,21 @@
 package org.iterx.sora.tool.meta.declaration;
 
+import org.iterx.sora.tool.meta.type.ClassMetaType;
 import org.iterx.sora.tool.meta.type.Type;
 
 import java.util.Arrays;
 
-public final class ConstructorDeclaration implements Declaration<ConstructorDeclaration> {
+public final class ConstructorDeclaration extends Declaration<ConstructorDeclaration> {
 
+    public static final Type<ClassMetaType>[] EMPTY_EXCEPTION_TYPES = new Type[0];
     public static final Type[] EMPTY_CONSTRUCTOR_TYPES = new Type[0];
     public static final Modifier[] EMPTY_MODIFIERS = new Modifier[0];
 
     public enum Access implements Declaration.Access {  PUBLIC, PROTECTED, PRIVATE, DEFAULT }
     public enum Modifier implements Declaration.Modifier { ABSTRACT, FINAL }
 
-    private final Type[] constructorTypes;
+    private final Type<?>[] constructorTypes;
+    private Type<ClassMetaType>[] exceptionTypes;
     private Access access;
     private Modifier[] modifiers;
 
@@ -22,13 +25,23 @@ public final class ConstructorDeclaration implements Declaration<ConstructorDecl
         this.modifiers = EMPTY_MODIFIERS;
     }
 
-    public static ConstructorDeclaration newConstructorDeclaration(final Type... constructorTypes) {
+    public static ConstructorDeclaration newConstructorDeclaration(final Type<?>... constructorTypes) {
         assertType(constructorTypes);
         return new ConstructorDeclaration(constructorTypes);
     }
 
-    public Type[] getConstructorTypes() {
+    public Type<?>[] getConstructorTypes() {
         return constructorTypes;
+    }
+
+    public Type<ClassMetaType>[] getExceptionTypes() {
+        return exceptionTypes;
+    }
+
+    public ConstructorDeclaration setExceptionTypes(final Type<ClassMetaType>... exceptionTypes) {
+        assertType(exceptionTypes);
+        this.exceptionTypes = exceptionTypes;
+        return this;
     }
 
     public Access getAccess() {
@@ -72,7 +85,7 @@ public final class ConstructorDeclaration implements Declaration<ConstructorDecl
     }
 
 
-    private static void assertType(final Type... types) {
+    private static void assertType(final Type<?>... types) {
         if(types == null) throw new IllegalArgumentException("type == null");
         for(Type type : types) if(type == null) throw new IllegalArgumentException("type == null");
     }

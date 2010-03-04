@@ -3,7 +3,7 @@ package org.iterx.sora.tool.meta.declaration;
 import org.iterx.sora.tool.meta.type.Type;
 
 
-public final class FieldDeclaration implements Declaration<FieldDeclaration> {
+public final class FieldDeclaration extends Declaration<FieldDeclaration> {
 
     public static final Modifier[] EMPTY_MODIFIERS = new Modifier[0];
 
@@ -11,7 +11,7 @@ public final class FieldDeclaration implements Declaration<FieldDeclaration> {
     public enum Modifier implements Declaration.Modifier { VOLATILE, STATIC, FINAL }
 
     private final String fieldName;
-    private Type fieldType;
+    private Type<?> fieldType;
     private Access access;
     private Modifier[] modifiers;
 
@@ -24,7 +24,7 @@ public final class FieldDeclaration implements Declaration<FieldDeclaration> {
         this.fieldName = fieldName;
     }
 
-    public static FieldDeclaration newFieldDeclaration(final String fieldName, final Type fieldType) {
+    public static FieldDeclaration newFieldDeclaration(final String fieldName, final Type<?> fieldType) {
         assertFieldName(fieldName);
         return new FieldDeclaration(fieldName).
                 setFieldType(fieldType);
@@ -34,11 +34,11 @@ public final class FieldDeclaration implements Declaration<FieldDeclaration> {
         return fieldName;
     }
 
-    public Type getFieldType() {
+    public Type<?> getFieldType() {
         return fieldType;
     }
 
-    public FieldDeclaration setFieldType(final Type fieldType) {
+    public FieldDeclaration setFieldType(final Type<?> fieldType) {
         assertType(fieldType);
         this.fieldType = fieldType;
         return this;
@@ -63,8 +63,6 @@ public final class FieldDeclaration implements Declaration<FieldDeclaration> {
         this.modifiers = modifiers;
         return this;
     }
-
-
 
     @Override
     public int hashCode() {
@@ -91,7 +89,7 @@ public final class FieldDeclaration implements Declaration<FieldDeclaration> {
         if(fieldName == null) throw new IllegalArgumentException("fieldName == null");
     }
 
-    private static void assertType(final Type... types) {
+    private static void assertType(final Type<?>... types) {
         if(types == null) throw new IllegalArgumentException("type == null");
         for(Type type : types) if(type == null) throw new IllegalArgumentException("type == null");
     }

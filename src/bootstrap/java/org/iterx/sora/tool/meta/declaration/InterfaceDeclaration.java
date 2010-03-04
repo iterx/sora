@@ -2,24 +2,25 @@ package org.iterx.sora.tool.meta.declaration;
 
 import org.iterx.sora.collection.Set;
 import org.iterx.sora.collection.set.HashSet;
+import org.iterx.sora.tool.meta.type.InterfaceMetaType;
 import org.iterx.sora.tool.meta.type.Type;
 
 import java.util.Arrays;
 
-public final class InterfaceDeclaration implements Declaration<InterfaceDeclaration> {
+public final class InterfaceDeclaration extends Declaration<InterfaceDeclaration> {
 
-    public static final Type[] EMPTY_INTERFACES = new Type[0];
+    public static final InterfaceMetaType[] EMPTY_INTERFACES = new InterfaceMetaType[0];
 
     public enum Access implements Declaration.Access {  PUBLIC, PROTECTED, PRIVATE, DEFAULT }
     public enum Modifier implements Declaration.Modifier { ABSTRACT }
 
     private final Set<FieldDeclaration> fieldDeclarations;
     private final Set<MethodDeclaration> methodDeclarations;
-    private final Type type;
+    private final InterfaceMetaType type;
     private Access access;
-    private Type[] interfaceTypes;
+    private InterfaceMetaType[] interfaceTypes;
 
-    private InterfaceDeclaration(final Type type) {
+    private InterfaceDeclaration(final InterfaceMetaType type) {
         this.fieldDeclarations = new HashSet<FieldDeclaration>();
         this.methodDeclarations = new HashSet<MethodDeclaration>();
         this.access = Access.PUBLIC;
@@ -27,20 +28,20 @@ public final class InterfaceDeclaration implements Declaration<InterfaceDeclarat
         this.type = type;
     }
 
-    public static InterfaceDeclaration newInterfaceDeclaration(final Type<Type.InterfaceMetaType> type) {
+    public static InterfaceDeclaration newInterfaceDeclaration(final InterfaceMetaType type) {
         assertType(type);
         return new InterfaceDeclaration(type);
     }
 
-    public Type getType() {
+    public InterfaceMetaType getType() {
         return type;
     }
 
-    public Type[] getInterfaceTypes() {
+    public InterfaceMetaType[] getInterfaceTypes() {
         return interfaceTypes;
     }
 
-    public InterfaceDeclaration setInterfaceTypes(final Type... interfaceTypes) {
+    public InterfaceDeclaration setInterfaceTypes(final InterfaceMetaType... interfaceTypes) {
         assertType(interfaceTypes);
         this.interfaceTypes = interfaceTypes;
         return this;

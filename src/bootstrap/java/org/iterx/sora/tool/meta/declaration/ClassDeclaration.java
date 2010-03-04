@@ -2,13 +2,16 @@ package org.iterx.sora.tool.meta.declaration;
 
 import org.iterx.sora.collection.Set;
 import org.iterx.sora.collection.set.HashSet;
+import org.iterx.sora.tool.meta.MetaClassLoader;
+import org.iterx.sora.tool.meta.type.ClassMetaType;
+import org.iterx.sora.tool.meta.type.InterfaceMetaType;
 import org.iterx.sora.tool.meta.type.Type;
 
 import java.util.Arrays;
 
-public final class ClassDeclaration implements Declaration<ClassDeclaration>{
+public final class ClassDeclaration extends Declaration<ClassDeclaration> {
 
-    public static final Type[] EMPTY_INTERFACES = new Type[0];
+    public static final InterfaceMetaType[] EMPTY_INTERFACES = new InterfaceMetaType[0];
     public static final Modifier[] EMPTY_MODIFIERS = new Modifier[0];
 
     public enum Access implements Declaration.Access {  PUBLIC, PROTECTED, PRIVATE, DEFAULT }
@@ -17,13 +20,13 @@ public final class ClassDeclaration implements Declaration<ClassDeclaration>{
     private final Set<FieldDeclaration> fieldDeclarations;
     private final Set<ConstructorDeclaration> constructorDeclarations;
     private final Set<MethodDeclaration> methodDeclarations;
-    private final Type type;
+    private final ClassMetaType type;
     private Access access;
     private Modifier[] modifiers;
-    private Type superType;
-    private Type[] interfaceTypes;
+    private ClassMetaType superType;
+    private InterfaceMetaType[] interfaceTypes;
 
-    private ClassDeclaration(final Type type) {
+    private ClassDeclaration(final ClassMetaType type) {
         this.fieldDeclarations = new HashSet<FieldDeclaration>();
         this.constructorDeclarations = new HashSet<ConstructorDeclaration>();
         this.methodDeclarations = new HashSet<MethodDeclaration>();
@@ -34,30 +37,35 @@ public final class ClassDeclaration implements Declaration<ClassDeclaration>{
         this.type = type;
     }
 
-    public static ClassDeclaration newClassDeclaration(final Type<Type.ClassMetaType> type) {
-        assertType(type);
-        return new ClassDeclaration(type);
+    public static ClassDeclaration newClassDeclaration(final ClassMetaType type) {
+        return newClassDeclaration(type, MetaClassLoader.getMetaClassLoader());
     }
 
-    public Type getType() {
+    public static ClassDeclaration newClassDeclaration(final ClassMetaType type, final MetaClassLoader metaClassLoader) {
+        assertType(type);
+        return new ClassDeclaration(type);
+        //return metaClassLoader.defineDeclaration(new ClassDeclaration(type));
+    }
+
+    public ClassMetaType getType() {
         return type;
     }
 
-    public Type getSuperType() {
+    public ClassMetaType getSuperType() {
         return superType;
     }
 
-    public ClassDeclaration setSuperType(final Type superType) {
+    public ClassDeclaration setSuperType(final ClassMetaType superType) {
         assertType(superType);
         this.superType = superType;
         return this;
     }
 
-    public Type[] getInterfaceTypes() {
+    public InterfaceMetaType[] getInterfaceTypes() {
         return interfaceTypes;
     }
 
-    public ClassDeclaration setInterfaceTypes(final Type... interfaceTypes) {
+    public ClassDeclaration setInterfaceTypes(final InterfaceMetaType... interfaceTypes) {
         assertType(interfaceTypes);
         this.interfaceTypes = interfaceTypes;
         return this;
@@ -178,7 +186,10 @@ public final class ClassDeclaration implements Declaration<ClassDeclaration>{
     }
 
     private static <T> void add(final Set<T> declarations, final T declaration) {
-        if(declarations.contains(declaration)) throw new IllegalStateException();
+        if(declarations.contains(declaration))
+        {
+            throw new IllegalStateException();
+        }
         declarations.add(declaration);
     }
 

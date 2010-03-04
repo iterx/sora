@@ -1,27 +1,31 @@
 package org.iterx.sora.tool.meta.declaration;
 
+import org.iterx.sora.tool.meta.type.ClassMetaType;
 import org.iterx.sora.tool.meta.type.Type;
 
 import java.util.Arrays;
 
-public final class MethodDeclaration implements Declaration<MethodDeclaration> {
+public final class MethodDeclaration extends Declaration<MethodDeclaration> {
 
     public static final Type[] EMPTY_ARGUMENT_TYPES = new Type[0];
+    public static final Type<ClassMetaType>[] EMPTY_EXCEPTION_TYPES = new Type[0];
     public static final Modifier[] EMPTY_MODIFIERS = new Modifier[0];
 
     public enum Access implements Declaration.Access {  PUBLIC, PROTECTED, PRIVATE, DEFAULT }
     public enum Modifier implements Declaration.Modifier { ABSTRACT, FINAL }
 
     private final String methodName;
-    private final Type[] argumentTypes;
-    private Type returnType;
+    private final Type<?>[] argumentTypes;
+    private Type<ClassMetaType>[] exceptionTypes;
+    private Type<?> returnType;
     private Access access;
     private Modifier[] modifiers;
 
     private MethodDeclaration(final String methodName,
-                              final Type... argumentTypes) {
+                              final Type<?>... argumentTypes) {
 
         this.returnType = Type.VOID_TYPE;
+        this.exceptionTypes = EMPTY_EXCEPTION_TYPES;
         this.access = Access.PUBLIC;
         this.modifiers = EMPTY_MODIFIERS;
         this.methodName = methodName;
@@ -38,20 +42,29 @@ public final class MethodDeclaration implements Declaration<MethodDeclaration> {
         return methodName;
     }
 
-    public Type[] getArgumentTypes() {
+    public Type<?>[] getArgumentTypes() {
         return argumentTypes;
     }
 
-    public Type getReturnType() {
+    public Type<?> getReturnType() {
         return returnType;
     }
 
-    public MethodDeclaration setReturnType(final Type returnType) {
+    public MethodDeclaration setReturnType(final Type<?> returnType) {
         assertType(returnType);
         this.returnType = returnType;
         return this;
     }
+    public Type<ClassMetaType>[] getExceptionTypes() {
+        return exceptionTypes;
+    }
 
+    public MethodDeclaration setExceptionTypes(final Type<ClassMetaType>... exceptionTypes) {
+        assertType(exceptionTypes);
+        this.exceptionTypes = exceptionTypes;
+        return this;
+    }
+    
     public Access getAccess() {
         return access;
     }
@@ -101,9 +114,9 @@ public final class MethodDeclaration implements Declaration<MethodDeclaration> {
         if(methodName == null) throw new IllegalArgumentException("methodName == null");
     }
 
-    private static void assertType(final Type... types) {
+    private static void assertType(final Type<?>... types) {
         if(types == null) throw new IllegalArgumentException("type == null");
-        for(Type type : types) if(type == null) throw new IllegalArgumentException("type == null");
+        for(Type<?> type : types) if(type == null) throw new IllegalArgumentException("type == null");
     }
 
     private static void assertAccess(final Access access) {

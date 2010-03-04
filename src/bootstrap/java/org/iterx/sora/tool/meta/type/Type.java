@@ -1,76 +1,107 @@
 package org.iterx.sora.tool.meta.type;
 
-import org.iterx.sora.tool.meta.declaration.ClassDeclaration;
-import org.iterx.sora.tool.meta.declaration.Declaration;
-import org.iterx.sora.tool.meta.declaration.InterfaceDeclaration;
+import org.iterx.sora.tool.meta.MetaClassLoader;
 
 
-//TODO: collapse as just Type (class, interface primative, etc).
-public final class Type<T extends Type.MetaType> {
-    //TODO: define native types
-    //TODO: work on generics... -> extract parameter types...
+public abstract class Type<T extends Type<T>> {
 
-    public static final Type VOID_TYPE = Type.getType(void.class);
-    public static final Type OBJECT_TYPE = Type.getType(Object.class);
+    public static final PrimitiveMetaType VOID_TYPE = PrimitiveMetaType.newType("void");
+    public static final PrimitiveMetaType BYTE_TYPE = PrimitiveMetaType.newType("byte");
+    public static final PrimitiveMetaType BOOLEAN_TYPE = PrimitiveMetaType.newType("boolean");
+    public static final PrimitiveMetaType CHAR_TYPE = PrimitiveMetaType.newType("char");
+    public static final PrimitiveMetaType SHORT_TYPE = PrimitiveMetaType.newType("short");
+    public static final PrimitiveMetaType INT_TYPE = PrimitiveMetaType.newType("int");
+    public static final PrimitiveMetaType LONG_TYPE = PrimitiveMetaType.newType("long");
+    public static final PrimitiveMetaType FLOAT_TYPE = PrimitiveMetaType.newType("float");
+    public static final PrimitiveMetaType DOUBLE_TYPE = PrimitiveMetaType.newType("double");
 
-    public static final ClassMetaType CLASS_META_TYPE = new ClassMetaType();
-    public static final InterfaceMetaType INTERFACE_META_TYPE = new InterfaceMetaType();
-
-    public static final class ClassMetaType implements MetaType<ClassDeclaration> {}
-    public static final class InterfaceMetaType implements MetaType<InterfaceDeclaration> {}
-    public interface MetaType<T extends Declaration<T>> {}
+    public static final ClassMetaType OBJECT_TYPE = ClassMetaType.newType("java.lang.Object");
 
     private final String name;
-    private final T metaType;
 
-    private Type(final String name, final T metaType) {
+    protected Type(final String name) {
         this.name = name;
-        this.metaType = metaType;
     }
 
     public String getName() {
         return name;
     }
 
-    public T getMetaType() {
-        return metaType;
+    public boolean isAnnotation() {
+        return false;
     }
 
-    @SuppressWarnings("unchecked")
-    public static <T extends MetaType<?>> Type<T> getType(final Class cls) {
-        return new Type<T>(cls.getName(), (T) toMetaType(cls));
+    public boolean isArray() {
+        return false;
     }
 
-    public static <T extends MetaType<?>> Type<T> getType(final String name, final T metaType) {
-        return new Type<T>(name, metaType);
+    public boolean isClass() {
+        return false;
+    }
+
+    public boolean isEnum() {
+        return false;
+    }
+
+    public boolean isInterface() {
+        return false;
+    }
+
+    public boolean isPrimitive() {
+        return false;
     }
 
     @Override
     public int hashCode() {
-        return name.hashCode();
+        return getName().hashCode();
     }
 
     @Override
     public boolean equals(final Object object) {
-        return (this == object ||
-                object != null && getClass() == object.getClass() && name.equals(((Type) object).name));
+        return ((this == object) ||
+                (object != null && getClass().equals(object.getClass()) && getName().equals(((Type) object).getName())));
     }
 
     @Override
     public String toString() {
         return new StringBuilder().
-                append("<").
-                append(metaType.getClass().getSimpleName()).
-                append(":").
-                append(name).
-                append(">").
+                append('<').
+                append(getClass().getSimpleName()).
+                append(':').
+                append(getName()).
+                append('>').
                 toString();
     }
-    private static MetaType toMetaType(final Class cls){
-        if(cls.isInterface()) return INTERFACE_META_TYPE;
-            //else if(cls.isPrimitive()) return MetaType.PRIMITIVE;
-            //else if(cls.isEnum()) return MetaType.ENUM;
-            //else if(cls.isAnnotation()) return MetaType.ANNOTATION;
-        else return CLASS_META_TYPE;
+
+    @Deprecated //TODO: use MetaClassLoader
+    public static <T extends Type<T>> T getType(final String name) throws ClassNotFoundException {
+        return getType(name, MetaClassLoader.getMetaClassLoader());
     }
+
+    @SuppressWarnings("unchecked")
+    @Deprecated //TODO: use MetaClassLoader
+    public static <T extends Type<T>> T getType(final String name, final MetaClassLoader metaClassLoader) throws ClassNotFoundException {
+        //TODO: check to see if primative and/or array...
+        if(name.endsWith("[]")) {
+            return (T) (Type<?>) ArrayMetaType.newType(name.substring(0, name.length() - 2));
+        }
+        else if("|void|byte|boolean|char|short|int|long|float|double|".contains("|" + name + "|")) {
+            return (T) (Type<?>) PrimitiveMetaType.newType(name);
+        }
+        return (T) (Type<?>) metaClassLoader.loadType(name);
+    }
+
+    @SuppressWarnings("unchecked")
+    @Deprecated //TODO: use MetaClassLoader
+    public static <T extends Type<T>> T getType(final Class cls) throws ClassNotFoundException {
+        final String name = cls.getName();
+        return (cls.isInterface())? (T) (Type<?>) InterfaceMetaType.newType(name) :
+               (cls.isPrimitive())? (T) (Type<?>) PrimitiveMetaType.newType(name) :
+               (cls.isAnnotation())? (T) (Type<?>) AnnotationMetaType.newType(name) :
+               (cls.isEnum())? (T) (Type<?>) EnumMetaType.newType(name) :
+               (cls.isArray())? (T) (Type<?>) ArrayMetaType.newType(name) :
+               (T) (Type<?>) ClassMetaType.newType(name);
+    }
+
+
 }
