@@ -1,14 +1,16 @@
 package org.iterx.sora.tool.meta.declaration;
 
+import org.iterx.sora.tool.meta.Declaration;
+import org.iterx.sora.tool.meta.MetaClassLoader;
+import org.iterx.sora.tool.meta.Type;
 import org.iterx.sora.tool.meta.type.ClassMetaType;
-import org.iterx.sora.tool.meta.type.Type;
 
 import java.util.Arrays;
 
 public final class MethodDeclaration extends Declaration<MethodDeclaration> {
 
-    public static final Type[] EMPTY_ARGUMENT_TYPES = new Type[0];
-    public static final Type<ClassMetaType>[] EMPTY_EXCEPTION_TYPES = new Type[0];
+    public static final Type<?>[] EMPTY_ARGUMENT_TYPES = new Type[0];
+    public static final Type<ClassMetaType>[] EMPTY_EXCEPTION_TYPES = new ClassMetaType[0];
     public static final Modifier[] EMPTY_MODIFIERS = new Modifier[0];
 
     public enum Access implements Declaration.Access {  PUBLIC, PROTECTED, PRIVATE, DEFAULT }
@@ -32,7 +34,7 @@ public final class MethodDeclaration extends Declaration<MethodDeclaration> {
         this.argumentTypes = argumentTypes;
     }
 
-    public static MethodDeclaration newMethodDeclaration(final String methodName, final Type... argumentTypes) {
+    public static MethodDeclaration newMethodDeclaration(final String methodName, final Type<?>... argumentTypes) {
         assertMethodName(methodName);
         assertType(argumentTypes);
         return new MethodDeclaration(methodName, argumentTypes);
@@ -84,7 +86,6 @@ public final class MethodDeclaration extends Declaration<MethodDeclaration> {
         this.modifiers = modifiers;
         return this;
     }
-
 
     @Override
     public int hashCode() {

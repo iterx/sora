@@ -1,6 +1,8 @@
 package org.iterx.sora.tool.meta.declaration;
 
-import org.iterx.sora.tool.meta.type.Type;
+import org.iterx.sora.tool.meta.Declaration;
+import org.iterx.sora.tool.meta.MetaClassLoader;
+import org.iterx.sora.tool.meta.Type;
 
 
 public final class FieldDeclaration extends Declaration<FieldDeclaration> {
@@ -26,8 +28,7 @@ public final class FieldDeclaration extends Declaration<FieldDeclaration> {
 
     public static FieldDeclaration newFieldDeclaration(final String fieldName, final Type<?> fieldType) {
         assertFieldName(fieldName);
-        return new FieldDeclaration(fieldName).
-                setFieldType(fieldType);
+        return new FieldDeclaration(fieldName).setFieldType(fieldType);
     }
 
     public String getFieldName() {

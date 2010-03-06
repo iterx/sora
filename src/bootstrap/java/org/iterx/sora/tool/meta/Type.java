@@ -1,6 +1,8 @@
-package org.iterx.sora.tool.meta.type;
+package org.iterx.sora.tool.meta;
 
 import org.iterx.sora.tool.meta.MetaClassLoader;
+import org.iterx.sora.tool.meta.type.ClassMetaType;
+import org.iterx.sora.tool.meta.type.PrimitiveMetaType;
 
 
 public abstract class Type<T extends Type<T>> {
@@ -17,10 +19,16 @@ public abstract class Type<T extends Type<T>> {
 
     public static final ClassMetaType OBJECT_TYPE = ClassMetaType.newType("java.lang.Object");
 
+    private final MetaClassLoader metaClassLoader;
     private final String name;
 
-    protected Type(final String name) {
+    protected Type(final MetaClassLoader metaClassLoader, final String name) {
+        this.metaClassLoader = metaClassLoader;
         this.name = name;
+    }
+
+    public MetaClassLoader getMetaClassLoader() {
+        return metaClassLoader;
     }
 
     public String getName() {
@@ -73,35 +81,7 @@ public abstract class Type<T extends Type<T>> {
                 toString();
     }
 
-    @Deprecated //TODO: use MetaClassLoader
-    public static <T extends Type<T>> T getType(final String name) throws ClassNotFoundException {
-        return getType(name, MetaClassLoader.getMetaClassLoader());
+    protected static <T extends Type<T>> T defineType(final MetaClassLoader metaClassLoader, final T type) {
+        return metaClassLoader.defineType(type);
     }
-
-    @SuppressWarnings("unchecked")
-    @Deprecated //TODO: use MetaClassLoader
-    public static <T extends Type<T>> T getType(final String name, final MetaClassLoader metaClassLoader) throws ClassNotFoundException {
-        //TODO: check to see if primative and/or array...
-        if(name.endsWith("[]")) {
-            return (T) (Type<?>) ArrayMetaType.newType(name.substring(0, name.length() - 2));
-        }
-        else if("|void|byte|boolean|char|short|int|long|float|double|".contains("|" + name + "|")) {
-            return (T) (Type<?>) PrimitiveMetaType.newType(name);
-        }
-        return (T) (Type<?>) metaClassLoader.loadType(name);
-    }
-
-    @SuppressWarnings("unchecked")
-    @Deprecated //TODO: use MetaClassLoader
-    public static <T extends Type<T>> T getType(final Class cls) throws ClassNotFoundException {
-        final String name = cls.getName();
-        return (cls.isInterface())? (T) (Type<?>) InterfaceMetaType.newType(name) :
-               (cls.isPrimitive())? (T) (Type<?>) PrimitiveMetaType.newType(name) :
-               (cls.isAnnotation())? (T) (Type<?>) AnnotationMetaType.newType(name) :
-               (cls.isEnum())? (T) (Type<?>) EnumMetaType.newType(name) :
-               (cls.isArray())? (T) (Type<?>) ArrayMetaType.newType(name) :
-               (T) (Type<?>) ClassMetaType.newType(name);
-    }
-
-
 }

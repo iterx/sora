@@ -1,11 +1,12 @@
 package org.iterx.sora.tool.meta.support.asm;
 
+import org.iterx.sora.tool.meta.Declaration;
+import org.iterx.sora.tool.meta.MetaClassLoader;
+import org.iterx.sora.tool.meta.Type;
 import org.iterx.sora.tool.meta.type.ClassMetaType;
 import org.iterx.sora.tool.meta.type.InterfaceMetaType;
-import org.iterx.sora.tool.meta.type.Type;
 import org.iterx.sora.tool.meta.declaration.ClassDeclaration;
 import org.iterx.sora.tool.meta.declaration.ConstructorDeclaration;
-import org.iterx.sora.tool.meta.declaration.Declaration;
 import org.iterx.sora.tool.meta.declaration.FieldDeclaration;
 import org.iterx.sora.tool.meta.declaration.InterfaceDeclaration;
 import org.iterx.sora.tool.meta.declaration.MethodDeclaration;
@@ -23,9 +24,13 @@ import static org.objectweb.asm.Opcodes.ACC_INTERFACE;
 
 public final class AsmExtractor {
 
-    private AsmExtractor() {}
+    private final MetaClassLoader metaClassLoader;
 
-    public static Declaration<?> extract(final byte[] bytes) {
+    public AsmExtractor(final MetaClassLoader metaClassLoader) {
+        this.metaClassLoader = metaClassLoader;
+    }
+
+    public Declaration<?> extract(final byte[] bytes) {
         final ClassReader classReader = new ClassReader(bytes);
         final DeclarationExtractorClassVisitor declarationExtractorClassVisitor = new DeclarationExtractorClassVisitor();
 
@@ -33,17 +38,18 @@ public final class AsmExtractor {
         return declarationExtractorClassVisitor.getDeclaration();
     }
 
-    public static Type<?> getType(final byte[] bytes) {
+    public Type<?> getType(final byte[] bytes) {
         final ClassReader classReader = new ClassReader(bytes);
         final MetaTypeClassVisitor metaTypeClassVisitor = new MetaTypeClassVisitor();
         classReader.accept(metaTypeClassVisitor,  ClassReader.SKIP_DEBUG|ClassReader.SKIP_FRAMES|ClassReader.SKIP_CODE);
         return metaTypeClassVisitor.getMetaType();
     }
 
-    private static class MetaTypeClassVisitor extends DefaultClassVisitor {
+    private class MetaTypeClassVisitor extends DefaultClassVisitor {
 
         private Type<?> metaType;
 
+        @SuppressWarnings("unchecked")
         public Type<?> getMetaType() {
             if(metaType == null) throw new IllegalStateException();
             return metaType;
@@ -56,12 +62,13 @@ public final class AsmExtractor {
                           final String superName,
                           final String[] interfaceNames) {
             final String className = org.objectweb.asm.Type.getObjectType(name).getClassName();
-            metaType = hasAsmOpcodes(access, ACC_INTERFACE)? InterfaceMetaType.newType(className) :
-                       ClassMetaType.newType(className);
+            metaType = hasAsmOpcodes(access, ACC_INTERFACE)?
+                       InterfaceMetaType.newType(metaClassLoader, className) :
+                       ClassMetaType.newType(metaClassLoader, className);
         }
     }
 
-    private static class DeclarationExtractorClassVisitor extends DefaultClassVisitor {
+    private class DeclarationExtractorClassVisitor extends DefaultClassVisitor {
 
         private DeclarationExtractorClassVisitor classVisitor;
 
@@ -140,7 +147,7 @@ public final class AsmExtractor {
         }
     }
 
-    private static class InterfaceDeclarationExtractorClassVisitor extends DeclarationExtractorClassVisitor {
+    private class InterfaceDeclarationExtractorClassVisitor extends DeclarationExtractorClassVisitor {
         private InterfaceDeclaration interfaceDeclaration;
 
         public InterfaceDeclarationExtractorClassVisitor(final int access,
@@ -184,7 +191,7 @@ public final class AsmExtractor {
                                          final String[] exceptions) {
             //TODO: add support for exceptions & generics
             if("<clinit>".equals(name)) {
-                System.err.println("<clinit> not supported for " + interfaceDeclaration.getType());
+                System.err.println("<clinit> not supported for " + interfaceDeclaration.getInterfaceType());
             }
             else if("<init>".equals(name)) {
                 throw new IllegalArgumentException();
@@ -200,7 +207,7 @@ public final class AsmExtractor {
         }
     }
 
-    private static class ClassDeclarationExtractorClassVisitor extends DeclarationExtractorClassVisitor {
+    private class ClassDeclarationExtractorClassVisitor extends DeclarationExtractorClassVisitor {
 
         private ClassDeclaration classDeclaration;
 
@@ -244,7 +251,7 @@ public final class AsmExtractor {
                                          final String signature,
                                          final String[] exceptions) {
             if("<clinit>".equals(name)) {
-                System.err.println("<clinit> not supported for " + classDeclaration.getType());
+                System.err.println("<clinit> not supported for " + classDeclaration.getClassType());
             }
             else if("<init>".equals(name)) {
                 classDeclaration.add(ConstructorDeclaration.newConstructorDeclaration(toTypes(org.objectweb.asm.Type.getArgumentTypes(description))).
@@ -261,7 +268,6 @@ public final class AsmExtractor {
             }
             return null;
         }
-
     }
 
     private static class DefaultClassVisitor implements ClassVisitor {
@@ -317,49 +323,50 @@ public final class AsmExtractor {
         return types;
     }
 
-
-    private static Type toType(final org.objectweb.asm.Type type) {
+    @SuppressWarnings("unchecked")
+    private <T extends Type> T toType(final org.objectweb.asm.Type type) {
         try {
-            return Type.getType(type.getClassName());
+            return (T) metaClassLoader.loadType(type.getClassName());
         }
         catch(final ClassNotFoundException e) {
             throw new RuntimeException(e);
         }
     }
 
-    private static Type[] toTypes(final org.objectweb.asm.Type... types) {
-        final Type[] instanceTypes = new Type[types.length];
+    @SuppressWarnings("unchecked")
+    private <T extends Type> T[] toTypes(final org.objectweb.asm.Type... types) {
+        final T[] instanceTypes = (T[]) new Type[types.length];
         for(int i = instanceTypes.length; i-- != 0; ) instanceTypes[i] = toType(types[i]);
         return instanceTypes;
     }
 
-    private static InterfaceMetaType toInterfaceType(final org.objectweb.asm.Type type) {
-        return InterfaceMetaType.newType(type.getClassName());
+    private InterfaceMetaType toInterfaceType(final org.objectweb.asm.Type type) {
+        return toType(type);
     }
 
-    public static InterfaceMetaType[] toInterfaceTypes(final org.objectweb.asm.Type... types) {
+    public InterfaceMetaType[] toInterfaceTypes(final org.objectweb.asm.Type... types) {
         final InterfaceMetaType[] interfaceTypes = new InterfaceMetaType[types.length];
         for(int i = interfaceTypes.length; i-- != 0; ) interfaceTypes[i] = toInterfaceType(types[i]);
         return interfaceTypes;
     }
 
-    public static ClassMetaType toClassType(final org.objectweb.asm.Type type) {
-        return ClassMetaType.newType(type.getClassName());
+    public ClassMetaType toClassType(final org.objectweb.asm.Type type) {
+        return toType(type);
     }
 
-    public static ClassMetaType[] toClassTypes(final org.objectweb.asm.Type... types) {
+    public ClassMetaType[] toClassTypes(final org.objectweb.asm.Type... types) {
         final ClassMetaType[] classTypes = new ClassMetaType[types.length];
         for(int i = classTypes.length; i-- != 0; ) classTypes[i] = toClassType(types[i]);
         return classTypes;
     }
 
-    private static <T extends Declaration.Access> T toAccess(final int value, final T... accesses) {
+    private <T extends Declaration.Access> T toAccess(final int value, final T... accesses) {
         for(final T access : accesses) if((value & getAsmOpcode("ACC_" + access)) != 0) return access;
         return accesses[accesses.length - 1];
     }
 
     @SuppressWarnings("unchecked")
-    private static <T extends Declaration.Modifier> T[] toModifiers(final int value, final T... modifiers) {
+    private <T extends Declaration.Modifier> T[] toModifiers(final int value, final T... modifiers) {
         int matches = 0;
 
         final T[] values = Arrays.copyOf(modifiers, modifiers.length);
@@ -367,11 +374,11 @@ public final class AsmExtractor {
         return Arrays.copyOf(values, matches);
     }
 
-    private static boolean hasAsmOpcodes(final int access, final int opcodes) {
+    private boolean hasAsmOpcodes(final int access, final int opcodes) {
         return ((access & opcodes) != 0);
     }
 
-    private static int getAsmOpcode(final String name) {
+    private int getAsmOpcode(final String name) {
         try {
             final Field field = org.objectweb.asm.Opcodes.class.getField(name);
             return (Integer) field.get(org.objectweb.asm.Opcodes.class);

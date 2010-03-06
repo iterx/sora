@@ -1,9 +1,9 @@
 package org.iterx.sora.tool.meta.support.asm;
 
-import org.iterx.sora.tool.meta.type.Type;
+import org.iterx.sora.tool.meta.Declaration;
+import org.iterx.sora.tool.meta.Type;
 import org.iterx.sora.tool.meta.declaration.ClassDeclaration;
 import org.iterx.sora.tool.meta.declaration.ConstructorDeclaration;
-import org.iterx.sora.tool.meta.declaration.Declaration;
 import org.iterx.sora.tool.meta.declaration.FieldDeclaration;
 import org.iterx.sora.tool.meta.declaration.InterfaceDeclaration;
 import org.iterx.sora.tool.meta.declaration.MethodDeclaration;
@@ -45,7 +45,7 @@ public final class AsmCompiler {
         public void startClassDeclaration(final ClassDeclaration classDeclaration) {
             classWriter.visit(V1_7,
                               toAccess(classDeclaration.getAccess()) | toModifier(classDeclaration.getModifiers()),
-                              toName(classDeclaration.getType()),
+                              toName(classDeclaration.getClassType()),
                               null,
                               toName(classDeclaration.getSuperType()),
                               toNames(classDeclaration.getInterfaceTypes()));
@@ -54,7 +54,7 @@ public final class AsmCompiler {
         public void startInterfaceDeclaration(final InterfaceDeclaration interfaceDeclaration) {
             classWriter.visit(V1_7,
                               ACC_INTERFACE | toAccess(interfaceDeclaration.getAccess()) | toModifier(interfaceDeclaration.getModifiers()),
-                              toName(interfaceDeclaration.getType()),
+                              toName(interfaceDeclaration.getInterfaceType()),
                               null,
                               toName(Type.OBJECT_TYPE),
                               toNames(interfaceDeclaration.getInterfaceTypes()));

@@ -2,10 +2,11 @@ package org.iterx.sora.tool.meta.declaration;
 
 import org.iterx.sora.collection.Set;
 import org.iterx.sora.collection.set.HashSet;
+import org.iterx.sora.tool.meta.Declaration;
 import org.iterx.sora.tool.meta.MetaClassLoader;
+import org.iterx.sora.tool.meta.Type;
 import org.iterx.sora.tool.meta.type.ClassMetaType;
 import org.iterx.sora.tool.meta.type.InterfaceMetaType;
-import org.iterx.sora.tool.meta.type.Type;
 
 import java.util.Arrays;
 
@@ -20,13 +21,15 @@ public final class ClassDeclaration extends Declaration<ClassDeclaration> {
     private final Set<FieldDeclaration> fieldDeclarations;
     private final Set<ConstructorDeclaration> constructorDeclarations;
     private final Set<MethodDeclaration> methodDeclarations;
-    private final ClassMetaType type;
+    private final ClassMetaType classType;
+    private final MetaClassLoader metaClassLoader;
+
     private Access access;
     private Modifier[] modifiers;
     private ClassMetaType superType;
     private InterfaceMetaType[] interfaceTypes;
 
-    private ClassDeclaration(final ClassMetaType type) {
+    private ClassDeclaration(final MetaClassLoader metaClassLoader, final ClassMetaType classType) {
         this.fieldDeclarations = new HashSet<FieldDeclaration>();
         this.constructorDeclarations = new HashSet<ConstructorDeclaration>();
         this.methodDeclarations = new HashSet<MethodDeclaration>();
@@ -34,21 +37,25 @@ public final class ClassDeclaration extends Declaration<ClassDeclaration> {
         this.interfaceTypes = EMPTY_INTERFACES;
         this.access = Access.PUBLIC;
         this.modifiers = EMPTY_MODIFIERS;
-        this.type = type;
+        this.classType = classType;
+        this.metaClassLoader = metaClassLoader;
     }
 
-    public static ClassDeclaration newClassDeclaration(final ClassMetaType type) {
-        return newClassDeclaration(type, MetaClassLoader.getMetaClassLoader());
+    public static ClassDeclaration newClassDeclaration(final ClassMetaType classType) {
+        return newClassDeclaration(MetaClassLoader.getSystemMetaClassLoader(), classType);
     }
 
-    public static ClassDeclaration newClassDeclaration(final ClassMetaType type, final MetaClassLoader metaClassLoader) {
-        assertType(type);
-        return new ClassDeclaration(type);
-        //return metaClassLoader.defineDeclaration(new ClassDeclaration(type));
+    public static ClassDeclaration newClassDeclaration(final MetaClassLoader metaClassLoader, final ClassMetaType classType) {
+        assertType(classType);
+        return defineDeclaration(metaClassLoader, classType, new ClassDeclaration(metaClassLoader, classType));
     }
 
-    public ClassMetaType getType() {
-        return type;
+    public MetaClassLoader getMetaClassLoader() {
+        return metaClassLoader;
+    }
+        
+    public ClassMetaType getClassType() {
+        return classType;
     }
 
     public ClassMetaType getSuperType() {
@@ -168,20 +175,20 @@ public final class ClassDeclaration extends Declaration<ClassDeclaration> {
 
     @Override
     public int hashCode() {
-        return type.hashCode();
+        return classType.hashCode();
     }
 
     @Override
     public boolean equals(final Object object) {
         return (this ==  object) ||
-               (object != null && object.getClass() == getClass() && type.equals(((ClassDeclaration) object).type));
+               (object != null && object.getClass() == getClass() && classType.equals(((ClassDeclaration) object).classType));
     }
 
     @Override
     public String toString() {
         return new StringBuilder().
                 append("ClassDeclaration: ").
-                append(type).
+                append(classType).
                 toString();
     }
 
@@ -200,8 +207,8 @@ public final class ClassDeclaration extends Declaration<ClassDeclaration> {
     }
 
     private static void assertType(final Type... types) {
-        if(types == null) throw new IllegalArgumentException("type == null");        
-        for(Type type : types) if(type == null) throw new IllegalArgumentException("type == null");
+        if(types == null) throw new IllegalArgumentException("classType == null");
+        for(Type type : types) if(type == null) throw new IllegalArgumentException("classType == null");
     }
 
     private static void assertAccess(final Access access) {

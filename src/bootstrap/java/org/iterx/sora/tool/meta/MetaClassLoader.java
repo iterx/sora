@@ -1,63 +1,58 @@
 package org.iterx.sora.tool.meta;
 
 import org.iterx.sora.tool.meta.declaration.ClassDeclaration;
-import org.iterx.sora.tool.meta.declaration.Declaration;
 import org.iterx.sora.tool.meta.declaration.InterfaceDeclaration;
 import org.iterx.sora.tool.meta.support.asm.AsmCompiler;
 import org.iterx.sora.tool.meta.support.asm.AsmExtractor;
+import org.iterx.sora.tool.meta.type.AnnotationMetaType;
+import org.iterx.sora.tool.meta.type.ArrayMetaType;
 import org.iterx.sora.tool.meta.type.ClassMetaType;
+import org.iterx.sora.tool.meta.type.EnumMetaType;
 import org.iterx.sora.tool.meta.type.InterfaceMetaType;
-import org.iterx.sora.tool.meta.type.Type;
+import org.iterx.sora.tool.meta.type.PrimitiveMetaType;
 
 import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.net.URL;
 import java.security.SecureClassLoader;
-import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 //TODO: add option to save...
 //TODO: issues -> how do we change type from class<->interface for a declaration (require separate class loaders)???
-//TODO: Metatyping -> how do we resolve meta type???? -> require preloading of referenced declarations... and or lookup???
-
 public final class MetaClassLoader extends SecureClassLoader implements Closeable {
 
-    private static final MetaClassLoader DEFAULT_META_CLASS_LOADER = new MetaClassLoader();
+    private static final MetaClassLoader SYSTEM_META_CLASS_LOADER = new MetaClassLoader();
 
-    private final Map<String, Declaration<?>> declarationByNames;
-    private final Map<String, Type<?>> typeByNames;
+    private final ConcurrentMap<String, Declaration<?>> declarationByNames;
+    private final ConcurrentMap<String, Type<?>> typeByNames;
+    private final AsmExtractor asmExtractor;
+    private final MetaClassLoader parent;
 
     public MetaClassLoader() {
-        this.declarationByNames = new ConcurrentHashMap<String, Declaration<?>>();
-        this.typeByNames = new ConcurrentHashMap<String, Type<?>>();
+        this(getSystemClassLoader());
     }
 
     public MetaClassLoader(final ClassLoader classLoader) {
+        this(MetaClassLoader.getSystemMetaClassLoader(), classLoader);
+    }
+
+    public MetaClassLoader(final MetaClassLoader metaClassLoader) {
+        this(metaClassLoader, getSystemClassLoader());
+    }
+
+    public MetaClassLoader(final MetaClassLoader metaClassLoader, final ClassLoader classLoader) {
         super(classLoader);
         this.declarationByNames = new ConcurrentHashMap<String, Declaration<?>>();
         this.typeByNames = new ConcurrentHashMap<String, Type<?>>();
+        this.asmExtractor = new AsmExtractor(this);
+        this.parent = metaClassLoader;
     }
 
-    public static MetaClassLoader getMetaClassLoader() {
-        //TODO: better define static lookup for default metaClassLoader and allow for hierarchy
-        return DEFAULT_META_CLASS_LOADER;
-    }
-
-    //TODO: do we want this (and get decls to call back onto metaclassloader for new???) -> or do we register decl with metaclassloader?
-    @Deprecated
-    public ClassDeclaration newDeclaration(final ClassMetaType type) {
-        //TODO: 1) ClassDeclaration.newClassDeclaration creates object
-        //TODO: 2) calls metaclassloader.defineDeclaration(decl) -> registers object
-        //TODO: 3) returns object
-        return setDeclaration(type.getName(), ClassDeclaration.newClassDeclaration(type));
-    }
-
-    @Deprecated
-    public InterfaceDeclaration newDeclaration(final InterfaceMetaType type) {
-        return setDeclaration(type.getName(), InterfaceDeclaration.newInterfaceDeclaration(type));
+    public static MetaClassLoader getSystemMetaClassLoader() {
+        return SYSTEM_META_CLASS_LOADER;
     }
 
     public ClassDeclaration loadDeclaration(final ClassMetaType type) throws ClassNotFoundException {
@@ -68,14 +63,7 @@ public final class MetaClassLoader extends SecureClassLoader implements Closeabl
         return (InterfaceDeclaration) loadDeclaration((Type<?>) type);
     }
 
-    public <T extends Declaration> T defineDeclaration(final T declaration) {
-        //TODO: register & check if already defined....
-        throw new UnsupportedOperationException();
-    }
-    public <T extends Type> T defineType(final T type) {
-        //TODO: register & check if already defined....
-        throw new UnsupportedOperationException();
-    }
+/*
 
     //TODO: fix up...
     public Declaration<?> loadDeclaration(final byte[] bytes) {
@@ -85,19 +73,34 @@ public final class MetaClassLoader extends SecureClassLoader implements Closeabl
     public byte[] storeDeclaration(final Declaration<?> declaration) {
         return compileDeclaration(declaration);
     }
+*/
 
-    public Type<?> loadType(final String name) throws ClassNotFoundException {
-        final Type<?> type  = getType(name);
-        return (type != null)? type : findType(name);
+    @SuppressWarnings("unchecked")
+    public <T extends Type> T loadType(final String name) throws ClassNotFoundException {
+        final T type = getType(name);
+        return (type != null)? type : (T) findType(name);
+    }
+
+    @SuppressWarnings("unchecked")
+    public <T extends Type> T loadType(final Class<?> cls) throws ClassNotFoundException {
+        final T type = getType(cls.getName());
+        return (type != null)? type : (T) defineType(cls);
     }
 
     public Class<?> loadClass(final Type<?> type) throws ClassNotFoundException {
         return loadClass(type.getName());
     }
 
-
     public void close() {
-        //TODO:....
+        throw new UnsupportedOperationException();
+    }
+
+    <T extends Declaration> T defineDeclaration(final Type<?> type, final T declaration) {
+        return setDeclaration(type.getName(), declaration);
+    }
+
+    <T extends Type> T defineType(final T type) {
+        return setType(type.getName(), type);
     }
 
     @Override
@@ -106,41 +109,56 @@ public final class MetaClassLoader extends SecureClassLoader implements Closeabl
         return (declaration != null)? defineClass(name, declaration) : super.findClass(name);
     }
 
+    protected Declaration<?> findDeclaration(final String name) throws ClassNotFoundException {
+        try {
+            final URL resource = getResource(toResource(name));
+            return defineDeclaration(loadResource(resource));
+        }
+        catch(final Exception e) {
+            throw new ClassNotFoundException("Undefined declaration '" + name + "'", e);
+        }
+    }
+
+    protected Type<?> findType(final String name) throws ClassNotFoundException {
+        try {
+            if(isArray(name))
+                return ArrayMetaType.newType(loadType(toArrayType(name)));
+            else {
+                final URL resource = getResource(toResource(name));
+                return defineType(loadResource(resource));
+            }
+        }
+        catch(final Exception e) {
+            throw new ClassNotFoundException("Undefined declaration '" + name + "'", e);
+        }
+    }
+
     private Declaration<?> loadDeclaration(final Type<?> type) throws ClassNotFoundException {
         final Declaration<?> declaration = getDeclaration(type.getName());
         return (declaration != null)? declaration : findDeclaration(type.getName());
     }
 
-    private Declaration<?> findDeclaration(final String name) throws ClassNotFoundException {
-        try {
-            final URL resource = getResource(toResource(name));
-            return setDeclaration(name, defineDeclaration(loadResource(resource)));
-        }
-        catch(final IOException e) {
-            throw new ClassNotFoundException("Undefined declaration '" + name + "'", e);
-        }
-    }
-
-    private Type<?> findType(final String name) throws ClassNotFoundException {
-        try {
-            final URL resource = getResource(toResource(name));
-            return defineType(loadResource(resource));
-        }
-        catch(final IOException e) {
-            throw new ClassNotFoundException("Undefined declaration '" + name + "'", e);
-        }
-    }
 
     private byte[] compileDeclaration(final Declaration<?> declaration) {
         return AsmCompiler.compile(declaration);
     }
 
     private Declaration<?> defineDeclaration(final byte[] bytes) {
-        return AsmExtractor.extract(bytes);
+        return asmExtractor.extract(bytes);
     }
 
     private Type<?> defineType(final byte[] bytes) {
-        return AsmExtractor.getType(bytes);
+        return asmExtractor.getType(bytes);
+    }
+
+    private Type<?> defineType(final Class cls) throws ClassNotFoundException {
+        final String name = cls.getName();
+        return (cls.isInterface())? InterfaceMetaType.newType(this, name) :
+               (cls.isPrimitive())? PrimitiveMetaType.newType(this, name) :
+               (cls.isAnnotation())? AnnotationMetaType.newType(this, name) :
+               (cls.isEnum())? EnumMetaType.newType(this, name) :
+               (cls.isArray())? ArrayMetaType.newType(this, loadType(toArrayType(name))) :
+               ClassMetaType.newType(this, name);
     }
 
     private Class<?> defineClass(final String name, final Declaration<?> declaration) {
@@ -157,23 +175,29 @@ public final class MetaClassLoader extends SecureClassLoader implements Closeabl
 
     @SuppressWarnings("unchecked")
     private <T extends Type<?>> T getType(final String name) {
-        return (T) typeByNames.get(name);
+        final T type = (T) typeByNames.get(name);
+        return (type != null)? type :
+               (parent != null)? parent.<T>getType(name) :
+               null;
     }
 
     private <T extends Type<?>> T setType(final String name, final T type) {
-        if(typeByNames.containsKey(name)) throw new IllegalStateException("Type already declared for '" + name + "'");
-        typeByNames.put(name, type);
+        if(null != typeByNames.putIfAbsent(name, type))
+            throw new IllegalStateException("Type already declared for '" + name + "'");
         return type;
     }
 
     @SuppressWarnings("unchecked")
     private <T extends Declaration<?>> T getDeclaration(final String name) {
-        return (T) declarationByNames.get(name);
+        final T declaration = (T) declarationByNames.get(name);
+        return (declaration != null)? declaration :
+               (parent != null)? parent.<T>getDeclaration(name) :
+               null;
     }
 
     private <T extends Declaration<?>> T setDeclaration(final String name, final T declaration) {
-        if(declarationByNames.containsKey(name)) throw new IllegalStateException("Declaration already declared for '" + name + "'");
-        declarationByNames.put(name, declaration);
+        if(null != declarationByNames.putIfAbsent(name, declaration))
+            throw new IllegalStateException("Declaration already declared for '" + name + "'");
         return declaration;
     }
 
@@ -181,4 +205,11 @@ public final class MetaClassLoader extends SecureClassLoader implements Closeabl
         return name.replace('.', '/') + ".class";
     }
 
+    private static boolean isArray(final String name) {
+        return name.endsWith("[]");
+    }
+
+    private static String toArrayType(final String name) {
+        return name.substring(0, name.length() - 2);
+    }
 }

@@ -1,8 +1,8 @@
 package org.iterx.sora.tool.meta.util;
 
+import org.iterx.sora.tool.meta.Declaration;
 import org.iterx.sora.tool.meta.declaration.ClassDeclaration;
 import org.iterx.sora.tool.meta.declaration.ConstructorDeclaration;
-import org.iterx.sora.tool.meta.declaration.Declaration;
 import org.iterx.sora.tool.meta.declaration.FieldDeclaration;
 import org.iterx.sora.tool.meta.declaration.InterfaceDeclaration;
 import org.iterx.sora.tool.meta.declaration.MethodDeclaration;

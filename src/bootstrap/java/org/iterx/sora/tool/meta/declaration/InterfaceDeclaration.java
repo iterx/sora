@@ -2,8 +2,10 @@ package org.iterx.sora.tool.meta.declaration;
 
 import org.iterx.sora.collection.Set;
 import org.iterx.sora.collection.set.HashSet;
+import org.iterx.sora.tool.meta.Declaration;
+import org.iterx.sora.tool.meta.MetaClassLoader;
+import org.iterx.sora.tool.meta.Type;
 import org.iterx.sora.tool.meta.type.InterfaceMetaType;
-import org.iterx.sora.tool.meta.type.Type;
 
 import java.util.Arrays;
 
@@ -16,25 +18,35 @@ public final class InterfaceDeclaration extends Declaration<InterfaceDeclaration
 
     private final Set<FieldDeclaration> fieldDeclarations;
     private final Set<MethodDeclaration> methodDeclarations;
-    private final InterfaceMetaType type;
+    private final InterfaceMetaType interfaceType;
+    private final MetaClassLoader metaClassLoader;
     private Access access;
     private InterfaceMetaType[] interfaceTypes;
 
-    private InterfaceDeclaration(final InterfaceMetaType type) {
+    private InterfaceDeclaration(final MetaClassLoader metaClassLoader, final InterfaceMetaType interfaceType) {
         this.fieldDeclarations = new HashSet<FieldDeclaration>();
         this.methodDeclarations = new HashSet<MethodDeclaration>();
         this.access = Access.PUBLIC;
         this.interfaceTypes = EMPTY_INTERFACES;
-        this.type = type;
+        this.interfaceType = interfaceType;
+        this.metaClassLoader = metaClassLoader;
     }
 
-    public static InterfaceDeclaration newInterfaceDeclaration(final InterfaceMetaType type) {
-        assertType(type);
-        return new InterfaceDeclaration(type);
+    public static InterfaceDeclaration newInterfaceDeclaration(final InterfaceMetaType interfaceType) {
+        return newInterfaceDeclaration(MetaClassLoader.getSystemMetaClassLoader(), interfaceType);
     }
 
-    public InterfaceMetaType getType() {
-        return type;
+    public static InterfaceDeclaration newInterfaceDeclaration(final MetaClassLoader metaClassLoader, final InterfaceMetaType interfaceType) {
+        assertType(interfaceType);
+        return defineDeclaration(metaClassLoader, interfaceType, new InterfaceDeclaration(metaClassLoader, interfaceType));
+    }
+
+    public MetaClassLoader getMetaClassLoader() {
+        return metaClassLoader;
+    }
+
+    public InterfaceMetaType getInterfaceType() {
+        return interfaceType;
     }
 
     public InterfaceMetaType[] getInterfaceTypes() {
@@ -115,13 +127,13 @@ public final class InterfaceDeclaration extends Declaration<InterfaceDeclaration
 
     @Override
     public int hashCode() {
-        return type.hashCode();
+        return interfaceType.hashCode();
     }
 
     @Override
     public boolean equals(final Object object) {
         return (this ==  object) ||
-               (object != null && object.getClass() == getClass() && type.equals(((InterfaceDeclaration) object).type));
+               (object != null && object.getClass() == getClass() && interfaceType.equals(((InterfaceDeclaration) object).interfaceType));
     }
 
     @Override
@@ -129,7 +141,7 @@ public final class InterfaceDeclaration extends Declaration<InterfaceDeclaration
         return new StringBuilder().
                 append("InterfaceDeclaration\n{\n").
                 append("access = ").append(access).append(",\n").
-                append("type = ").append(type).append(",\n").
+                append("interfaceType = ").append(interfaceType).append(",\n").
                 append("interfaceTypes = ").append(Arrays.toString(interfaceTypes)).append(",\n").
                 append("fields = ").append(fieldDeclarations).append(",\n").
                 append("methods = ").append(methodDeclarations).append("\n").
@@ -149,8 +161,8 @@ public final class InterfaceDeclaration extends Declaration<InterfaceDeclaration
     }
 
     private static void assertType(final Type... types) {
-        if(types == null) throw new IllegalArgumentException("type == null");        
-        for(Type type : types) if(type == null) throw new IllegalArgumentException("type == null");
+        if(types == null) throw new IllegalArgumentException("interfaceType == null");
+        for(Type type : types) if(type == null) throw new IllegalArgumentException("interfaceType == null");
     }
 
     private static void assertAccess(final Access access) {
