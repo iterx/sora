@@ -19,7 +19,7 @@ public abstract class Type<T extends Type<T>> {
 
     public static final ClassMetaType OBJECT_TYPE = ClassMetaType.newType("java.lang.Object");
 
-    private final MetaClassLoader metaClassLoader;
+    private final transient MetaClassLoader metaClassLoader;
     private final String name;
 
     protected Type(final MetaClassLoader metaClassLoader, final String name) {

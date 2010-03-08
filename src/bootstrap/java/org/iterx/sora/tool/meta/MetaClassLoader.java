@@ -22,13 +22,18 @@ import java.util.concurrent.ConcurrentMap;
 
 //TODO: add option to save...
 //TODO: issues -> how do we change type from class<->interface for a declaration (require separate class loaders)???
-public final class MetaClassLoader extends SecureClassLoader implements Closeable {
+public class MetaClassLoader extends SecureClassLoader implements Closeable {
+
+    //TODO: ClassDecl & InterfaceDecl -> should be class/interface meta types as well
+
+
 
     private static final MetaClassLoader SYSTEM_META_CLASS_LOADER = new MetaClassLoader();
 
     private final ConcurrentMap<String, Declaration<?>> declarationByNames;
     private final ConcurrentMap<String, Type<?>> typeByNames;
     private final AsmExtractor asmExtractor;
+    private final AsmCompiler asmCompiler;
     private final MetaClassLoader parent;
 
     public MetaClassLoader() {
@@ -48,6 +53,7 @@ public final class MetaClassLoader extends SecureClassLoader implements Closeabl
         this.declarationByNames = new ConcurrentHashMap<String, Declaration<?>>();
         this.typeByNames = new ConcurrentHashMap<String, Type<?>>();
         this.asmExtractor = new AsmExtractor(this);
+        this.asmCompiler = new AsmCompiler(this);
         this.parent = metaClassLoader;
     }
 
@@ -140,7 +146,7 @@ public final class MetaClassLoader extends SecureClassLoader implements Closeabl
 
 
     private byte[] compileDeclaration(final Declaration<?> declaration) {
-        return AsmCompiler.compile(declaration);
+        return asmCompiler.compile(declaration);
     }
 
     private Declaration<?> defineDeclaration(final byte[] bytes) {
@@ -162,15 +168,20 @@ public final class MetaClassLoader extends SecureClassLoader implements Closeabl
     }
 
     private Class<?> defineClass(final String name, final Declaration<?> declaration) {
-        final byte[] bytes = AsmCompiler.compile(declaration);
+        final byte[] bytes = asmCompiler.compile(declaration);
         return super.defineClass(name, bytes, 0, bytes.length);
     }
 
     private byte[] loadResource(final URL resource) throws IOException {
         final InputStream inputStream = resource.openStream();
-        final ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-        for(int i = inputStream.read(); i != -1; i = inputStream.read()) byteArrayOutputStream.write(i);
-        return byteArrayOutputStream.toByteArray();
+        try {
+            final ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+            for(int i = inputStream.read(); i != -1; i = inputStream.read()) byteArrayOutputStream.write(i);
+            return byteArrayOutputStream.toByteArray();
+        }
+        finally {
+            inputStream.close();
+        }
     }
 
     @SuppressWarnings("unchecked")

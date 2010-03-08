@@ -19,7 +19,8 @@ public final class InterfaceDeclaration extends Declaration<InterfaceDeclaration
     private final Set<FieldDeclaration> fieldDeclarations;
     private final Set<MethodDeclaration> methodDeclarations;
     private final InterfaceMetaType interfaceType;
-    private final MetaClassLoader metaClassLoader;
+    private final transient MetaClassLoader metaClassLoader;
+
     private Access access;
     private InterfaceMetaType[] interfaceTypes;
 

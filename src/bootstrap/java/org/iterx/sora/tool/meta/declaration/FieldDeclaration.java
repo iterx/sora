@@ -102,34 +102,4 @@ public final class FieldDeclaration extends Declaration<FieldDeclaration> {
     private static void assertModifiers(final Modifier... modifiers) {
         if(modifiers == null) throw new IllegalArgumentException("modifiers == null");
     }
-
-
-    /*
-import org.iterx.sora.tool.meta.support.asm.AsmCompiler;
-import org.objectweb.asm.ClassVisitor;
-import org.objectweb.asm.FieldVisitor;
-import org.objectweb.asm.Type;
-
-import static org.objectweb.asm.Opcodes.ACC_PRIVATE;
-import static org.objectweb.asm.Opcodes.ACC_PROTECTED;
-import static org.objectweb.asm.Opcodes.ACC_PUBLIC;
-import static org.objectweb.asm.Opcodes.ACC_FINAL;
-
-    public static class FieldDeclarationAsmCompiler extends AsmCompiler<ClassVisitor, AsmCompiler.DeclarationContext<FieldDeclaration>, FieldDeclaration> {
-
-        public FieldDeclarationAsmCompiler() {
-            super(ClassVisitor.class, FieldDeclaration.class);
-        }
-
-        public void compile(final ClassVisitor classVisitor, final DeclarationContext<FieldDeclaration> context) {
-            final FieldDeclaration fieldDeclaration = context.getDeclaration();
-            final FieldVisitor fieldVisitor = classVisitor.visitField(fieldDeclaration.getAccess(),
-                                                                     fieldDeclaration.getFieldName(),
-                                                                     fieldDeclaration.getFieldType().getDescriptor(),
-                                                                     null,
-                                                                     null);
-            fieldVisitor.visitEnd();
-        }
-    }
-    */
 }

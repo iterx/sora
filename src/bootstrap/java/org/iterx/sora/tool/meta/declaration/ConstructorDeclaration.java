@@ -1,10 +1,14 @@
 package org.iterx.sora.tool.meta.declaration;
 
 import org.iterx.sora.tool.meta.Declaration;
+import org.iterx.sora.tool.meta.Instruction;
 import org.iterx.sora.tool.meta.Type;
+import org.iterx.sora.tool.meta.instruction.Instructions;
 import org.iterx.sora.tool.meta.type.ClassMetaType;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 public final class ConstructorDeclaration extends Declaration<ConstructorDeclaration> {
 
@@ -15,15 +19,18 @@ public final class ConstructorDeclaration extends Declaration<ConstructorDeclara
     public enum Access implements Declaration.Access {  PUBLIC, PROTECTED, PRIVATE, DEFAULT }
     public enum Modifier implements Declaration.Modifier { ABSTRACT, FINAL }
 
+    private final List<Instruction<?>> instructions;
     private final Type<?>[] constructorTypes;
     private Type<ClassMetaType>[] exceptionTypes;
     private Access access;
     private Modifier[] modifiers;
 
     private ConstructorDeclaration(final Type... constructorTypes) {
-        this.constructorTypes = constructorTypes;
+        this.instructions = new ArrayList<Instruction<?>>();
         this.access = Access.PUBLIC;
         this.modifiers = EMPTY_MODIFIERS;
+        this.exceptionTypes = EMPTY_EXCEPTION_TYPES;
+        this.constructorTypes = constructorTypes;
     }
 
     public static ConstructorDeclaration newConstructorDeclaration(final Type<?>... constructorTypes) {
@@ -65,6 +72,24 @@ public final class ConstructorDeclaration extends Declaration<ConstructorDeclara
         return this;
     }
 
+    public Instruction<?>[] getInstructions() {
+        return instructions.toArray(new Instruction<?>[instructions.size()]);
+    }
+
+    public ConstructorDeclaration add(final Instructions instructions) {
+        this.instructions.addAll(instructions.instructions);
+        return this;
+    }
+
+    public ConstructorDeclaration add(final Instruction<?> instruction) {
+        this.instructions.add(instruction);
+        return this;
+    }
+
+    public ConstructorDeclaration remove(final Instruction<?> instruction) {
+        this.instructions.remove(instruction);
+        return this;
+    }
 
     @Override
     public int hashCode() {
@@ -98,39 +123,4 @@ public final class ConstructorDeclaration extends Declaration<ConstructorDeclara
     private static void assertModifiers(final Modifier... modifiers) {
         if(modifiers == null) throw new IllegalArgumentException("modifiers == null");
     }
-
-    /*
-    public Collection<Statement> getStatements() {
-        return statements.statements;
-    }
-
-    public ConstructorDeclaration define(final Statements statements) {
-        this.statements.statements.clear();
-        this.statements.statements.addAll(statements.statements);
-        return this;
-    }
-
-
-
-    public static class ConstructorDeclarationCompiler extends AsmCompiler<ClassVisitor, AsmCompiler.DeclarationContext<ConstructorDeclaration>, ConstructorDeclaration> {
-
-        public ConstructorDeclarationCompiler() {
-            super(ClassVisitor.class, ConstructorDeclaration.class);
-        }
-
-        public void compile(final ClassVisitor classVisitor, final DeclarationContext<ConstructorDeclaration> context) {
-            final ConstructorDeclaration constructorDeclaration = context.getDeclaration();
-            final MethodVisitor methodVisitor = classVisitor.visitMethod(constructorDeclaration.getAccess(),
-                                                                        "<init>",
-                                                                        Type.getMethodDescriptor(Type.VOID_TYPE, constructorDeclaration.constructorTypes),
-                                                                        null,
-                                                                        null);
-            methodVisitor.visitCode();
-            compile(methodVisitor, context, constructorDeclaration.getStatements());
-            methodVisitor.visitInsn(RETURN);
-            methodVisitor.visitMaxs(0, 0);
-            methodVisitor.visitEnd();
-        }
-    }
-    */
 }

@@ -8,19 +8,19 @@ import org.iterx.sora.tool.meta.declaration.MethodDeclaration;
 
 public interface DeclarationVisitor {
 
-    void startClassDeclaration(ClassDeclaration classDeclaration);
+    void startClass(ClassDeclaration classDeclaration);
 
-    void startInterfaceDeclaration(InterfaceDeclaration interfaceDeclaration);
+    void startInterface(InterfaceDeclaration interfaceDeclaration);
 
-    void fieldDeclaration(FieldDeclaration fieldDeclaration);
+    void field(FieldDeclaration fieldDeclaration);
 
-    void constructorDeclaration(ConstructorDeclaration constructorDeclaration);
+    void constructor(ConstructorDeclaration constructorDeclaration);
 
-    void methodDeclaration(MethodDeclaration methodDeclaration);
+    void method(MethodDeclaration methodDeclaration);
 
-    void endClassDeclaration();
+    void endClass();
 
-    void endInterfaceDeclaration();
+    void endInterface();
 }
 
 

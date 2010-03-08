@@ -6,14 +6,14 @@ import org.iterx.sora.tool.meta.Type;
 import java.util.HashSet;
 import java.util.Set;
 
-public class Declarations {
+public abstract class Declarations {
 
-    final Set<FieldDeclaration> fieldDeclarations;
-    final Set<ConstructorDeclaration> constructorDeclarations;
-    final Set<MethodDeclaration> methodDeclarations;
+    public final Set<FieldDeclaration> fieldDeclarations;
+    public final Set<ConstructorDeclaration> constructorDeclarations;
+    public final Set<MethodDeclaration> methodDeclarations;
 
+    //TODO: should check to see if this has been extended -> if so extract inline declarations
     public Declarations() {
-        //TODO: should check to see if this has been extended -> if so extract inline declarations
         this.fieldDeclarations = new HashSet<FieldDeclaration>();
         this.constructorDeclarations = new HashSet<ConstructorDeclaration>();
         this.methodDeclarations = new HashSet<MethodDeclaration>();

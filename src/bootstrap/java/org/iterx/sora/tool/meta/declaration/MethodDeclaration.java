@@ -1,11 +1,15 @@
 package org.iterx.sora.tool.meta.declaration;
 
 import org.iterx.sora.tool.meta.Declaration;
+import org.iterx.sora.tool.meta.Instruction;
 import org.iterx.sora.tool.meta.MetaClassLoader;
 import org.iterx.sora.tool.meta.Type;
+import org.iterx.sora.tool.meta.instruction.Instructions;
 import org.iterx.sora.tool.meta.type.ClassMetaType;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 public final class MethodDeclaration extends Declaration<MethodDeclaration> {
 
@@ -16,6 +20,7 @@ public final class MethodDeclaration extends Declaration<MethodDeclaration> {
     public enum Access implements Declaration.Access {  PUBLIC, PROTECTED, PRIVATE, DEFAULT }
     public enum Modifier implements Declaration.Modifier { ABSTRACT, FINAL }
 
+    private final List<Instruction<?>> instructions;
     private final String methodName;
     private final Type<?>[] argumentTypes;
     private Type<ClassMetaType>[] exceptionTypes;
@@ -25,7 +30,7 @@ public final class MethodDeclaration extends Declaration<MethodDeclaration> {
 
     private MethodDeclaration(final String methodName,
                               final Type<?>... argumentTypes) {
-
+        this.instructions = new ArrayList<Instruction<?>>();
         this.returnType = Type.VOID_TYPE;
         this.exceptionTypes = EMPTY_EXCEPTION_TYPES;
         this.access = Access.PUBLIC;
@@ -87,6 +92,25 @@ public final class MethodDeclaration extends Declaration<MethodDeclaration> {
         return this;
     }
 
+    public Instruction<?>[] getInstructions() {
+        return instructions.toArray(new Instruction<?>[instructions.size()]);
+    }
+
+    public MethodDeclaration add(final Instructions instructions) {
+        this.instructions.addAll(instructions.instructions);
+        return this;
+    }
+
+    public MethodDeclaration add(final Instruction<?> instruction) {
+        this.instructions.add(instruction);
+        return this;
+        }
+
+    public MethodDeclaration remove(final Instruction<?> instruction) {
+        this.instructions.remove(instruction);
+        return this;
+    }
+
     @Override
     public int hashCode() {
         return 31 * methodName.hashCode() +  Arrays.hashCode(argumentTypes);
@@ -127,49 +151,4 @@ public final class MethodDeclaration extends Declaration<MethodDeclaration> {
     private static void assertModifiers(final Modifier... modifiers) {
         if(modifiers == null) throw new IllegalArgumentException("modifiers == null");
     }
-
-        
-/*
-    public Collection<Statement> getStatements() {
-        return statements.statements;
-    }
-
-    public MethodDeclaration before(final Statements statements) {
-        //TODO: append to beginning of statements
-        throw new UnsupportedOperationException();
-    }
-
-    public MethodDeclaration define(final Statements statements) {
-        this.statements.statements.clear();
-        this.statements.statements.addAll(statements.statements);
-        return this;
-    }
-
-    public MethodDeclaration after(final Statements statements) {
-        //TODO: append to end of statements...
-        throw new UnsupportedOperationException();
-    }
-
-    public static class MethodDeclarationAsmCompiler extends AsmCompiler<ClassVisitor, AsmCompiler.DeclarationContext<MethodDeclaration>, MethodDeclaration> {
-
-        public MethodDeclarationAsmCompiler() {
-            super(ClassVisitor.class, MethodDeclaration.class);
-        }
-
-        public void compile(final ClassVisitor classVisitor, final DeclarationContext<MethodDeclaration> context) {
-            final MethodDeclaration methodDeclaration = context.getDeclaration();
-            final MethodVisitor methodVisitor = classVisitor.visitMethod(methodDeclaration.getAccess(),
-                                                                        methodDeclaration.getMethodName(),
-                                                                        Type.getMethodDescriptor(methodDeclaration.getReturnType(),
-                                                                                                 methodDeclaration.getArgumentTypes()),
-                                                                        null,
-                                                                        null);
-            methodVisitor.visitCode();
-            compile(methodVisitor, context, methodDeclaration.getStatements());
-            if(methodDeclaration.getReturnType() == Type.VOID_TYPE) methodVisitor.visitInsn(RETURN);
-            methodVisitor.visitMaxs(0, 0);
-            methodVisitor.visitEnd();
-        }
-    }
-*/
 }

@@ -25,29 +25,29 @@ public final class DeclarationReader {
     }
 
     private void accept(final DeclarationVisitor declarationVisitor, final ClassDeclaration classDeclaration) {
-        declarationVisitor.startClassDeclaration(classDeclaration);
+        declarationVisitor.startClass(classDeclaration);
         for(FieldDeclaration fieldDeclaration : classDeclaration.getFieldDeclarations()) accept(declarationVisitor, fieldDeclaration);
         for(ConstructorDeclaration constructorDeclaration : classDeclaration.getConstructorDeclarations()) accept(declarationVisitor, constructorDeclaration);
         for(MethodDeclaration methodDeclaration : classDeclaration.getMethodDeclarations()) accept(declarationVisitor, methodDeclaration);
-        declarationVisitor.endClassDeclaration();
+        declarationVisitor.endClass();
     }
 
     private void accept(final DeclarationVisitor declarationVisitor, final InterfaceDeclaration interfaceDeclaration) {
-        declarationVisitor.startInterfaceDeclaration(interfaceDeclaration);
+        declarationVisitor.startInterface(interfaceDeclaration);
         for(FieldDeclaration fieldDeclaration : interfaceDeclaration.getFieldDeclarations()) accept(declarationVisitor, fieldDeclaration);
         for(MethodDeclaration methodDeclaration : interfaceDeclaration.getMethodDeclarations()) accept(declarationVisitor, methodDeclaration);
-        declarationVisitor.endInterfaceDeclaration();
+        declarationVisitor.endInterface();
     }
 
     private void accept(final DeclarationVisitor declarationVisitor, final FieldDeclaration fieldDeclaration) {
-        declarationVisitor.fieldDeclaration(fieldDeclaration);
+        declarationVisitor.field(fieldDeclaration);
     }
 
     private void accept(final DeclarationVisitor declarationVisitor, final ConstructorDeclaration constructorDeclaration) {
-        declarationVisitor.constructorDeclaration(constructorDeclaration);
+        declarationVisitor.constructor(constructorDeclaration);
     }
 
     private void accept(final DeclarationVisitor declarationVisitor, final MethodDeclaration methodDeclaration) {
-        declarationVisitor.methodDeclaration(methodDeclaration);
+        declarationVisitor.method(methodDeclaration);
     }
 }

@@ -10,6 +10,7 @@ import org.iterx.sora.tool.meta.type.InterfaceMetaType;
 
 import java.util.Arrays;
 
+//TODO: should implement Type<ClassMetaType>...
 public final class ClassDeclaration extends Declaration<ClassDeclaration> {
 
     public static final InterfaceMetaType[] EMPTY_INTERFACES = new InterfaceMetaType[0];
@@ -22,7 +23,8 @@ public final class ClassDeclaration extends Declaration<ClassDeclaration> {
     private final Set<ConstructorDeclaration> constructorDeclarations;
     private final Set<MethodDeclaration> methodDeclarations;
     private final ClassMetaType classType;
-    private final MetaClassLoader metaClassLoader;
+
+    private final transient MetaClassLoader metaClassLoader;
 
     private Access access;
     private Modifier[] modifiers;
@@ -193,10 +195,7 @@ public final class ClassDeclaration extends Declaration<ClassDeclaration> {
     }
 
     private static <T> void add(final Set<T> declarations, final T declaration) {
-        if(declarations.contains(declaration))
-        {
-            throw new IllegalStateException();
-        }
+        if(declarations.contains(declaration)) throw new IllegalStateException();
         declarations.add(declaration);
     }
 
