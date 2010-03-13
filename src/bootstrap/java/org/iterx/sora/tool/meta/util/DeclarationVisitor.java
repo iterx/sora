@@ -7,7 +7,7 @@ import org.iterx.sora.tool.meta.declaration.InterfaceDeclaration;
 import org.iterx.sora.tool.meta.declaration.MethodDeclaration;
 
 public interface DeclarationVisitor {
-
+    
     void startClass(ClassDeclaration classDeclaration);
 
     void startInterface(InterfaceDeclaration interfaceDeclaration);

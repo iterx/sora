@@ -1,9 +1,14 @@
 package org.iterx.sora.tool.meta.support.asm;
 
 import org.iterx.sora.tool.meta.Declaration;
+import org.iterx.sora.tool.meta.Instruction;
 import org.iterx.sora.tool.meta.MetaClassLoader;
 import org.iterx.sora.tool.meta.Type;
 import org.iterx.sora.tool.meta.Value;
+import org.iterx.sora.tool.meta.instruction.InvokeSuperInstruction;
+import org.iterx.sora.tool.meta.instruction.ReturnInstruction;
+import org.iterx.sora.tool.meta.value.Constant;
+import org.iterx.sora.tool.meta.value.Variable;
 import org.iterx.sora.tool.meta.instruction.GetFieldInstruction;
 import org.iterx.sora.tool.meta.instruction.PutFieldInstruction;
 import org.iterx.sora.tool.meta.type.ClassMetaType;
@@ -259,10 +264,12 @@ public final class AsmExtractor {
                 System.err.println("<clinit> not supported for " + classDeclaration.getClassType());
             }
             else if("<init>".equals(name)) {
-                classDeclaration.add(ConstructorDeclaration.newConstructorDeclaration(toTypes(org.objectweb.asm.Type.getArgumentTypes(description))).
+                final ConstructorDeclaration constructorDeclaration = ConstructorDeclaration.newConstructorDeclaration(toTypes(org.objectweb.asm.Type.getArgumentTypes(description))).
                         setExceptionTypes(toTypes(toObjectTypes(exceptions))).
                         setAccess(toAccess(access, ConstructorDeclaration.Access.values())).
-                        setModifiers(toModifiers(access, ConstructorDeclaration.Modifier.values())));
+                        setModifiers(toModifiers(access, ConstructorDeclaration.Modifier.values()));
+                classDeclaration.add(constructorDeclaration);
+                return new ConstructorDeclarationInstructionExtractorMethodVisitor(constructorDeclaration);
             }
             else {
                 final MethodDeclaration methodDeclaration = MethodDeclaration.newMethodDeclaration(name, toTypes(org.objectweb.asm.Type.getArgumentTypes(description))).
@@ -271,7 +278,7 @@ public final class AsmExtractor {
                         setAccess(toAccess(access, MethodDeclaration.Access.values())).
                         setModifiers(toModifiers(access, MethodDeclaration.Modifier.values()));
                 classDeclaration.add(methodDeclaration);
-                return new InstructionExtractorMethodVisitor(methodDeclaration);
+                return new MethodDeclarationInstructionExtractorMethodVisitor(methodDeclaration);
             }
             return null;
         }
@@ -324,14 +331,41 @@ public final class AsmExtractor {
         public void visitEnd() {}
     }
 
-    private class InstructionExtractorMethodVisitor implements MethodVisitor, Opcodes {
+    private class MethodDeclarationInstructionExtractorMethodVisitor extends InstructionExtractorMethodVisitor {
 
         private final MethodDeclaration methodDeclaration;
+
+        private MethodDeclarationInstructionExtractorMethodVisitor(final MethodDeclaration methodDeclaration) {
+            super(methodDeclaration.getArgumentTypes());
+            this.methodDeclaration = methodDeclaration;
+        }
+
+        protected void add(final Instruction<?> instruction) {
+            methodDeclaration.add(instruction);
+        }
+    }
+
+    private class ConstructorDeclarationInstructionExtractorMethodVisitor extends InstructionExtractorMethodVisitor {
+
+        private final ConstructorDeclaration constructorDeclaration;
+
+        private ConstructorDeclarationInstructionExtractorMethodVisitor(final ConstructorDeclaration constructorDeclaration) {
+            super(constructorDeclaration.getConstructorTypes());
+            this.constructorDeclaration = constructorDeclaration;
+        }
+
+        protected void add(final Instruction<?> instruction) {
+            constructorDeclaration.add(instruction);
+        }
+    }
+
+
+    private abstract class InstructionExtractorMethodVisitor implements MethodVisitor, Opcodes {
+
         private final AsmScope asmScope;
 
-        private InstructionExtractorMethodVisitor(final MethodDeclaration methodDeclaration) {
-            this.asmScope = newAsmStack(methodDeclaration.getArgumentTypes());
-            this.methodDeclaration = methodDeclaration;
+        private InstructionExtractorMethodVisitor(final Type... types) {
+            this.asmScope = newAsmStack(types);
         }
 
         public AnnotationVisitor visitAnnotationDefault() {
@@ -355,7 +389,19 @@ public final class AsmExtractor {
         public void visitFrame(final int i, final int i1, final Object[] objects, final int i2, final Object[] objects1) {
         }
 
-        public void visitInsn(final int i) {
+        public void visitInsn(final int opcode) {
+            switch(opcode) {
+                case IRETURN:
+                case LRETURN:
+                case FRETURN:
+                case DRETURN:
+                case ARETURN:
+                   // add(ReturnInstruction.newReturnInstruction(pop(asmScope)));
+                    break;
+                case RETURN:
+                    add(ReturnInstruction.newReturnInstruction());
+                    break;
+            }
         }
 
         public void visitIntInsn(final int i, final int i1) {
@@ -377,23 +423,33 @@ public final class AsmExtractor {
 
             switch(opcode){
                 case GETFIELD:
-                    methodDeclaration.add(GetFieldInstruction.newGetFieldInstruction(name));
-                    //method.add(GetFieldInstruction.newGetFieldInstruction(name, Value.newValue(name)));
+                    add(GetFieldInstruction.newGetFieldInstruction(name));
+                    //method.add(GetFieldInstruction.newGetFieldInstruction(name, Variable.newVariable(name)));
                     //asmScope.push(name, );
                     break;
                 case PUTFIELD:
                     final String valueName = asmScope.peek();
-                    //TODO: do we need to support Value types???
-                    methodDeclaration.add(PutFieldInstruction.newPutFieldInstruction(name, Value.newValue(valueName)));
-                    asmScope.pop();
-                    asmScope.pop();
+                    //TODO: do we need to support Variable types???
+                    add(PutFieldInstruction.newPutFieldInstruction(name, Variable.newVariable(valueName)));
+                    popAll(asmScope, 2);
                     break;
                 default:
                     //throw new UnsupportedOperationException();
             }
         }
 
-        public void visitMethodInsn(final int i, final String s, final String s1, final String s2) {
+        public void visitMethodInsn(final int opcode, final String owner, final String name, final String description) {
+            switch(opcode) {
+
+                case INVOKESPECIAL:
+                    if("<init>".equals(name)){
+                        final int length = toArgumentTypes(description).length;
+                        add(InvokeSuperInstruction.invokeInitInstruction(popAll(asmScope, length)));
+                        break;
+                    }
+
+                default:
+            }
         }
 
         public void visitJumpInsn(final int i, final Label label) {
@@ -432,6 +488,35 @@ public final class AsmExtractor {
         public void visitEnd() {
         }
 
+        protected abstract void add(final Instruction<?> instruction);
+
+
+        protected AsmScope newAsmStack(final Type<?>[] argumentTypes) {
+            final AsmScope asmScope = new AsmScope();
+
+            asmScope.push("this", Type.OBJECT_TYPE);
+            for(int i = 0, size = argumentTypes.length; i != size; i++) asmScope.push("arg" + i, argumentTypes[i]);
+            return asmScope;
+        }
+
+        private void pushAll(final AsmScope asmScope, final Value... values) {
+
+/*
+            for(final Value value : values) {
+                final String name = (value.isVariable())? ((Variable) value).getName() : null;
+                asmScope.push(name, value);
+            }
+*/
+        }
+
+        private Value pop(final AsmScope asmScope) {
+            return null;
+        }
+
+        private Value[] popAll(final AsmScope asmScope, final int count) {
+            return new Value[0];
+        }
+
         private Type<?> toType(final int opcode) {
             if(hasAsmOpcodes(opcode, ILOAD)) return Type.INT_TYPE;
             else if(hasAsmOpcodes(opcode, ALOAD))  return Type.OBJECT_TYPE;
@@ -440,20 +525,20 @@ public final class AsmExtractor {
             else if(hasAsmOpcodes(opcode, DLOAD))  return Type.DOUBLE_TYPE;
             throw new IllegalArgumentException();
         }
-
-        private AsmScope newAsmStack(final Type<?>[] argumentTypes) {
-            final AsmScope asmScope = new AsmScope();
-
-            asmScope.push("this", Type.OBJECT_TYPE);
-            for(int i = 0, size = argumentTypes.length; i != size; i++) asmScope.push("arg" + i, argumentTypes[i]);
-            return asmScope;
-        }
     }
 
     private static org.objectweb.asm.Type[] toObjectTypes(final String... names) {
         final org.objectweb.asm.Type[] types = (names != null)? new org.objectweb.asm.Type[names.length] : new org.objectweb.asm.Type[0];
         for(int i = types.length; i-- != 0; ) types[i] = org.objectweb.asm.Type.getObjectType(names[i]);
         return types;
+    }
+
+    private static org.objectweb.asm.Type[] toArgumentTypes(final String description) {
+        return org.objectweb.asm.Type.getArgumentTypes(description);
+    }
+
+    private static org.objectweb.asm.Type toReturnType(final String description) {
+        return org.objectweb.asm.Type.getReturnType(description);
     }
 
     @SuppressWarnings("unchecked")

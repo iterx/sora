@@ -1,5 +1,6 @@
 package org.iterx.sora.tool.meta.test;
 
+import org.iterx.sora.tool.meta.Declaration;
 import org.iterx.sora.tool.meta.MetaClassLoader;
 import org.iterx.sora.tool.meta.Type;
 import org.iterx.sora.tool.meta.declaration.ClassDeclaration;
@@ -39,27 +40,34 @@ public class StubMetaClassLoader extends MetaClassLoader {
     @Override
     public Class<?> loadClass(final Type<?> type) throws ClassNotFoundException {
         if(debug) {
-            if(type.getClass() == ClassMetaType.class)debug(asmCompiler.compile(loadDeclaration((ClassMetaType) type)));
-            else if(type.getClass() == InterfaceMetaType.class)debug(asmCompiler.compile(loadDeclaration((InterfaceMetaType) type)));
+            if(type.getClass() == ClassMetaType.class) debug(asmCompiler.compile(loadDeclaration((ClassMetaType) type)));
+            else if(type.getClass() == InterfaceMetaType.class) debug(asmCompiler.compile(loadDeclaration((InterfaceMetaType) type)));
             else throw new IllegalArgumentException();
         }
         return super.loadClass(type);
     }
+
+    public URL getResource(final String name) {
+        try {
+            return (classes.containsKey(name))?
+                   new URL("vm", null, -1, name, new ClassURLStreamHandler(classes.get(name))) :
+                   super.getResource(name);
+        }
+        catch(final MalformedURLException e) {
+            return null;
+        }
+    }
+
 
     public void defineClass(final ClassDeclaration classDeclaration) {
         classes.put(toResource(classDeclaration.getClassType().getName()),
                     asmCompiler.compile(classDeclaration));
     }
 
-    public URL getResource(final String name) {
-        try {
-            return (classes.containsKey(name))?
-                   new URL("memory", null, -1, name, new ClassURLStreamHandler(classes.get(name))) :
-                   super.getResource(name);
-        }
-        catch(final MalformedURLException e) {
-            return null;
-        }
+    @Override
+    protected Class<?> defineClass(final String name, final Declaration<?> declaration) {
+        if(declaration.isClassDeclaration()) defineClass((ClassDeclaration) declaration);
+        return super.defineClass(name, declaration);
     }
 
     private class ClassURLStreamHandler extends URLStreamHandler {
@@ -86,7 +94,6 @@ public class StubMetaClassLoader extends MetaClassLoader {
     private static void debug(final byte[] bytes) {
         new ClassReader(bytes).accept(new TraceClassVisitor(new PrintWriter(System.out)), 0);
     }
-
 
     private static String toResource(final String name) {
         return name.replace('.', '/') + ".class";

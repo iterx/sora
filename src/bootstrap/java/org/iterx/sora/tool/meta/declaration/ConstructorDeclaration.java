@@ -2,8 +2,8 @@ package org.iterx.sora.tool.meta.declaration;
 
 import org.iterx.sora.tool.meta.Declaration;
 import org.iterx.sora.tool.meta.Instruction;
+import org.iterx.sora.tool.meta.Instructions;
 import org.iterx.sora.tool.meta.Type;
-import org.iterx.sora.tool.meta.instruction.Instructions;
 import org.iterx.sora.tool.meta.type.ClassMetaType;
 
 import java.util.ArrayList;
@@ -36,6 +36,11 @@ public final class ConstructorDeclaration extends Declaration<ConstructorDeclara
     public static ConstructorDeclaration newConstructorDeclaration(final Type<?>... constructorTypes) {
         assertType(constructorTypes);
         return new ConstructorDeclaration(constructorTypes);
+    }
+
+    @Override
+    public boolean isConstructorDeclaration() {
+        return true;
     }
 
     public Type<?>[] getConstructorTypes() {
@@ -77,7 +82,7 @@ public final class ConstructorDeclaration extends Declaration<ConstructorDeclara
     }
 
     public ConstructorDeclaration add(final Instructions instructions) {
-        this.instructions.addAll(instructions.instructions);
+        for(final Instruction instruction : instructions.getInstructions()) this.instructions.add(instruction);
         return this;
     }
 

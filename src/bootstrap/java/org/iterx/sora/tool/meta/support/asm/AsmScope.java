@@ -7,7 +7,6 @@ import java.util.Arrays;
 //TODO: Rename to scope -> add block scoping & hierarchy 
 public final class AsmScope {
 
-
     private static final int DEFAULT_CAPACITY = 16;
 
     private String[] names;

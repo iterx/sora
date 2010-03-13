@@ -23,6 +23,7 @@ public class ConstructorDeclarationMatcher extends BaseMatcher<ConstructorDeclar
         return (expectedConstructorDeclaration.equals(constructorDeclaration) &&
                 expectedConstructorDeclaration.getAccess().equals(constructorDeclaration.getAccess()) &&
                 Arrays.equals(expectedConstructorDeclaration.getModifiers(), constructorDeclaration.getModifiers()) &&
-                Arrays.equals(expectedConstructorDeclaration.getExceptionTypes(), constructorDeclaration.getExceptionTypes()));
+                Arrays.equals(expectedConstructorDeclaration.getExceptionTypes(), constructorDeclaration.getExceptionTypes()) &&
+                new InstructionsMatcher(expectedConstructorDeclaration.getInstructions()).matches(constructorDeclaration.getInstructions()));
     }
 }

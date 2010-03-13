@@ -5,6 +5,8 @@ import org.iterx.sora.tool.meta.Instruction;
 import org.iterx.sora.tool.meta.MetaClassLoader;
 import org.iterx.sora.tool.meta.Type;
 import org.iterx.sora.tool.meta.Value;
+import org.iterx.sora.tool.meta.value.Constant;
+import org.iterx.sora.tool.meta.value.Variable;
 import org.iterx.sora.tool.meta.declaration.ClassDeclaration;
 import org.iterx.sora.tool.meta.declaration.ConstructorDeclaration;
 import org.iterx.sora.tool.meta.declaration.FieldDeclaration;
@@ -13,7 +15,7 @@ import org.iterx.sora.tool.meta.declaration.MethodDeclaration;
 import org.iterx.sora.tool.meta.instruction.GetFieldInstruction;
 import org.iterx.sora.tool.meta.instruction.InvokeSuperInstruction;
 import org.iterx.sora.tool.meta.instruction.PutFieldInstruction;
-import org.iterx.sora.tool.meta.instruction.ReturnValueInstruction;
+import org.iterx.sora.tool.meta.instruction.ReturnInstruction;
 import org.iterx.sora.tool.meta.instruction.StoreInstruction;
 import org.iterx.sora.tool.meta.util.DeclarationReader;
 import org.iterx.sora.tool.meta.util.DeclarationVisitor;
@@ -80,7 +82,7 @@ public final class AsmCompiler {
                                                                       fieldDeclaration.getFieldName(),
                                                                       toDescriptor(fieldDeclaration.getFieldType()),
                                                                       null,
-                                                                      null);
+                                                                      fieldDeclaration.getFieldValue());
             fieldVisitor.visitEnd();
         }
 
@@ -92,8 +94,6 @@ public final class AsmCompiler {
                                                                         null);
             methodVisitor.visitCode();
             new InstructionReader(constructorDeclaration.getInstructions()).accept(new CompilerInstructionVisitor(classDeclaration, constructorDeclaration, methodVisitor));
-            //TODO: remove - should always force instruction....
-            methodVisitor.visitInsn(RETURN);
             methodVisitor.visitMaxs(0, 0);
             methodVisitor.visitEnd();
         }
@@ -106,8 +106,6 @@ public final class AsmCompiler {
                                                                         null);
             methodVisitor.visitCode();
             new InstructionReader(methodDeclaration.getInstructions()).accept(new CompilerInstructionVisitor(classDeclaration, methodDeclaration, methodVisitor));
-            //TODO: remove - should always force instruction....
-            if(methodDeclaration.getReturnType() == Type.VOID_TYPE) methodVisitor.visitInsn(RETURN);
             methodVisitor.visitMaxs(0, 0);
             methodVisitor.visitEnd();
         }
@@ -152,7 +150,7 @@ public final class AsmCompiler {
 
         public void getField(final GetFieldInstruction getFieldInstruction) {
             final FieldDeclaration fieldDeclaration = classDeclaration.getFieldDeclaration(getFieldInstruction.getFieldName());
-
+            methodVisitor.visitVarInsn(ALOAD, 0);            
             loadValues(methodVisitor, asmScope);
             methodVisitor.visitFieldInsn(GETFIELD,
                                          toName(classDeclaration.getClassType()),
@@ -162,6 +160,7 @@ public final class AsmCompiler {
 
         public void putField(final PutFieldInstruction putFieldInstruction) {
             final FieldDeclaration fieldDeclaration = classDeclaration.getFieldDeclaration(putFieldInstruction.getFieldName());
+            methodVisitor.visitVarInsn(ALOAD, 0);
             loadValues(methodVisitor, asmScope, putFieldInstruction.getValue());
             methodVisitor.visitFieldInsn(PUTFIELD,
                                          toName(classDeclaration.getClassType()),
@@ -170,9 +169,9 @@ public final class AsmCompiler {
         }
 
         public void store(final StoreInstruction storeInstruction) {
-            final Value value = storeInstruction.getValue();
-            final String valueName = value.getName();
-            final Type valueType = value.getType();
+            final Variable variable = storeInstruction.getVariable();
+            final String valueName = variable.getName();
+            final Type valueType = variable.getType();
 
             instructions(storeInstruction.getInstruction());
             //TODO: abstract out as store values???
@@ -182,6 +181,7 @@ public final class AsmCompiler {
         }
 
         public void invokeSuper(final InvokeSuperInstruction invokeSuperInstruction) {
+            methodVisitor.visitVarInsn(ALOAD, 0);
             loadValues(methodVisitor, asmScope, invokeSuperInstruction.getValues());
             methodVisitor.visitMethodInsn(INVOKESPECIAL,
                                           toName(classDeclaration.getSuperType()),
@@ -189,10 +189,15 @@ public final class AsmCompiler {
                                           toMethodDescriptor(Type.VOID_TYPE, constructorDeclaration.getConstructorTypes()));
         }
 
-        public void returnValue(final ReturnValueInstruction returnValueInstruction) {
-            if(returnValueInstruction.getInstruction() != null) instructions(returnValueInstruction.getInstruction());
-            if(returnValueInstruction.getValue() != null) loadValues(methodVisitor, asmScope, returnValueInstruction.getValue());
-            methodVisitor.visitInsn(toType(methodDeclaration.getReturnType()).getOpcode(IRETURN));
+        public void returnValue(final ReturnInstruction returnInstruction) {
+            if(constructorDeclaration != null) {
+                methodVisitor.visitInsn(RETURN);
+            }
+            else {
+                if(returnInstruction.getInstruction() != null) instructions(returnInstruction.getInstruction());
+                if(returnInstruction.getValue() != null) loadValues(methodVisitor, asmScope, returnInstruction.getValue());
+                methodVisitor.visitInsn(toType(methodDeclaration.getReturnType()).getOpcode(IRETURN));
+            }
         }
 
         private void instructions(final Instruction... instructions) {
@@ -200,12 +205,50 @@ public final class AsmCompiler {
         }
 
         private static void loadValues(final MethodVisitor methodVisitor, final AsmScope asmScope, final Value... values) {
-            methodVisitor.visitVarInsn(ALOAD, 0);
             for(final Value value : values) {
-                final String valueName = value.getName();
-                methodVisitor.visitVarInsn(toType(asmScope.getType(valueName)).getOpcode(ILOAD),
-                                           asmScope.getIndex(valueName));
+                if(value.isConstant()) loadConstant(methodVisitor, (Constant) value);
+                else if(value.isVariable()) loadVariable(methodVisitor, asmScope, (Variable) value);
+                else throw new IllegalArgumentException();
             }
+        }
+
+        private static void loadConstant(final MethodVisitor methodVisitor, final Constant constant) {
+            final Type type = constant.getType();
+            final Object value = constant.getValue();
+
+            if(type == Type.OBJECT_TYPE) methodVisitor.visitInsn(ACONST_NULL);
+            else if(type == Type.BOOLEAN_TYPE) methodVisitor.visitInsn((((Boolean) value))? ICONST_1 : ICONST_0);
+            else if(type == Type.BYTE_TYPE || type == Type.SHORT_TYPE || type == Type.INT_TYPE) {
+                final int i = ((Number) value).intValue();
+                if(i == -1) methodVisitor.visitInsn(ICONST_M1);
+                else if(i >= 0 && i <= 5) methodVisitor.visitInsn(getAsmOpcode("ICONST_" + i));
+                else if(i >= Byte.MIN_VALUE && i <= Byte.MAX_VALUE) methodVisitor.visitIntInsn(BIPUSH, i);
+                else if(i >= Short.MIN_VALUE && i <= Short.MAX_VALUE) methodVisitor.visitIntInsn(SIPUSH, i);
+                else methodVisitor.visitLdcInsn(i);
+            }
+            else if(type == Type.FLOAT_TYPE) {
+                final float f = ((Number) value).floatValue();
+                if(f == 0f || f == 1f || f == 2f) methodVisitor.visitInsn(getAsmOpcode("FCONST_" + (int) f));
+                else methodVisitor.visitLdcInsn(f);
+            }
+            else if(type == Type.LONG_TYPE) {
+                final long l = ((Number) value).longValue();
+                if(l == 0 || l == 1) methodVisitor.visitInsn(getAsmOpcode("LCONST_" + l));
+                else methodVisitor.visitLdcInsn(l);
+            }
+            else if(type == Type.DOUBLE_TYPE) {
+                final double d = ((Number) value).doubleValue();
+                if(d == 0d || d == 1d) methodVisitor.visitInsn(getAsmOpcode("DCONST_" + (int) d ));
+                else methodVisitor.visitLdcInsn(d);
+            }
+            else methodVisitor.visitLdcInsn(value);
+        }
+
+        private static void loadVariable(final MethodVisitor methodVisitor, final AsmScope asmScope, final Variable variable) {
+            final String variableName = variable.getName();
+            methodVisitor.visitVarInsn(toType(asmScope.getType(variableName)).getOpcode(ILOAD),
+                                       asmScope.getIndex(variableName));
+
         }
 
 
@@ -216,7 +259,6 @@ public final class AsmCompiler {
             for(int i = 0, size = argumentTypes.length; i != size; i++) asmScope.push("arg" + i, argumentTypes[i]);
             return asmScope;
         }
-
     }
 
 

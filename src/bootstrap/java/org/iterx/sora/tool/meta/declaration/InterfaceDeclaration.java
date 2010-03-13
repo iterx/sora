@@ -3,6 +3,7 @@ package org.iterx.sora.tool.meta.declaration;
 import org.iterx.sora.collection.Set;
 import org.iterx.sora.collection.set.HashSet;
 import org.iterx.sora.tool.meta.Declaration;
+import org.iterx.sora.tool.meta.Declarations;
 import org.iterx.sora.tool.meta.MetaClassLoader;
 import org.iterx.sora.tool.meta.Type;
 import org.iterx.sora.tool.meta.type.InterfaceMetaType;
@@ -40,6 +41,11 @@ public final class InterfaceDeclaration extends Declaration<InterfaceDeclaration
     public static InterfaceDeclaration newInterfaceDeclaration(final MetaClassLoader metaClassLoader, final InterfaceMetaType interfaceType) {
         assertType(interfaceType);
         return defineDeclaration(metaClassLoader, interfaceType, new InterfaceDeclaration(metaClassLoader, interfaceType));
+    }
+
+    @Override
+    public boolean isInterfaceDeclaration() {
+        return true;
     }
 
     public MetaClassLoader getMetaClassLoader() {
@@ -121,8 +127,8 @@ public final class InterfaceDeclaration extends Declaration<InterfaceDeclaration
 
     public InterfaceDeclaration add(final Declarations declarations) {
         assertDeclarations(declarations);
-        fieldDeclarations.addAll(declarations.fieldDeclarations);
-        methodDeclarations.addAll(declarations.methodDeclarations);
+        for(final FieldDeclaration fieldDeclaration : declarations.getFieldDeclarations()) fieldDeclarations.add(fieldDeclaration);
+        for(final MethodDeclaration methodDeclaration : declarations.getMethodDeclarations()) methodDeclarations.add(methodDeclaration);
         return this;
     }
 
@@ -173,7 +179,7 @@ public final class InterfaceDeclaration extends Declaration<InterfaceDeclaration
 
     private static void assertDeclarations(final Declarations declarations) {
         if(declarations == null) throw new IllegalArgumentException("declarations == null");
-        if(!declarations.constructorDeclarations.isEmpty()) throw new IllegalArgumentException("Unsupported declarations '" + declarations.constructorDeclarations +"'");
+        if(declarations.getConstructorDeclarations().length != 0) throw new IllegalArgumentException("Unsupported declarations '" + declarations.getConstructorDeclarations() +"'");
     }
 
     private static void assertFieldDeclaration(final FieldDeclaration fieldDeclaration) {

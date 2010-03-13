@@ -18,6 +18,7 @@ public abstract class Type<T extends Type<T>> {
     public static final PrimitiveMetaType DOUBLE_TYPE = PrimitiveMetaType.newType("double");
 
     public static final ClassMetaType OBJECT_TYPE = ClassMetaType.newType("java.lang.Object");
+    public static final ClassMetaType STRING_TYPE = ClassMetaType.newType("java.lang.String");
 
     private final transient MetaClassLoader metaClassLoader;
     private final String name;

@@ -39,7 +39,7 @@ public class ClassDeclarationMatcher extends BaseMatcher<Declaration<?>> {
 
         private MatchesDeclarationVisitor(final ClassDeclaration classDeclaration) {
             this.expectedClassDeclaration = classDeclaration;
-            this.matches = false;
+            this.matches = true;
         }
 
         public boolean matches() {
@@ -47,33 +47,39 @@ public class ClassDeclarationMatcher extends BaseMatcher<Declaration<?>> {
         }
 
         public void startClass(final ClassDeclaration classDeclaration) {
-            matches = (expectedClassDeclaration != null &&
-                       expectedClassDeclaration.equals(classDeclaration) &&
-                       expectedClassDeclaration.getAccess().equals(classDeclaration.getAccess()) &&
-                       expectedClassDeclaration.getSuperType().equals(classDeclaration.getSuperType())&&
-                       Arrays.equals(expectedClassDeclaration.getModifiers(), classDeclaration.getModifiers()) &&
-                       Arrays.equals(expectedClassDeclaration.getInterfaceTypes(), classDeclaration.getInterfaceTypes()) &&
-                       Arrays.equals(expectedClassDeclaration.getFieldDeclarations(), classDeclaration.getFieldDeclarations()) &&
-                       Arrays.equals(expectedClassDeclaration.getConstructorDeclarations(), classDeclaration.getConstructorDeclarations()) &&
-                       Arrays.equals(expectedClassDeclaration.getMethodDeclarations(), classDeclaration.getMethodDeclarations()));
+            set(expectedClassDeclaration != null &&
+                expectedClassDeclaration.equals(classDeclaration) &&
+                expectedClassDeclaration.getAccess().equals(classDeclaration.getAccess()) &&
+                expectedClassDeclaration.getSuperType().equals(classDeclaration.getSuperType())&&
+                Arrays.equals(expectedClassDeclaration.getModifiers(), classDeclaration.getModifiers()) &&
+                Arrays.equals(expectedClassDeclaration.getInterfaceTypes(), classDeclaration.getInterfaceTypes()) &&
+                Arrays.equals(expectedClassDeclaration.getFieldDeclarations(), classDeclaration.getFieldDeclarations()) &&
+                Arrays.equals(expectedClassDeclaration.getConstructorDeclarations(), classDeclaration.getConstructorDeclarations()) &&
+                Arrays.equals(expectedClassDeclaration.getMethodDeclarations(), classDeclaration.getMethodDeclarations()));
         }
 
-        public void startInterface(final InterfaceDeclaration interfaceDeclaration) {}
+        public void startInterface(final InterfaceDeclaration interfaceDeclaration) {
+            set(false);
+        }
 
         public void field(final FieldDeclaration fieldDeclaration) {
-            if(matches) matches &= new FieldDeclarationMatcher(expectedClassDeclaration.getFieldDeclaration(fieldDeclaration.getFieldName())).matches(fieldDeclaration);
+            set(new FieldDeclarationMatcher(expectedClassDeclaration.getFieldDeclaration(fieldDeclaration.getFieldName())).matches(fieldDeclaration));
         }
 
         public void constructor(final ConstructorDeclaration constructorDeclaration) {
-            if(matches) matches &= new ConstructorDeclarationMatcher(expectedClassDeclaration.getConstructorDeclaration(constructorDeclaration.getConstructorTypes())).matches(constructorDeclaration);
+            set(new ConstructorDeclarationMatcher(expectedClassDeclaration.getConstructorDeclaration(constructorDeclaration.getConstructorTypes())).matches(constructorDeclaration));
         }
 
         public void method(final MethodDeclaration methodDeclaration) {
-            if(matches) matches &= new MethodDeclarationMatcher(expectedClassDeclaration.getMethodDeclaration(methodDeclaration.getMethodName(), methodDeclaration.getArgumentTypes())).matches(methodDeclaration);
+            set(new MethodDeclarationMatcher(expectedClassDeclaration.getMethodDeclaration(methodDeclaration.getMethodName(), methodDeclaration.getArgumentTypes())).matches(methodDeclaration));
         }
         
         public void endClass() {}
 
         public void endInterface() {}
+
+        private void set(final boolean value) {
+            if(!value) matches = false;
+        }
     }
 }

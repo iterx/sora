@@ -1,7 +1,6 @@
 package org.iterx.sora.tool.meta.declaration;
 
 import org.iterx.sora.tool.meta.Declaration;
-import org.iterx.sora.tool.meta.MetaClassLoader;
 import org.iterx.sora.tool.meta.Type;
 
 
@@ -16,9 +15,7 @@ public final class FieldDeclaration extends Declaration<FieldDeclaration> {
     private Type<?> fieldType;
     private Access access;
     private Modifier[] modifiers;
-
-    //private Modifier modifier; //Mark as volatile or transient
-    //TODO: add value...
+    private Object fieldValue;
 
     private FieldDeclaration(final String fieldName) {
         this.access = Access.PRIVATE;
@@ -29,6 +26,11 @@ public final class FieldDeclaration extends Declaration<FieldDeclaration> {
     public static FieldDeclaration newFieldDeclaration(final String fieldName, final Type<?> fieldType) {
         assertFieldName(fieldName);
         return new FieldDeclaration(fieldName).setFieldType(fieldType);
+    }
+
+    @Override
+    public boolean isFieldDeclaration() {
+        return true;
     }
 
     public String getFieldName() {
@@ -42,6 +44,34 @@ public final class FieldDeclaration extends Declaration<FieldDeclaration> {
     public FieldDeclaration setFieldType(final Type<?> fieldType) {
         assertType(fieldType);
         this.fieldType = fieldType;
+        return this;
+    }
+
+    public Object getFieldValue() {
+        return fieldValue;
+    }
+
+    public FieldDeclaration setFieldValue(final Integer fieldValue) {
+        this.fieldValue = fieldValue;
+        return this;
+    }
+    public FieldDeclaration setFieldValue(final Long fieldValue) {
+        this.fieldValue = fieldValue;
+        return this;
+    }
+
+    public FieldDeclaration setFieldValue(final Float fieldValue) {
+        this.fieldValue = fieldValue;
+        return this;
+    }
+
+    public FieldDeclaration setFieldValue(final Double fieldValue) {
+        this.fieldValue = fieldValue;
+        return this;
+    }
+
+    public FieldDeclaration setFieldValue(final String fieldValue) {
+        this.fieldValue = fieldValue;
         return this;
     }
 

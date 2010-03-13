@@ -2,9 +2,8 @@ package org.iterx.sora.tool.meta.declaration;
 
 import org.iterx.sora.tool.meta.Declaration;
 import org.iterx.sora.tool.meta.Instruction;
-import org.iterx.sora.tool.meta.MetaClassLoader;
 import org.iterx.sora.tool.meta.Type;
-import org.iterx.sora.tool.meta.instruction.Instructions;
+import org.iterx.sora.tool.meta.Instructions;
 import org.iterx.sora.tool.meta.type.ClassMetaType;
 
 import java.util.ArrayList;
@@ -43,6 +42,11 @@ public final class MethodDeclaration extends Declaration<MethodDeclaration> {
         assertMethodName(methodName);
         assertType(argumentTypes);
         return new MethodDeclaration(methodName, argumentTypes);
+    }
+
+    @Override
+    public boolean isMethodDeclaration() {
+        return true;
     }
 
     public String getMethodName() {
@@ -97,7 +101,7 @@ public final class MethodDeclaration extends Declaration<MethodDeclaration> {
     }
 
     public MethodDeclaration add(final Instructions instructions) {
-        this.instructions.addAll(instructions.instructions);
+        for(final Instruction instruction : instructions.getInstructions()) this.instructions.add(instruction);
         return this;
     }
 

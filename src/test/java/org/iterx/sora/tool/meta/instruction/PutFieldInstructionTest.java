@@ -1,64 +1,55 @@
 package org.iterx.sora.tool.meta.instruction;
 
-import org.iterx.sora.tool.meta.MetaClassLoader;
+import org.iterx.sora.tool.meta.Declarations;
+import org.iterx.sora.tool.meta.Instructions;
 import org.iterx.sora.tool.meta.Type;
-import org.iterx.sora.tool.meta.Value;
+import org.iterx.sora.tool.meta.value.Variable;
 import org.iterx.sora.tool.meta.declaration.ClassDeclaration;
-import org.iterx.sora.tool.meta.declaration.FieldDeclaration;
 import org.iterx.sora.tool.meta.declaration.MethodDeclaration;
-import org.iterx.sora.tool.meta.instruction.GetFieldInstruction;
-import org.iterx.sora.tool.meta.instruction.PutFieldInstruction;
-import org.iterx.sora.tool.meta.support.asm.AsmCompiler;
-import org.iterx.sora.tool.meta.support.asm.AsmExtractor;
-import org.iterx.sora.tool.meta.type.ClassMetaType;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+
+import java.util.Arrays;
+import java.util.Collection;
 
 
-public class PutFieldInstructionTest {
+@RunWith(Parameterized.class)
+public class PutFieldInstructionTest extends InstructionTestCase {
 
-    private MetaClassLoader asmExtractorMetaClassLoader;
-    private MetaClassLoader asmCompilerMetaClassLoader;
-    private AsmExtractor asmExtractor;
-    private AsmCompiler asmCompiler;
+    private static final String GET_FIELD_NAME = "getField";
+    private static final String PUT_FIELD_NAME = "putField";
 
-    @Test
-    public void shouldCompileAndExtractGetFieldInstruction() {
-        //TODO: paramertise test -> one for each type...
-        final ClassDeclaration expectedClassDeclaration = newClassDeclaration(asmCompilerMetaClassLoader, Type.LONG_TYPE);
-
-        final byte[] bytes = asmCompiler.compile(expectedClassDeclaration);
-        final ClassDeclaration actualClassDeclaration = (ClassDeclaration) asmExtractor.extract(bytes);
-        //TODO: write reflective matcher...
-        Assert.assertEquals(expectedClassDeclaration, actualClassDeclaration);
+    public PutFieldInstructionTest(final Type<?> type, final Object result) {
+        super(type, result);
     }
 
-    @Before
-    public void setUp() {
-        asmCompilerMetaClassLoader = new MetaClassLoader();
-        asmExtractorMetaClassLoader = new MetaClassLoader();
-        asmCompiler = new AsmCompiler(asmCompilerMetaClassLoader);
-        asmExtractor = new AsmExtractor(asmExtractorMetaClassLoader);
+    @Parameterized.Parameters
+    public static Collection<Object[]> data() {
+        return Arrays.asList(new Object[]{ Type.SHORT_TYPE, (short) 0 },
+                             new Object[]{ Type.BYTE_TYPE, (byte) 0 },
+                             new Object[]{ Type.CHAR_TYPE, '\0' },
+                             new Object[]{ Type.BOOLEAN_TYPE, false },
+                             new Object[]{ Type.INT_TYPE, 0 },
+                             new Object[]{ Type.LONG_TYPE, 0L },
+                             new Object[]{ Type.FLOAT_TYPE, 0f },
+                             new Object[]{ Type.DOUBLE_TYPE, 0d },
+                             new Object[]{ Type.OBJECT_TYPE, null });
     }
 
-    private ClassDeclaration newClassDeclaration(final MetaClassLoader metaClassLoader, final Type type) {
-        final String className = toName(type.getName(), "Field", "Test");
-        final String fieldName = toName(type.getName(), "Field");
-        final String methodName = toName("put", type.getName(), "Field");
-        final ClassDeclaration classDeclaration = ClassDeclaration.newClassDeclaration(metaClassLoader,
-                                                                                       ClassMetaType.newType(metaClassLoader, className));
-
-        classDeclaration.add(FieldDeclaration.newFieldDeclaration(fieldName, type));
-        classDeclaration.add(MethodDeclaration.newMethodDeclaration(methodName, type).
-                setReturnType(Type.VOID_TYPE).
-                add(PutFieldInstruction.newPutFieldInstruction(fieldName, Value.newValue("arg0"))));
-        return classDeclaration;
+    public void setUpMethodDeclaration(final MethodDeclaration methodDeclaration) {
+        methodDeclaration.add(new Instructions() {{
+            final Variable variable = variable("<variable>", getType());
+            store(variable, getField(GET_FIELD_NAME));
+            putField(PUT_FIELD_NAME, variable);
+            returnInstruction(getField(PUT_FIELD_NAME));
+        }});
     }
 
-    private static String toName(final String... names) {
-        final StringBuilder stringBuilder = new StringBuilder(names[0]);
-        for(int i = 1, size = names.length; i < size; i++) stringBuilder.append(names[i].toUpperCase().substring(0, 1)).append(names[i].substring(1));
-        return stringBuilder.toString();
+    @Override
+    public void setUpClassDeclaration(final ClassDeclaration classDeclaration) {
+        classDeclaration.add(new Declarations(){{
+            field(GET_FIELD_NAME, getType());
+            field(PUT_FIELD_NAME, getType());
+        }});
     }
 }

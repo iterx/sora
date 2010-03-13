@@ -3,6 +3,7 @@ package org.iterx.sora.tool.meta.declaration;
 import org.iterx.sora.collection.Set;
 import org.iterx.sora.collection.set.HashSet;
 import org.iterx.sora.tool.meta.Declaration;
+import org.iterx.sora.tool.meta.Declarations;
 import org.iterx.sora.tool.meta.MetaClassLoader;
 import org.iterx.sora.tool.meta.Type;
 import org.iterx.sora.tool.meta.type.ClassMetaType;
@@ -50,6 +51,11 @@ public final class ClassDeclaration extends Declaration<ClassDeclaration> {
     public static ClassDeclaration newClassDeclaration(final MetaClassLoader metaClassLoader, final ClassMetaType classType) {
         assertType(classType);
         return defineDeclaration(metaClassLoader, classType, new ClassDeclaration(metaClassLoader, classType));
+    }
+
+    @Override
+    public boolean isClassDeclaration() {
+        return true;
     }
 
     public MetaClassLoader getMetaClassLoader() {
@@ -169,9 +175,9 @@ public final class ClassDeclaration extends Declaration<ClassDeclaration> {
 
     public ClassDeclaration add(final Declarations declarations) {
         assertDeclarations(declarations);
-        fieldDeclarations.addAll(declarations.fieldDeclarations);
-        constructorDeclarations.addAll(declarations.constructorDeclarations);
-        methodDeclarations.addAll(declarations.methodDeclarations);
+        for(final FieldDeclaration fieldDeclaration : declarations.getFieldDeclarations()) fieldDeclarations.add(fieldDeclaration);
+        for(final ConstructorDeclaration constructorDeclaration : declarations.getConstructorDeclarations()) constructorDeclarations.add(constructorDeclaration);
+        for(final MethodDeclaration methodDeclaration : declarations.getMethodDeclarations()) methodDeclarations.add(methodDeclaration);
         return this;
     }
 

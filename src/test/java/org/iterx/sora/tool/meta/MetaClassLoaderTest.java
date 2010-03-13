@@ -116,7 +116,8 @@ public class MetaClassLoaderTest {
         new DebugClassLoader().defineClass(bytes);
     }
 
-    private static void debug(final ClassReader classReader) {
+
+private static void debug(final ClassReader classReader) {
         classReader.accept(new TraceClassVisitor(new PrintWriter(System.out)), 0);
     }
 

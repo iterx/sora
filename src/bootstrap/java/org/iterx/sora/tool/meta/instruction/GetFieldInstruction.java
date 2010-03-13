@@ -1,8 +1,6 @@
 package org.iterx.sora.tool.meta.instruction;
 
 import org.iterx.sora.tool.meta.Instruction;
-import org.iterx.sora.tool.meta.Type;
-import org.iterx.sora.tool.meta.Value;
 
 public final class GetFieldInstruction extends Instruction<GetFieldInstruction> {
 

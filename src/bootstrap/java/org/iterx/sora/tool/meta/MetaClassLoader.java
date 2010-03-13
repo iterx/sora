@@ -69,18 +69,6 @@ public class MetaClassLoader extends SecureClassLoader implements Closeable {
         return (InterfaceDeclaration) loadDeclaration((Type<?>) type);
     }
 
-/*
-
-    //TODO: fix up...
-    public Declaration<?> loadDeclaration(final byte[] bytes) {
-        return defineDeclaration(bytes);
-    }
-    //TODO: fix up
-    public byte[] storeDeclaration(final Declaration<?> declaration) {
-        return compileDeclaration(declaration);
-    }
-*/
-
     @SuppressWarnings("unchecked")
     public <T extends Type> T loadType(final String name) throws ClassNotFoundException {
         final T type = getType(name);
@@ -139,11 +127,15 @@ public class MetaClassLoader extends SecureClassLoader implements Closeable {
         }
     }
 
+    protected Class<?> defineClass(final String name, final Declaration<?> declaration) {
+        final byte[] bytes = asmCompiler.compile(declaration);
+        return super.defineClass(name, bytes, 0, bytes.length);
+    }
+
     private Declaration<?> loadDeclaration(final Type<?> type) throws ClassNotFoundException {
         final Declaration<?> declaration = getDeclaration(type.getName());
         return (declaration != null)? declaration : findDeclaration(type.getName());
     }
-
 
     private byte[] compileDeclaration(final Declaration<?> declaration) {
         return asmCompiler.compile(declaration);
@@ -165,11 +157,6 @@ public class MetaClassLoader extends SecureClassLoader implements Closeable {
                (cls.isEnum())? EnumMetaType.newType(this, name) :
                (cls.isArray())? ArrayMetaType.newType(this, loadType(toArrayType(name))) :
                ClassMetaType.newType(this, name);
-    }
-
-    private Class<?> defineClass(final String name, final Declaration<?> declaration) {
-        final byte[] bytes = asmCompiler.compile(declaration);
-        return super.defineClass(name, bytes, 0, bytes.length);
     }
 
     private byte[] loadResource(final URL resource) throws IOException {

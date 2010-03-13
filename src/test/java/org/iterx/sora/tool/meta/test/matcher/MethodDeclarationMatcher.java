@@ -24,6 +24,7 @@ public class MethodDeclarationMatcher extends BaseMatcher<MethodDeclaration> {
                 expectedMethodDeclaration.getReturnType().equals(methodDeclaration.getReturnType()) &&
                 expectedMethodDeclaration.getAccess().equals(methodDeclaration.getAccess()) &&
                 Arrays.equals(expectedMethodDeclaration.getModifiers(), methodDeclaration.getModifiers()) &&
-                Arrays.equals(expectedMethodDeclaration.getExceptionTypes(), methodDeclaration.getExceptionTypes()));
+                Arrays.equals(expectedMethodDeclaration.getExceptionTypes(), methodDeclaration.getExceptionTypes())) &&
+               new InstructionsMatcher(expectedMethodDeclaration.getInstructions()).matches(expectedMethodDeclaration.getInstructions());
     }
 }
