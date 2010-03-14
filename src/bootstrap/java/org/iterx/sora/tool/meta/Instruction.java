@@ -1,6 +1,6 @@
 package org.iterx.sora.tool.meta;
 
-public abstract class Instruction<T extends Instruction<T>> {
+public interface Instruction<T extends Instruction<T>> {
 
     public static Instruction<?> NO_OP = new Instruction() {}; 
 

@@ -1,15 +1,15 @@
 package org.iterx.sora.tool.meta;
 
-import org.iterx.sora.tool.meta.declaration.ClassDeclaration;
-import org.iterx.sora.tool.meta.declaration.InterfaceDeclaration;
+import org.iterx.sora.tool.meta.declaration.ClassTypeDeclaration;
+import org.iterx.sora.tool.meta.declaration.InterfaceTypeDeclaration;
 import org.iterx.sora.tool.meta.support.asm.AsmCompiler;
 import org.iterx.sora.tool.meta.support.asm.AsmExtractor;
-import org.iterx.sora.tool.meta.type.AnnotationMetaType;
-import org.iterx.sora.tool.meta.type.ArrayMetaType;
-import org.iterx.sora.tool.meta.type.ClassMetaType;
-import org.iterx.sora.tool.meta.type.EnumMetaType;
-import org.iterx.sora.tool.meta.type.InterfaceMetaType;
-import org.iterx.sora.tool.meta.type.PrimitiveMetaType;
+import org.iterx.sora.tool.meta.type.AnnotationType;
+import org.iterx.sora.tool.meta.type.ArrayType;
+import org.iterx.sora.tool.meta.type.ClassType;
+import org.iterx.sora.tool.meta.type.EnumType;
+import org.iterx.sora.tool.meta.type.InterfaceType;
+import org.iterx.sora.tool.meta.type.PrimitiveType;
 
 import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
@@ -20,8 +20,9 @@ import java.security.SecureClassLoader;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-//TODO: add option to save...
+//TODO: add option to save... -> MetaClassStorer
 //TODO: issues -> how do we change type from class<->interface for a declaration (require separate class loaders)???
+//TODO:           or do we implement a redefine call???
 public class MetaClassLoader extends SecureClassLoader implements Closeable {
 
     //TODO: ClassDecl & InterfaceDecl -> should be class/interface meta types as well
@@ -61,12 +62,12 @@ public class MetaClassLoader extends SecureClassLoader implements Closeable {
         return SYSTEM_META_CLASS_LOADER;
     }
 
-    public ClassDeclaration loadDeclaration(final ClassMetaType type) throws ClassNotFoundException {
-        return (ClassDeclaration) loadDeclaration((Type<?>) type);
+    public ClassTypeDeclaration loadDeclaration(final ClassType type) throws ClassNotFoundException {
+        return (ClassTypeDeclaration) loadDeclaration((Type<?>) type);
     }
 
-    public InterfaceDeclaration loadDeclaration(final InterfaceMetaType type) throws ClassNotFoundException {
-        return (InterfaceDeclaration) loadDeclaration((Type<?>) type);
+    public InterfaceTypeDeclaration loadDeclaration(final InterfaceType type) throws ClassNotFoundException {
+        return (InterfaceTypeDeclaration) loadDeclaration((Type<?>) type);
     }
 
     @SuppressWarnings("unchecked")
@@ -116,7 +117,7 @@ public class MetaClassLoader extends SecureClassLoader implements Closeable {
     protected Type<?> findType(final String name) throws ClassNotFoundException {
         try {
             if(isArray(name))
-                return ArrayMetaType.newType(loadType(toArrayType(name)));
+                return ArrayType.newType(loadType(toArrayType(name)));
             else {
                 final URL resource = getResource(toResource(name));
                 return defineType(loadResource(resource));
@@ -151,12 +152,12 @@ public class MetaClassLoader extends SecureClassLoader implements Closeable {
 
     private Type<?> defineType(final Class cls) throws ClassNotFoundException {
         final String name = cls.getName();
-        return (cls.isInterface())? InterfaceMetaType.newType(this, name) :
-               (cls.isPrimitive())? PrimitiveMetaType.newType(this, name) :
-               (cls.isAnnotation())? AnnotationMetaType.newType(this, name) :
-               (cls.isEnum())? EnumMetaType.newType(this, name) :
-               (cls.isArray())? ArrayMetaType.newType(this, loadType(toArrayType(name))) :
-               ClassMetaType.newType(this, name);
+        return (cls.isInterface())? InterfaceType.newType(this, name) :
+               (cls.isPrimitive())? PrimitiveType.newType(this, name) :
+               (cls.isAnnotation())? AnnotationType.newType(this, name) :
+               (cls.isEnum())? EnumType.newType(this, name) :
+               (cls.isArray())? ArrayType.newType(this, loadType(toArrayType(name))) :
+               ClassType.newType(this, name);
     }
 
     private byte[] loadResource(final URL resource) throws IOException {

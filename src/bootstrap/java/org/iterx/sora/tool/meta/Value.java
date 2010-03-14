@@ -1,23 +1,11 @@
 package org.iterx.sora.tool.meta;
 
 
-public abstract class Value<T extends Value<T>> {
+public interface Value<T extends Value<T>> {
     
-    private final Type<?> type;
+    Type<?> getType();
 
-    protected Value(final Type<?> type) {
-        this.type = type;
-    }
+    boolean isConstant();
 
-    public Type<?> getType() {
-        return type;
-    }
-
-    public boolean isConstant() {
-        return false;
-    }
-
-    public boolean isVariable() {
-        return false;
-    }
+    boolean isVariable();
 }

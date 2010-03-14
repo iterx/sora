@@ -1,18 +1,19 @@
 package org.iterx.sora.tool.meta.declaration;
 
+import org.iterx.sora.tool.meta.AbstractDeclaration;
 import org.iterx.sora.tool.meta.Declaration;
 import org.iterx.sora.tool.meta.Instruction;
 import org.iterx.sora.tool.meta.Instructions;
 import org.iterx.sora.tool.meta.Type;
-import org.iterx.sora.tool.meta.type.ClassMetaType;
+import org.iterx.sora.tool.meta.type.ClassType;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-public final class ConstructorDeclaration extends Declaration<ConstructorDeclaration> {
+public final class ConstructorDeclaration extends AbstractDeclaration<ConstructorDeclaration> {
 
-    public static final Type<ClassMetaType>[] EMPTY_EXCEPTION_TYPES = new ClassMetaType[0];
+    public static final Type<ClassType>[] EMPTY_EXCEPTION_TYPES = new ClassType[0];
     public static final Type<?>[] EMPTY_CONSTRUCTOR_TYPES = new Type[0];
     public static final Modifier[] EMPTY_MODIFIERS = new Modifier[0];
 
@@ -21,7 +22,7 @@ public final class ConstructorDeclaration extends Declaration<ConstructorDeclara
 
     private final List<Instruction<?>> instructions;
     private final Type<?>[] constructorTypes;
-    private Type<ClassMetaType>[] exceptionTypes;
+    private Type<ClassType>[] exceptionTypes;
     private Access access;
     private Modifier[] modifiers;
 
@@ -47,11 +48,11 @@ public final class ConstructorDeclaration extends Declaration<ConstructorDeclara
         return constructorTypes;
     }
 
-    public Type<ClassMetaType>[] getExceptionTypes() {
+    public Type<ClassType>[] getExceptionTypes() {
         return exceptionTypes;
     }
 
-    public ConstructorDeclaration setExceptionTypes(final Type<ClassMetaType>... exceptionTypes) {
+    public ConstructorDeclaration setExceptionTypes(final Type<ClassType>... exceptionTypes) {
         assertType(exceptionTypes);
         this.exceptionTypes = exceptionTypes;
         return this;

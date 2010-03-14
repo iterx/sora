@@ -1,16 +1,16 @@
 package org.iterx.sora.tool.meta.util;
 
-import org.iterx.sora.tool.meta.declaration.ClassDeclaration;
+import org.iterx.sora.tool.meta.declaration.ClassTypeDeclaration;
 import org.iterx.sora.tool.meta.declaration.ConstructorDeclaration;
 import org.iterx.sora.tool.meta.declaration.FieldDeclaration;
-import org.iterx.sora.tool.meta.declaration.InterfaceDeclaration;
+import org.iterx.sora.tool.meta.declaration.InterfaceTypeDeclaration;
 import org.iterx.sora.tool.meta.declaration.MethodDeclaration;
 
 public interface DeclarationVisitor {
     
-    void startClass(ClassDeclaration classDeclaration);
+    void startClass(ClassTypeDeclaration classTypeDeclaration);
 
-    void startInterface(InterfaceDeclaration interfaceDeclaration);
+    void startInterface(InterfaceTypeDeclaration interfaceTypeDeclaration);
 
     void field(FieldDeclaration fieldDeclaration);
 

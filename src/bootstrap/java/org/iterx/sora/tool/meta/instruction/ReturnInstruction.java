@@ -1,10 +1,11 @@
 package org.iterx.sora.tool.meta.instruction;
 
+import org.iterx.sora.tool.meta.AbstractInstruction;
 import org.iterx.sora.tool.meta.Instruction;
 import org.iterx.sora.tool.meta.Value;
 import org.iterx.sora.tool.meta.value.Constant;
 
-public final class ReturnInstruction extends Instruction<ReturnInstruction> {
+public final class ReturnInstruction extends AbstractInstruction<ReturnInstruction> {
 
     private final Value value;
     private final Instruction instruction;

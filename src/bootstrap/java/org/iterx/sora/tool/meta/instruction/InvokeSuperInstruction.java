@@ -1,10 +1,9 @@
 package org.iterx.sora.tool.meta.instruction;
 
-import org.iterx.sora.tool.meta.Instruction;
+import org.iterx.sora.tool.meta.AbstractInstruction;
 import org.iterx.sora.tool.meta.Value;
-import org.iterx.sora.tool.meta.value.Variable;
 
-public final class InvokeSuperInstruction extends Instruction<InvokeSuperInstruction> {
+public final class InvokeSuperInstruction extends AbstractInstruction<InvokeSuperInstruction> {
 
     private static final Value[] EMPTY_VALUES = new Value[0];
 

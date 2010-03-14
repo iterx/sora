@@ -10,9 +10,9 @@ import java.util.Arrays;
 import java.util.Collection;
 
 @RunWith(Parameterized.class)
-public class ReturnValueInstructionTest extends InstructionTestCase {
+public class ReturnInstructionTest extends InstructionTestCase {
 
-    public ReturnValueInstructionTest(final Type<?> type, final Object result) {
+    public ReturnInstructionTest(final Type<?> type, final Object result) {
         super(type, result);
     }
 

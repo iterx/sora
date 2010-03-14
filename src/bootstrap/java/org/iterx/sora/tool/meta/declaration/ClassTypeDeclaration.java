@@ -2,19 +2,20 @@ package org.iterx.sora.tool.meta.declaration;
 
 import org.iterx.sora.collection.Set;
 import org.iterx.sora.collection.set.HashSet;
+import org.iterx.sora.tool.meta.AbstractTypeDeclaration;
 import org.iterx.sora.tool.meta.Declaration;
 import org.iterx.sora.tool.meta.Declarations;
 import org.iterx.sora.tool.meta.MetaClassLoader;
 import org.iterx.sora.tool.meta.Type;
-import org.iterx.sora.tool.meta.type.ClassMetaType;
-import org.iterx.sora.tool.meta.type.InterfaceMetaType;
+import org.iterx.sora.tool.meta.type.ClassType;
+import org.iterx.sora.tool.meta.type.InterfaceType;
 
 import java.util.Arrays;
 
-//TODO: should implement Type<ClassMetaType>...
-public final class ClassDeclaration extends Declaration<ClassDeclaration> {
+//TODO: should implement Type<ClassType>...
+public final class ClassTypeDeclaration extends AbstractTypeDeclaration<ClassType, ClassTypeDeclaration> {
 
-    public static final InterfaceMetaType[] EMPTY_INTERFACES = new InterfaceMetaType[0];
+    public static final InterfaceType[] EMPTY_INTERFACES = new InterfaceType[0];
     public static final Modifier[] EMPTY_MODIFIERS = new Modifier[0];
 
     public enum Access implements Declaration.Access {  PUBLIC, PROTECTED, PRIVATE, DEFAULT }
@@ -23,16 +24,18 @@ public final class ClassDeclaration extends Declaration<ClassDeclaration> {
     private final Set<FieldDeclaration> fieldDeclarations;
     private final Set<ConstructorDeclaration> constructorDeclarations;
     private final Set<MethodDeclaration> methodDeclarations;
-    private final ClassMetaType classType;
+    private final ClassType classType;
 
     private final transient MetaClassLoader metaClassLoader;
 
     private Access access;
     private Modifier[] modifiers;
-    private ClassMetaType superType;
-    private InterfaceMetaType[] interfaceTypes;
+    private ClassType superType;
+    private InterfaceType[] interfaceTypes;
+    private Type<?> outerType;
+    //TODO: need to define inner classes -> will need to analyse them to make synethic methods
 
-    private ClassDeclaration(final MetaClassLoader metaClassLoader, final ClassMetaType classType) {
+    private ClassTypeDeclaration(final MetaClassLoader metaClassLoader, final ClassType classType) {
         this.fieldDeclarations = new HashSet<FieldDeclaration>();
         this.constructorDeclarations = new HashSet<ConstructorDeclaration>();
         this.methodDeclarations = new HashSet<MethodDeclaration>();
@@ -42,15 +45,16 @@ public final class ClassDeclaration extends Declaration<ClassDeclaration> {
         this.modifiers = EMPTY_MODIFIERS;
         this.classType = classType;
         this.metaClassLoader = metaClassLoader;
+        this.outerType = Type.VOID_TYPE;
     }
 
-    public static ClassDeclaration newClassDeclaration(final ClassMetaType classType) {
+    public static ClassTypeDeclaration newClassDeclaration(final ClassType classType) {
         return newClassDeclaration(MetaClassLoader.getSystemMetaClassLoader(), classType);
     }
 
-    public static ClassDeclaration newClassDeclaration(final MetaClassLoader metaClassLoader, final ClassMetaType classType) {
+    public static ClassTypeDeclaration newClassDeclaration(final MetaClassLoader metaClassLoader, final ClassType classType) {
         assertType(classType);
-        return defineDeclaration(metaClassLoader, classType, new ClassDeclaration(metaClassLoader, classType));
+        return defineDeclaration(metaClassLoader, classType, new ClassTypeDeclaration(metaClassLoader, classType));
     }
 
     @Override
@@ -58,39 +62,58 @@ public final class ClassDeclaration extends Declaration<ClassDeclaration> {
         return true;
     }
 
+    @Override
+    public boolean isClass() {
+        return true;
+    }
+
     public MetaClassLoader getMetaClassLoader() {
         return metaClassLoader;
     }
-        
-    public ClassMetaType getClassType() {
+
+    public String getName() {
+        return getClassType().getName();
+    }
+
+    public ClassType getClassType() {
         return classType;
     }
 
-    public ClassMetaType getSuperType() {
+    public ClassType getSuperType() {
         return superType;
     }
 
-    public ClassDeclaration setSuperType(final ClassMetaType superType) {
+    public ClassTypeDeclaration setSuperType(final ClassType superType) {
         assertType(superType);
         this.superType = superType;
         return this;
     }
 
-    public InterfaceMetaType[] getInterfaceTypes() {
+    public InterfaceType[] getInterfaceTypes() {
         return interfaceTypes;
     }
 
-    public ClassDeclaration setInterfaceTypes(final InterfaceMetaType... interfaceTypes) {
+    public ClassTypeDeclaration setInterfaceTypes(final InterfaceType... interfaceTypes) {
         assertType(interfaceTypes);
         this.interfaceTypes = interfaceTypes;
         return this;
     }
 
+    public Type<?> getOuterType() {
+        return outerType;
+    }
+
+    public ClassTypeDeclaration setOuterType(final Type<?> outerType) {
+        assertType(outerType);
+        this.outerType = outerType;
+        return this;
+    }
+        
     public Access getAccess() {
         return access;
     }
 
-    public ClassDeclaration setAccess(final Access access) {
+    public ClassTypeDeclaration setAccess(final Access access) {
         assertAccess(access);
         this.access = access;
         return this;
@@ -100,7 +123,7 @@ public final class ClassDeclaration extends Declaration<ClassDeclaration> {
         return modifiers;
     }
 
-    public ClassDeclaration setModifiers(final Modifier... modifiers) {
+    public ClassTypeDeclaration setModifiers(final Modifier... modifiers) {
         assertModifiers(modifiers);
         this.modifiers = modifiers;
         return this;
@@ -140,40 +163,40 @@ public final class ClassDeclaration extends Declaration<ClassDeclaration> {
         throw new RuntimeException(new NoSuchMethodException());
     }
 
-    public ClassDeclaration add(final FieldDeclaration fieldDeclaration) {
+    public ClassTypeDeclaration add(final FieldDeclaration fieldDeclaration) {
         assertFieldDeclaration(fieldDeclaration);
         add(fieldDeclarations, fieldDeclaration);
         return this;
     }
 
-    public ClassDeclaration remove(final FieldDeclaration fieldDeclaration) {
+    public ClassTypeDeclaration remove(final FieldDeclaration fieldDeclaration) {
         remove(fieldDeclarations, fieldDeclaration);
         return this;
     }
 
-    public ClassDeclaration add(final ConstructorDeclaration constructorDeclaration) {
+    public ClassTypeDeclaration add(final ConstructorDeclaration constructorDeclaration) {
         assertConstructorDeclaration(constructorDeclaration);
         add(constructorDeclarations, constructorDeclaration);
         return this;
     }
 
-    public ClassDeclaration remove(final ConstructorDeclaration constructorDeclaration) {
+    public ClassTypeDeclaration remove(final ConstructorDeclaration constructorDeclaration) {
         remove(constructorDeclarations, constructorDeclaration);
         return this;
     }
     
-    public ClassDeclaration add(final MethodDeclaration methodDeclaration) {
+    public ClassTypeDeclaration add(final MethodDeclaration methodDeclaration) {
         assertMethodDeclaration(methodDeclaration);
         add(methodDeclarations, methodDeclaration);
         return this;
     }
 
-    public ClassDeclaration remove(final MethodDeclaration methodDeclaration) {
+    public ClassTypeDeclaration remove(final MethodDeclaration methodDeclaration) {
         remove(methodDeclarations, methodDeclaration);
         return this;
     }
 
-    public ClassDeclaration add(final Declarations declarations) {
+    public ClassTypeDeclaration add(final Declarations declarations) {
         assertDeclarations(declarations);
         for(final FieldDeclaration fieldDeclaration : declarations.getFieldDeclarations()) fieldDeclarations.add(fieldDeclaration);
         for(final ConstructorDeclaration constructorDeclaration : declarations.getConstructorDeclarations()) constructorDeclarations.add(constructorDeclaration);
@@ -189,13 +212,13 @@ public final class ClassDeclaration extends Declaration<ClassDeclaration> {
     @Override
     public boolean equals(final Object object) {
         return (this ==  object) ||
-               (object != null && object.getClass() == getClass() && classType.equals(((ClassDeclaration) object).classType));
+               (object != null && object.getClass() == getClass() && classType.equals(((ClassTypeDeclaration) object).classType));
     }
 
     @Override
     public String toString() {
         return new StringBuilder().
-                append("ClassDeclaration: ").
+                append("ClassTypeDeclaration: ").
                 append(classType).
                 toString();
     }

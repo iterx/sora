@@ -5,11 +5,11 @@ import org.iterx.sora.tool.meta.Declarations;
 import org.iterx.sora.tool.meta.Instructions;
 import org.iterx.sora.tool.meta.MetaClassLoader;
 import org.iterx.sora.tool.meta.Type;
-import org.iterx.sora.tool.meta.declaration.ClassDeclaration;
+import org.iterx.sora.tool.meta.declaration.ClassTypeDeclaration;
 import org.iterx.sora.tool.meta.declaration.MethodDeclaration;
 import org.iterx.sora.tool.meta.test.StubMetaClassLoader;
 import org.iterx.sora.tool.meta.test.matcher.ClassDeclarationMatcher;
-import org.iterx.sora.tool.meta.type.ClassMetaType;
+import org.iterx.sora.tool.meta.type.ClassType;
 import org.iterx.sora.tool.meta.util.DeclarationReader;
 import org.iterx.sora.tool.meta.util.trace.TraceDeclarationVisitor;
 import org.jmock.Expectations;
@@ -50,23 +50,23 @@ public abstract class InstructionTestCase {
 
     @Test
     public void shouldCompileInstruction() throws Throwable {
-        final ClassDeclaration classDeclaration = newClassDeclaration(compileMetaClassLoader, type);
-        final Class<?> cls = compileMetaClassLoader.loadClass(classDeclaration.getClassType());
+        final ClassTypeDeclaration classTypeDeclaration = newClassDeclaration(compileMetaClassLoader, type);
+        final Class<?> cls = compileMetaClassLoader.loadClass(classTypeDeclaration.getClassType());
 
         assertCompile(compileMetaClassLoader, cls, type, result);
     }
 
     @Test
     public void shouldExtractInstruction() throws Throwable {
-        final ClassDeclaration expectedClassDeclaration = newClassDeclaration(compileMetaClassLoader, type);
-        extractMetaClassLoader.defineClass(expectedClassDeclaration);
+        final ClassTypeDeclaration expectedClassTypeDeclaration = newClassDeclaration(compileMetaClassLoader, type);
+        extractMetaClassLoader.defineClass(expectedClassTypeDeclaration);
 
-        assertExtract(expectedClassDeclaration, extractMetaClassLoader.loadDeclaration(expectedClassDeclaration.getClassType()));
+        assertExtract(expectedClassTypeDeclaration, extractMetaClassLoader.loadDeclaration(expectedClassTypeDeclaration.getClassType()));
     }
 
     public abstract void setUpMethodDeclaration(final MethodDeclaration methodDeclaration);
 
-    public void setUpClassDeclaration(final ClassDeclaration classDeclaration) {}
+    public void setUpClassDeclaration(final ClassTypeDeclaration classTypeDeclaration) {}
 
 
     @Before
@@ -75,10 +75,10 @@ public abstract class InstructionTestCase {
         extractMetaClassLoader = new StubMetaClassLoader(false);
     }
 
-    private ClassDeclaration newClassDeclaration(final MetaClassLoader metaClassLoader, final Type type) {
+    private ClassTypeDeclaration newClassDeclaration(final MetaClassLoader metaClassLoader, final Type type) {
         final String className = toName(getClass().getSimpleName(), "$", toName(type));
         final MethodDeclaration methodDeclaration = MethodDeclaration.newMethodDeclaration(METHOD_NAME).setReturnType(type);
-        final ClassDeclaration classDeclaration = ClassDeclaration.newClassDeclaration(metaClassLoader, ClassMetaType.newType(metaClassLoader, className)).
+        final ClassTypeDeclaration classTypeDeclaration = ClassTypeDeclaration.newClassDeclaration(metaClassLoader, ClassType.newType(metaClassLoader, className)).
                 add(new Declarations() {{
                     constructor().
                             add(new Instructions() {{
@@ -87,9 +87,9 @@ public abstract class InstructionTestCase {
                             }});
                     method(methodDeclaration);
                 }});
-        setUpClassDeclaration(classDeclaration);
+        setUpClassDeclaration(classTypeDeclaration);
         setUpMethodDeclaration(methodDeclaration);
-        return classDeclaration;
+        return classTypeDeclaration;
     }
 
     private static void assertCompile(final ClassLoader classLoader, final Class<?> cls, final Type type, final Object expectedValue) throws Throwable {
@@ -99,10 +99,10 @@ public abstract class InstructionTestCase {
                           Expectations.equal(expectedValue).matches(cls.getDeclaredMethod(METHOD_NAME).invoke(instance)));
     }
 
-    private static void assertExtract(final ClassDeclaration expectedClassDeclaration, final Declaration<?> actualDeclaration) {
+    private static void assertExtract(final ClassTypeDeclaration expectedClassTypeDeclaration, final Declaration<?> actualDeclaration) {
 
         Assert.assertTrue("Actual:\n" + toString(actualDeclaration),
-                          new ClassDeclarationMatcher(expectedClassDeclaration).matches(actualDeclaration));
+                          new ClassDeclarationMatcher(expectedClassTypeDeclaration).matches(actualDeclaration));
     }
 
     private static String toName(final String... names) {

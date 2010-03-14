@@ -3,10 +3,10 @@ package org.iterx.sora.tool.meta.test;
 import org.iterx.sora.tool.meta.Declaration;
 import org.iterx.sora.tool.meta.MetaClassLoader;
 import org.iterx.sora.tool.meta.Type;
-import org.iterx.sora.tool.meta.declaration.ClassDeclaration;
+import org.iterx.sora.tool.meta.declaration.ClassTypeDeclaration;
 import org.iterx.sora.tool.meta.support.asm.AsmCompiler;
-import org.iterx.sora.tool.meta.type.ClassMetaType;
-import org.iterx.sora.tool.meta.type.InterfaceMetaType;
+import org.iterx.sora.tool.meta.type.ClassType;
+import org.iterx.sora.tool.meta.type.InterfaceType;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.util.TraceClassVisitor;
 
@@ -40,8 +40,8 @@ public class StubMetaClassLoader extends MetaClassLoader {
     @Override
     public Class<?> loadClass(final Type<?> type) throws ClassNotFoundException {
         if(debug) {
-            if(type.getClass() == ClassMetaType.class) debug(asmCompiler.compile(loadDeclaration((ClassMetaType) type)));
-            else if(type.getClass() == InterfaceMetaType.class) debug(asmCompiler.compile(loadDeclaration((InterfaceMetaType) type)));
+            if(type.getClass() == ClassType.class) debug(asmCompiler.compile(loadDeclaration((ClassType) type)));
+            else if(type.getClass() == InterfaceType.class) debug(asmCompiler.compile(loadDeclaration((InterfaceType) type)));
             else throw new IllegalArgumentException();
         }
         return super.loadClass(type);
@@ -59,14 +59,14 @@ public class StubMetaClassLoader extends MetaClassLoader {
     }
 
 
-    public void defineClass(final ClassDeclaration classDeclaration) {
-        classes.put(toResource(classDeclaration.getClassType().getName()),
-                    asmCompiler.compile(classDeclaration));
+    public void defineClass(final ClassTypeDeclaration classTypeDeclaration) {
+        classes.put(toResource(classTypeDeclaration.getClassType().getName()),
+                    asmCompiler.compile(classTypeDeclaration));
     }
 
     @Override
     protected Class<?> defineClass(final String name, final Declaration<?> declaration) {
-        if(declaration.isClassDeclaration()) defineClass((ClassDeclaration) declaration);
+        if(declaration.isClassDeclaration()) defineClass((ClassTypeDeclaration) declaration);
         return super.defineClass(name, declaration);
     }
 

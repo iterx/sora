@@ -1,10 +1,9 @@
 package org.iterx.sora.tool.meta;
 
-import org.iterx.sora.tool.meta.declaration.ClassDeclaration;
-import org.iterx.sora.tool.meta.declaration.InterfaceDeclaration;
-import org.iterx.sora.tool.meta.type.ClassMetaType;
-import org.iterx.sora.tool.meta.type.InterfaceMetaType;
-import org.iterx.sora.tool.meta.Type;
+import org.iterx.sora.tool.meta.declaration.ClassTypeDeclaration;
+import org.iterx.sora.tool.meta.declaration.InterfaceTypeDeclaration;
+import org.iterx.sora.tool.meta.type.ClassType;
+import org.iterx.sora.tool.meta.type.InterfaceType;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -19,30 +18,30 @@ public class MetaClassLoaderTest {
 
     @Test
     public void shouldLoadClassDeclarationForClassMetaType() throws Throwable {
-        final ClassMetaType classType = metaClassLoader.loadType(TestClass.class);
-        final ClassDeclaration classDeclaration = metaClassLoader.loadDeclaration(classType);
-        Assert.assertEquals(classType, classDeclaration.getClassType());
+        final ClassType classType = metaClassLoader.loadType(TestClass.class);
+        final ClassTypeDeclaration classTypeDeclaration = metaClassLoader.loadDeclaration(classType);
+        Assert.assertEquals(classType, classTypeDeclaration.getClassType());
     }
 
     @Test
     public void shouldLoadInterfaceDeclarationForInterfaceMetaType() throws Throwable {
-        final InterfaceMetaType interfaceMetaType = metaClassLoader.loadType(TestInterface.class);
-        final InterfaceDeclaration interfaceDeclaration = metaClassLoader.loadDeclaration(interfaceMetaType);
-        Assert.assertEquals(interfaceMetaType, interfaceDeclaration.getInterfaceType());
+        final InterfaceType interfaceType = metaClassLoader.loadType(TestInterface.class);
+        final InterfaceTypeDeclaration interfaceTypeDeclaration = metaClassLoader.loadDeclaration(interfaceType);
+        Assert.assertEquals(interfaceType, interfaceTypeDeclaration.getInterfaceType());
     }
 
     @Test
     public void shouldCreateNewDeclarationForClassMetaType() throws Throwable {
-        final ClassMetaType classType = ClassMetaType.newType(metaClassLoader, "test");
-        final ClassDeclaration classDeclaration = ClassDeclaration.newClassDeclaration(metaClassLoader, classType);
-        Assert.assertNotNull(classDeclaration);
+        final ClassType classType = ClassType.newType(metaClassLoader, "test");
+        final ClassTypeDeclaration classTypeDeclaration = ClassTypeDeclaration.newClassDeclaration(metaClassLoader, classType);
+        Assert.assertNotNull(classTypeDeclaration);
     }
 
     @Test
     public void shouldCreateNewDeclarationForInterfaceMetaType() throws Throwable {
-        final InterfaceMetaType interfaceType = InterfaceMetaType.newType(metaClassLoader, "test");
-        final InterfaceDeclaration interfaceDeclaration = InterfaceDeclaration.newInterfaceDeclaration(metaClassLoader, interfaceType);
-        Assert.assertNotNull(interfaceDeclaration);
+        final InterfaceType interfaceType = InterfaceType.newType(metaClassLoader, "test");
+        final InterfaceTypeDeclaration interfaceTypeDeclaration = InterfaceTypeDeclaration.newInterfaceDeclaration(metaClassLoader, interfaceType);
+        Assert.assertNotNull(interfaceTypeDeclaration);
     }
 
     @Test
@@ -59,21 +58,21 @@ public class MetaClassLoaderTest {
 
     @Test
     public void shouldLoadClassForNewClassDeclaration() throws Throwable {
-        final ClassMetaType classType = ClassMetaType.newType(metaClassLoader, "test");
-        final ClassDeclaration classDeclaration = ClassDeclaration.newClassDeclaration(metaClassLoader, classType);
+        final ClassType classType = ClassType.newType(metaClassLoader, "test");
+        final ClassTypeDeclaration classTypeDeclaration = ClassTypeDeclaration.newClassDeclaration(metaClassLoader, classType);
         final Class cls = metaClassLoader.loadClass(classType);
         Assert.assertEquals(classType, metaClassLoader.loadType(cls));
     }
 
     @Test
     public void shouldLoadDeclarationForClass () throws Throwable {
-        final ClassDeclaration stringClassDeclaration = metaClassLoader.loadDeclaration(metaClassLoader.<ClassMetaType>loadType(String.class));
+        final ClassTypeDeclaration stringClassTypeDeclaration = metaClassLoader.loadDeclaration(metaClassLoader.<ClassType>loadType(String.class));
     }
 
     @Test
     public void shouldStoreInterface() {
         throw new UnsupportedOperationException();
-        //final InterfaceDeclaration interfaceDeclaration = InterfaceDeclaration.newInterfaceDeclaration(metaClassLoader, InterfaceMetaType.newType("test"));
+        //final InterfaceTypeDeclaration interfaceDeclaration = InterfaceTypeDeclaration.newInterfaceDeclaration(metaClassLoader, InterfaceType.newType("test"));
         //debug(metaClassLoader.storeDeclaration(interfaceDeclaration));
     }
 

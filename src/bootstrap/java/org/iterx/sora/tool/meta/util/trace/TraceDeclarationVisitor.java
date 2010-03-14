@@ -2,10 +2,10 @@ package org.iterx.sora.tool.meta.util.trace;
 
 import org.iterx.sora.tool.meta.Declaration;
 import org.iterx.sora.tool.meta.Type;
-import org.iterx.sora.tool.meta.declaration.ClassDeclaration;
+import org.iterx.sora.tool.meta.declaration.ClassTypeDeclaration;
 import org.iterx.sora.tool.meta.declaration.ConstructorDeclaration;
 import org.iterx.sora.tool.meta.declaration.FieldDeclaration;
-import org.iterx.sora.tool.meta.declaration.InterfaceDeclaration;
+import org.iterx.sora.tool.meta.declaration.InterfaceTypeDeclaration;
 import org.iterx.sora.tool.meta.declaration.MethodDeclaration;
 import org.iterx.sora.tool.meta.util.DeclarationVisitor;
 import org.iterx.sora.tool.meta.util.InstructionReader;
@@ -21,20 +21,20 @@ public class TraceDeclarationVisitor implements DeclarationVisitor {
         printStream = (outputStream instanceof PrintStream)? (PrintStream) outputStream : new PrintStream(outputStream);
     }
 
-    public void startClass(final ClassDeclaration classDeclaration) {
-        print(classDeclaration.getAccess(), classDeclaration.getModifiers());
+    public void startClass(final ClassTypeDeclaration classTypeDeclaration) {
+        print(classTypeDeclaration.getAccess(), classTypeDeclaration.getModifiers());
         print(" ");
-        print(classDeclaration.getClassType());
+        print(classTypeDeclaration.getClassType());
         print(" extends ");
-        print(classDeclaration.getSuperType());
-        if(classDeclaration.getInterfaceTypes().length != 0) {
+        print(classTypeDeclaration.getSuperType());
+        if(classTypeDeclaration.getInterfaceTypes().length != 0) {
             print(" implements ");
-            print(classDeclaration.getInterfaceTypes());
+            print(classTypeDeclaration.getInterfaceTypes());
         }
         print(" {\n");
     }
 
-    public void startInterface(final InterfaceDeclaration interfaceDeclaration) {
+    public void startInterface(final InterfaceTypeDeclaration interfaceTypeDeclaration) {
     }
 
     public void field(final FieldDeclaration fieldDeclaration) {

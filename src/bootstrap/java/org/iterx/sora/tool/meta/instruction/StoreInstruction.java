@@ -1,10 +1,10 @@
 package org.iterx.sora.tool.meta.instruction;
 
+import org.iterx.sora.tool.meta.AbstractInstruction;
 import org.iterx.sora.tool.meta.Instruction;
-import org.iterx.sora.tool.meta.Value;
 import org.iterx.sora.tool.meta.value.Variable;
 
-public final class StoreInstruction extends Instruction<StoreInstruction> {
+public final class StoreInstruction extends AbstractInstruction<StoreInstruction> {
 
     private final Instruction<?> instruction;
     private final Variable variable;

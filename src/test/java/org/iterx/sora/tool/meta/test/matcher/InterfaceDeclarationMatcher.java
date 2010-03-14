@@ -3,10 +3,10 @@ package org.iterx.sora.tool.meta.test.matcher;
 import org.hamcrest.BaseMatcher;
 import org.hamcrest.Description;
 import org.iterx.sora.tool.meta.Declaration;
-import org.iterx.sora.tool.meta.declaration.ClassDeclaration;
+import org.iterx.sora.tool.meta.declaration.ClassTypeDeclaration;
 import org.iterx.sora.tool.meta.declaration.ConstructorDeclaration;
 import org.iterx.sora.tool.meta.declaration.FieldDeclaration;
-import org.iterx.sora.tool.meta.declaration.InterfaceDeclaration;
+import org.iterx.sora.tool.meta.declaration.InterfaceTypeDeclaration;
 import org.iterx.sora.tool.meta.declaration.MethodDeclaration;
 import org.iterx.sora.tool.meta.util.DeclarationReader;
 import org.iterx.sora.tool.meta.util.DeclarationVisitor;
@@ -18,9 +18,9 @@ public class InterfaceDeclarationMatcher extends BaseMatcher<Declaration<?>> {
     private final MatchesDeclarationVisitor matchesDeclarationVisitor;
     private final Declaration declaration;
 
-    public InterfaceDeclarationMatcher(final InterfaceDeclaration interfaceDeclaration) {
-        this.matchesDeclarationVisitor = new MatchesDeclarationVisitor(interfaceDeclaration);
-        this.declaration = interfaceDeclaration;
+    public InterfaceDeclarationMatcher(final InterfaceTypeDeclaration interfaceTypeDeclaration) {
+        this.matchesDeclarationVisitor = new MatchesDeclarationVisitor(interfaceTypeDeclaration);
+        this.declaration = interfaceTypeDeclaration;
     }
 
     public void describeTo(final Description description) {
@@ -34,11 +34,11 @@ public class InterfaceDeclarationMatcher extends BaseMatcher<Declaration<?>> {
 
     private static class MatchesDeclarationVisitor implements DeclarationVisitor {
 
-        private final InterfaceDeclaration expectedInterfaceDeclaration;
+        private final InterfaceTypeDeclaration expectedInterfaceTypeDeclaration;
         private boolean matches;
 
-        private MatchesDeclarationVisitor(final InterfaceDeclaration interfaceDeclaration) {
-            this.expectedInterfaceDeclaration = interfaceDeclaration;
+        private MatchesDeclarationVisitor(final InterfaceTypeDeclaration interfaceTypeDeclaration) {
+            this.expectedInterfaceTypeDeclaration = interfaceTypeDeclaration;
             this.matches = false;
         }
 
@@ -46,20 +46,20 @@ public class InterfaceDeclarationMatcher extends BaseMatcher<Declaration<?>> {
             return matches;
         }
 
-        public void startClass(final ClassDeclaration classDeclaration) {}
+        public void startClass(final ClassTypeDeclaration classTypeDeclaration) {}
 
-        public void startInterface(final InterfaceDeclaration interfaceDeclaration) {
-            matches = (expectedInterfaceDeclaration != null &&
-                       expectedInterfaceDeclaration.equals(interfaceDeclaration) &&
-                       expectedInterfaceDeclaration.getAccess().equals(interfaceDeclaration.getAccess()) &&
-                       Arrays.equals(expectedInterfaceDeclaration.getModifiers(), interfaceDeclaration.getModifiers()) &&
-                       Arrays.equals(expectedInterfaceDeclaration.getInterfaceTypes(), interfaceDeclaration.getInterfaceTypes()) &&
-                       Arrays.equals(expectedInterfaceDeclaration.getFieldDeclarations(), interfaceDeclaration.getFieldDeclarations()) &&
-                       Arrays.equals(expectedInterfaceDeclaration.getMethodDeclarations(), interfaceDeclaration.getMethodDeclarations()));
+        public void startInterface(final InterfaceTypeDeclaration interfaceTypeDeclaration) {
+            matches = (expectedInterfaceTypeDeclaration != null &&
+                       expectedInterfaceTypeDeclaration.equals(interfaceTypeDeclaration) &&
+                       expectedInterfaceTypeDeclaration.getAccess().equals(interfaceTypeDeclaration.getAccess()) &&
+                       Arrays.equals(expectedInterfaceTypeDeclaration.getModifiers(), interfaceTypeDeclaration.getModifiers()) &&
+                       Arrays.equals(expectedInterfaceTypeDeclaration.getInterfaceTypes(), interfaceTypeDeclaration.getInterfaceTypes()) &&
+                       Arrays.equals(expectedInterfaceTypeDeclaration.getFieldDeclarations(), interfaceTypeDeclaration.getFieldDeclarations()) &&
+                       Arrays.equals(expectedInterfaceTypeDeclaration.getMethodDeclarations(), interfaceTypeDeclaration.getMethodDeclarations()));
         }
 
         public void field(final FieldDeclaration fieldDeclaration) {
-            if(matches) matches &= new FieldDeclarationMatcher(expectedInterfaceDeclaration.getFieldDeclaration(fieldDeclaration.getFieldName())).matches(fieldDeclaration);
+            if(matches) matches &= new FieldDeclarationMatcher(expectedInterfaceTypeDeclaration.getFieldDeclaration(fieldDeclaration.getFieldName())).matches(fieldDeclaration);
         }
 
         public void constructor(final ConstructorDeclaration constructorDeclaration) {
@@ -67,7 +67,7 @@ public class InterfaceDeclarationMatcher extends BaseMatcher<Declaration<?>> {
         }
 
         public void method(final MethodDeclaration methodDeclaration) {
-            if(matches) matches &= new MethodDeclarationMatcher(expectedInterfaceDeclaration.getMethodDeclaration(methodDeclaration.getMethodName(), methodDeclaration.getArgumentTypes())).matches(methodDeclaration);
+            if(matches) matches &= new MethodDeclarationMatcher(expectedInterfaceTypeDeclaration.getMethodDeclaration(methodDeclaration.getMethodName(), methodDeclaration.getArgumentTypes())).matches(methodDeclaration);
         }
         
         public void endClass() {}

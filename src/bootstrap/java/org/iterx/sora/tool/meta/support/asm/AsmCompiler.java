@@ -5,12 +5,13 @@ import org.iterx.sora.tool.meta.Instruction;
 import org.iterx.sora.tool.meta.MetaClassLoader;
 import org.iterx.sora.tool.meta.Type;
 import org.iterx.sora.tool.meta.Value;
+import org.iterx.sora.tool.meta.declaration.ClassTypeDeclaration;
+import org.iterx.sora.tool.meta.type.ClassType;
 import org.iterx.sora.tool.meta.value.Constant;
 import org.iterx.sora.tool.meta.value.Variable;
-import org.iterx.sora.tool.meta.declaration.ClassDeclaration;
 import org.iterx.sora.tool.meta.declaration.ConstructorDeclaration;
 import org.iterx.sora.tool.meta.declaration.FieldDeclaration;
-import org.iterx.sora.tool.meta.declaration.InterfaceDeclaration;
+import org.iterx.sora.tool.meta.declaration.InterfaceTypeDeclaration;
 import org.iterx.sora.tool.meta.declaration.MethodDeclaration;
 import org.iterx.sora.tool.meta.instruction.GetFieldInstruction;
 import org.iterx.sora.tool.meta.instruction.InvokeSuperInstruction;
@@ -48,7 +49,7 @@ public final class AsmCompiler {
     private static class CompilerDeclarationVisitor implements DeclarationVisitor, Opcodes {
 
         private final ClassWriter classWriter;
-        private ClassDeclaration classDeclaration;
+        private ClassTypeDeclaration classTypeDeclaration;
 
         private CompilerDeclarationVisitor() {
             this.classWriter = new ClassWriter(ClassWriter.COMPUTE_MAXS);
@@ -58,23 +59,30 @@ public final class AsmCompiler {
             return classWriter.toByteArray();
         }
 
-        public void startClass(final ClassDeclaration classDeclaration) {
-            this.classDeclaration = classDeclaration;
+        public void startClass(final ClassTypeDeclaration classTypeDeclaration) {
+            this.classTypeDeclaration = classTypeDeclaration;
             classWriter.visit(V1_7,
-                              toAccess(classDeclaration.getAccess()) | toModifier(classDeclaration.getModifiers()),
-                              toName(classDeclaration.getClassType()),
+                              toAccess(classTypeDeclaration.getAccess()) | toModifier(classTypeDeclaration.getModifiers()),
+                              toName(classTypeDeclaration.getClassType()),
                               null,
-                              toName(classDeclaration.getSuperType()),
-                              toNames(classDeclaration.getInterfaceTypes()));
+                              toName(classTypeDeclaration.getSuperType()),
+                              toNames(classTypeDeclaration.getInterfaceTypes()));
+
+            if(classTypeDeclaration.getOuterType() != Type.VOID_TYPE) {
+                classWriter.visitInnerClass(toName(classTypeDeclaration.getClassType()),
+                                            toName(classTypeDeclaration.getOuterType()),
+                                            toName(classTypeDeclaration.getClassType()), //TODO: make this short name
+                                            toAccess(classTypeDeclaration.getAccess()));
+            }
         }
 
-        public void startInterface(final InterfaceDeclaration interfaceDeclaration) {
+        public void startInterface(final InterfaceTypeDeclaration interfaceTypeDeclaration) {
             classWriter.visit(V1_7,
-                              ACC_INTERFACE | toAccess(interfaceDeclaration.getAccess()) | toModifier(interfaceDeclaration.getModifiers()),
-                              toName(interfaceDeclaration.getInterfaceType()),
+                              ACC_INTERFACE | toAccess(interfaceTypeDeclaration.getAccess()) | toModifier(interfaceTypeDeclaration.getModifiers()),
+                              toName(interfaceTypeDeclaration.getInterfaceType()),
                               null,
                               toName(Type.OBJECT_TYPE),
-                              toNames(interfaceDeclaration.getInterfaceTypes()));
+                              toNames(interfaceTypeDeclaration.getInterfaceTypes()));
         }
 
         public void field(final FieldDeclaration fieldDeclaration) {
@@ -93,7 +101,7 @@ public final class AsmCompiler {
                                                                         null,
                                                                         null);
             methodVisitor.visitCode();
-            new InstructionReader(constructorDeclaration.getInstructions()).accept(new CompilerInstructionVisitor(classDeclaration, constructorDeclaration, methodVisitor));
+            new InstructionReader(constructorDeclaration.getInstructions()).accept(new CompilerInstructionVisitor(classTypeDeclaration, constructorDeclaration, methodVisitor));
             methodVisitor.visitMaxs(0, 0);
             methodVisitor.visitEnd();
         }
@@ -105,13 +113,13 @@ public final class AsmCompiler {
                                                                         null,
                                                                         null);
             methodVisitor.visitCode();
-            new InstructionReader(methodDeclaration.getInstructions()).accept(new CompilerInstructionVisitor(classDeclaration, methodDeclaration, methodVisitor));
+            new InstructionReader(methodDeclaration.getInstructions()).accept(new CompilerInstructionVisitor(classTypeDeclaration, methodDeclaration, methodVisitor));
             methodVisitor.visitMaxs(0, 0);
             methodVisitor.visitEnd();
         }
 
         public void endClass() {
-            this.classDeclaration = null;
+            this.classTypeDeclaration = null;
             classWriter.visitEnd();
         }
 
@@ -122,48 +130,58 @@ public final class AsmCompiler {
 
     private static class CompilerInstructionVisitor implements InstructionVisitor, Opcodes {
 
-        private final ClassDeclaration classDeclaration;
+        private final ClassTypeDeclaration classTypeDeclaration;
         private final MethodDeclaration methodDeclaration;
         private final ConstructorDeclaration constructorDeclaration;
         private final MethodVisitor methodVisitor;
         private final AsmScope asmScope;
 
-        private CompilerInstructionVisitor(final ClassDeclaration classDeclaration,
+        private CompilerInstructionVisitor(final ClassTypeDeclaration classTypeDeclaration,
                                            final ConstructorDeclaration constructorDeclaration,
                                            final MethodVisitor methodVisitor) {
             this.asmScope = newAsmStack(constructorDeclaration.getConstructorTypes());
-            this.classDeclaration = classDeclaration;
+            this.classTypeDeclaration = classTypeDeclaration;
             this.methodDeclaration = null;
             this.constructorDeclaration = constructorDeclaration;
             this.methodVisitor = methodVisitor;
         }
 
-        private CompilerInstructionVisitor(final ClassDeclaration classDeclaration,
+        private CompilerInstructionVisitor(final ClassTypeDeclaration classTypeDeclaration,
                                            final MethodDeclaration methodDeclaration,
                                            final MethodVisitor methodVisitor) {
             this.asmScope = newAsmStack(methodDeclaration.getArgumentTypes());
-            this.classDeclaration = classDeclaration;
+            this.classTypeDeclaration = classTypeDeclaration;
             this.methodDeclaration = methodDeclaration;
             this.constructorDeclaration = null;
             this.methodVisitor = methodVisitor;
         }
 
         public void getField(final GetFieldInstruction getFieldInstruction) {
-            final FieldDeclaration fieldDeclaration = classDeclaration.getFieldDeclaration(getFieldInstruction.getFieldName());
-            methodVisitor.visitVarInsn(ALOAD, 0);            
-            loadValues(methodVisitor, asmScope);
+            //TODO: need to lookup declaration based on target...
+            try {
+            final Variable fieldOwner = getFieldInstruction.getFieldOwner();
+            final ClassTypeDeclaration classTypeDeclaration = (fieldOwner == Variable.THIS)?
+                                                      this.classTypeDeclaration :
+                                                      this.classTypeDeclaration.getMetaClassLoader().loadDeclaration((ClassType) fieldOwner.getType());
+            final FieldDeclaration fieldDeclaration = classTypeDeclaration.getFieldDeclaration(getFieldInstruction.getFieldName());
+            //methodVisitor.visitVarInsn(ALOAD, 0);
+            loadValues(methodVisitor, asmScope, fieldOwner);
             methodVisitor.visitFieldInsn(GETFIELD,
-                                         toName(classDeclaration.getClassType()),
+                                         toName(classTypeDeclaration.getClassType()),
                                          fieldDeclaration.getFieldName(),
                                          toDescriptor(fieldDeclaration.getFieldType()));
+            }
+            catch(final Exception e) {
+                throw new RuntimeException(e);
+            }
         }
 
         public void putField(final PutFieldInstruction putFieldInstruction) {
-            final FieldDeclaration fieldDeclaration = classDeclaration.getFieldDeclaration(putFieldInstruction.getFieldName());
+            final FieldDeclaration fieldDeclaration = classTypeDeclaration.getFieldDeclaration(putFieldInstruction.getFieldName());
             methodVisitor.visitVarInsn(ALOAD, 0);
             loadValues(methodVisitor, asmScope, putFieldInstruction.getValue());
             methodVisitor.visitFieldInsn(PUTFIELD,
-                                         toName(classDeclaration.getClassType()),
+                                         toName(classTypeDeclaration.getClassType()),
                                          fieldDeclaration.getFieldName(),
                                          toDescriptor(fieldDeclaration.getFieldType()));
         }
@@ -184,7 +202,7 @@ public final class AsmCompiler {
             methodVisitor.visitVarInsn(ALOAD, 0);
             loadValues(methodVisitor, asmScope, invokeSuperInstruction.getValues());
             methodVisitor.visitMethodInsn(INVOKESPECIAL,
-                                          toName(classDeclaration.getSuperType()),
+                                          toName(classTypeDeclaration.getSuperType()),
                                           "<init>",
                                           toMethodDescriptor(Type.VOID_TYPE, constructorDeclaration.getConstructorTypes()));
         }
@@ -241,7 +259,7 @@ public final class AsmCompiler {
                 if(d == 0d || d == 1d) methodVisitor.visitInsn(getAsmOpcode("DCONST_" + (int) d ));
                 else methodVisitor.visitLdcInsn(d);
             }
-            else methodVisitor.visitLdcInsn(value);
+            else if(type != Type.VOID_TYPE) methodVisitor.visitLdcInsn(value);
         }
 
         private static void loadVariable(final MethodVisitor methodVisitor, final AsmScope asmScope, final Variable variable) {
@@ -255,7 +273,7 @@ public final class AsmCompiler {
         private static AsmScope newAsmStack(final Type<?>[] argumentTypes) {
             final AsmScope asmScope = new AsmScope();
 
-            asmScope.push("this", Type.OBJECT_TYPE);
+            asmScope.push("<this>", Type.OBJECT_TYPE);
             for(int i = 0, size = argumentTypes.length; i != size; i++) asmScope.push("arg" + i, argumentTypes[i]);
             return asmScope;
         }

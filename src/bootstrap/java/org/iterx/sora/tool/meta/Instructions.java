@@ -60,7 +60,7 @@ public abstract class Instructions {
     protected Constant constant(final String value) {
         return Constant.newConstant(value);
     }
-
+    
     protected Variable variable(final String name, final Type<?> type) {
         return Variable.newVariable(name, type);
     }

@@ -1,10 +1,10 @@
 package org.iterx.sora.tool.meta.util;
 
 import org.iterx.sora.tool.meta.Declaration;
-import org.iterx.sora.tool.meta.declaration.ClassDeclaration;
+import org.iterx.sora.tool.meta.declaration.ClassTypeDeclaration;
 import org.iterx.sora.tool.meta.declaration.ConstructorDeclaration;
 import org.iterx.sora.tool.meta.declaration.FieldDeclaration;
-import org.iterx.sora.tool.meta.declaration.InterfaceDeclaration;
+import org.iterx.sora.tool.meta.declaration.InterfaceTypeDeclaration;
 import org.iterx.sora.tool.meta.declaration.MethodDeclaration;
 
 public final class DeclarationReader {
@@ -17,25 +17,25 @@ public final class DeclarationReader {
 
     public void accept(final DeclarationVisitor declarationVisitor) {
         final Class cls = declaration.getClass();
-        if(ClassDeclaration.class == cls) accept(declarationVisitor, (ClassDeclaration) declaration);
-        else if(InterfaceDeclaration.class == cls) accept(declarationVisitor, (InterfaceDeclaration) declaration);
+        if(ClassTypeDeclaration.class == cls) accept(declarationVisitor, (ClassTypeDeclaration) declaration);
+        else if(InterfaceTypeDeclaration.class == cls) accept(declarationVisitor, (InterfaceTypeDeclaration) declaration);
         else if(FieldDeclaration.class == cls) accept(declarationVisitor, (FieldDeclaration) declaration);
         else if(ConstructorDeclaration.class == cls) accept(declarationVisitor, (ConstructorDeclaration) declaration);
         else if(MethodDeclaration.class == cls) accept(declarationVisitor, (MethodDeclaration) declaration);
     }
 
-    private void accept(final DeclarationVisitor declarationVisitor, final ClassDeclaration classDeclaration) {
-        declarationVisitor.startClass(classDeclaration);
-        for(FieldDeclaration fieldDeclaration : classDeclaration.getFieldDeclarations()) accept(declarationVisitor, fieldDeclaration);
-        for(ConstructorDeclaration constructorDeclaration : classDeclaration.getConstructorDeclarations()) accept(declarationVisitor, constructorDeclaration);
-        for(MethodDeclaration methodDeclaration : classDeclaration.getMethodDeclarations()) accept(declarationVisitor, methodDeclaration);
+    private void accept(final DeclarationVisitor declarationVisitor, final ClassTypeDeclaration classTypeDeclaration) {
+        declarationVisitor.startClass(classTypeDeclaration);
+        for(FieldDeclaration fieldDeclaration : classTypeDeclaration.getFieldDeclarations()) accept(declarationVisitor, fieldDeclaration);
+        for(ConstructorDeclaration constructorDeclaration : classTypeDeclaration.getConstructorDeclarations()) accept(declarationVisitor, constructorDeclaration);
+        for(MethodDeclaration methodDeclaration : classTypeDeclaration.getMethodDeclarations()) accept(declarationVisitor, methodDeclaration);
         declarationVisitor.endClass();
     }
 
-    private void accept(final DeclarationVisitor declarationVisitor, final InterfaceDeclaration interfaceDeclaration) {
-        declarationVisitor.startInterface(interfaceDeclaration);
-        for(FieldDeclaration fieldDeclaration : interfaceDeclaration.getFieldDeclarations()) accept(declarationVisitor, fieldDeclaration);
-        for(MethodDeclaration methodDeclaration : interfaceDeclaration.getMethodDeclarations()) accept(declarationVisitor, methodDeclaration);
+    private void accept(final DeclarationVisitor declarationVisitor, final InterfaceTypeDeclaration interfaceTypeDeclaration) {
+        declarationVisitor.startInterface(interfaceTypeDeclaration);
+        for(FieldDeclaration fieldDeclaration : interfaceTypeDeclaration.getFieldDeclarations()) accept(declarationVisitor, fieldDeclaration);
+        for(MethodDeclaration methodDeclaration : interfaceTypeDeclaration.getMethodDeclarations()) accept(declarationVisitor, methodDeclaration);
         declarationVisitor.endInterface();
     }
 

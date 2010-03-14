@@ -1,9 +1,10 @@
 package org.iterx.sora.tool.meta.value;
 
+import org.iterx.sora.tool.meta.AbstractValue;
 import org.iterx.sora.tool.meta.Type;
 import org.iterx.sora.tool.meta.Value;
 
-public final class Constant extends Value<Constant> {
+public final class Constant extends AbstractValue<Constant> {
 
     public final static Constant NULL = new Constant(Type.OBJECT_TYPE, null);
     public final static Constant VOID = new Constant(Type.VOID_TYPE, null);

@@ -2,30 +2,31 @@ package org.iterx.sora.tool.meta.declaration;
 
 import org.iterx.sora.collection.Set;
 import org.iterx.sora.collection.set.HashSet;
+import org.iterx.sora.tool.meta.AbstractTypeDeclaration;
 import org.iterx.sora.tool.meta.Declaration;
 import org.iterx.sora.tool.meta.Declarations;
 import org.iterx.sora.tool.meta.MetaClassLoader;
 import org.iterx.sora.tool.meta.Type;
-import org.iterx.sora.tool.meta.type.InterfaceMetaType;
+import org.iterx.sora.tool.meta.type.InterfaceType;
 
 import java.util.Arrays;
 
-public final class InterfaceDeclaration extends Declaration<InterfaceDeclaration> {
+public final class InterfaceTypeDeclaration extends AbstractTypeDeclaration<InterfaceType, InterfaceTypeDeclaration> {
 
-    public static final InterfaceMetaType[] EMPTY_INTERFACES = new InterfaceMetaType[0];
+    public static final InterfaceType[] EMPTY_INTERFACES = new InterfaceType[0];
 
     public enum Access implements Declaration.Access {  PUBLIC, PROTECTED, PRIVATE, DEFAULT }
     public enum Modifier implements Declaration.Modifier { ABSTRACT }
 
     private final Set<FieldDeclaration> fieldDeclarations;
     private final Set<MethodDeclaration> methodDeclarations;
-    private final InterfaceMetaType interfaceType;
+    private final InterfaceType interfaceType;
     private final transient MetaClassLoader metaClassLoader;
 
     private Access access;
-    private InterfaceMetaType[] interfaceTypes;
+    private InterfaceType[] interfaceTypes;
 
-    private InterfaceDeclaration(final MetaClassLoader metaClassLoader, final InterfaceMetaType interfaceType) {
+    private InterfaceTypeDeclaration(final MetaClassLoader metaClassLoader, final InterfaceType interfaceType) {
         this.fieldDeclarations = new HashSet<FieldDeclaration>();
         this.methodDeclarations = new HashSet<MethodDeclaration>();
         this.access = Access.PUBLIC;
@@ -34,13 +35,18 @@ public final class InterfaceDeclaration extends Declaration<InterfaceDeclaration
         this.metaClassLoader = metaClassLoader;
     }
 
-    public static InterfaceDeclaration newInterfaceDeclaration(final InterfaceMetaType interfaceType) {
+    public static InterfaceTypeDeclaration newInterfaceDeclaration(final InterfaceType interfaceType) {
         return newInterfaceDeclaration(MetaClassLoader.getSystemMetaClassLoader(), interfaceType);
     }
 
-    public static InterfaceDeclaration newInterfaceDeclaration(final MetaClassLoader metaClassLoader, final InterfaceMetaType interfaceType) {
+    public static InterfaceTypeDeclaration newInterfaceDeclaration(final MetaClassLoader metaClassLoader, final InterfaceType interfaceType) {
         assertType(interfaceType);
-        return defineDeclaration(metaClassLoader, interfaceType, new InterfaceDeclaration(metaClassLoader, interfaceType));
+        return defineDeclaration(metaClassLoader, interfaceType, new InterfaceTypeDeclaration(metaClassLoader, interfaceType));
+    }
+
+    @Override
+    public boolean isInterface() {
+        return true;
     }
 
     @Override
@@ -52,15 +58,19 @@ public final class InterfaceDeclaration extends Declaration<InterfaceDeclaration
         return metaClassLoader;
     }
 
-    public InterfaceMetaType getInterfaceType() {
+    public String getName() {
+        return interfaceType.getName();
+    }
+
+    public InterfaceType getInterfaceType() {
         return interfaceType;
     }
 
-    public InterfaceMetaType[] getInterfaceTypes() {
+    public InterfaceType[] getInterfaceTypes() {
         return interfaceTypes;
     }
 
-    public InterfaceDeclaration setInterfaceTypes(final InterfaceMetaType... interfaceTypes) {
+    public InterfaceTypeDeclaration setInterfaceTypes(final InterfaceType... interfaceTypes) {
         assertType(interfaceTypes);
         this.interfaceTypes = interfaceTypes;
         return this;
@@ -70,7 +80,7 @@ public final class InterfaceDeclaration extends Declaration<InterfaceDeclaration
         return access;
     }
 
-    public InterfaceDeclaration setAccess(final Access access) {
+    public InterfaceTypeDeclaration setAccess(final Access access) {
         assertAccess(access);
         this.access = access;
         return this;
@@ -103,29 +113,29 @@ public final class InterfaceDeclaration extends Declaration<InterfaceDeclaration
         throw new RuntimeException(new NoSuchMethodException());
     }
 
-    public InterfaceDeclaration add(final FieldDeclaration fieldDeclaration) {
+    public InterfaceTypeDeclaration add(final FieldDeclaration fieldDeclaration) {
         assertFieldDeclaration(fieldDeclaration);
         add(fieldDeclarations, fieldDeclaration);
         return this;
     }
 
-    public InterfaceDeclaration remove(final FieldDeclaration fieldDeclaration) {
+    public InterfaceTypeDeclaration remove(final FieldDeclaration fieldDeclaration) {
         remove(fieldDeclarations, fieldDeclaration);
         return this;
     }
 
-    public InterfaceDeclaration add(final MethodDeclaration methodDeclaration) {
+    public InterfaceTypeDeclaration add(final MethodDeclaration methodDeclaration) {
         assertMethodDeclaration(methodDeclaration);
         add(methodDeclarations, methodDeclaration);
         return this;
     }
 
-    public InterfaceDeclaration remove(final MethodDeclaration methodDeclaration) {
+    public InterfaceTypeDeclaration remove(final MethodDeclaration methodDeclaration) {
         remove(methodDeclarations, methodDeclaration);
         return this;
     }
 
-    public InterfaceDeclaration add(final Declarations declarations) {
+    public InterfaceTypeDeclaration add(final Declarations declarations) {
         assertDeclarations(declarations);
         for(final FieldDeclaration fieldDeclaration : declarations.getFieldDeclarations()) fieldDeclarations.add(fieldDeclaration);
         for(final MethodDeclaration methodDeclaration : declarations.getMethodDeclarations()) methodDeclarations.add(methodDeclaration);
@@ -140,13 +150,13 @@ public final class InterfaceDeclaration extends Declaration<InterfaceDeclaration
     @Override
     public boolean equals(final Object object) {
         return (this ==  object) ||
-               (object != null && object.getClass() == getClass() && interfaceType.equals(((InterfaceDeclaration) object).interfaceType));
+               (object != null && object.getClass() == getClass() && interfaceType.equals(((InterfaceTypeDeclaration) object).interfaceType));
     }
 
     @Override
     public String toString() {
         return new StringBuilder().
-                append("InterfaceDeclaration\n{\n").
+                append("InterfaceTypeDeclaration\n{\n").
                 append("access = ").append(access).append(",\n").
                 append("interfaceType = ").append(interfaceType).append(",\n").
                 append("interfaceTypes = ").append(Arrays.toString(interfaceTypes)).append(",\n").

@@ -1,10 +1,11 @@
 package org.iterx.sora.tool.meta.declaration;
 
+import org.iterx.sora.tool.meta.AbstractDeclaration;
 import org.iterx.sora.tool.meta.Declaration;
 import org.iterx.sora.tool.meta.Type;
 
 
-public final class FieldDeclaration extends Declaration<FieldDeclaration> {
+public final class FieldDeclaration extends AbstractDeclaration<FieldDeclaration> {
 
     public static final Modifier[] EMPTY_MODIFIERS = new Modifier[0];
 

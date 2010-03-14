@@ -3,10 +3,10 @@ package org.iterx.sora.tool.meta.test.matcher;
 import org.hamcrest.BaseMatcher;
 import org.hamcrest.Description;
 import org.iterx.sora.tool.meta.Declaration;
-import org.iterx.sora.tool.meta.declaration.ClassDeclaration;
+import org.iterx.sora.tool.meta.declaration.ClassTypeDeclaration;
 import org.iterx.sora.tool.meta.declaration.ConstructorDeclaration;
 import org.iterx.sora.tool.meta.declaration.FieldDeclaration;
-import org.iterx.sora.tool.meta.declaration.InterfaceDeclaration;
+import org.iterx.sora.tool.meta.declaration.InterfaceTypeDeclaration;
 import org.iterx.sora.tool.meta.declaration.MethodDeclaration;
 import org.iterx.sora.tool.meta.util.DeclarationReader;
 import org.iterx.sora.tool.meta.util.DeclarationVisitor;
@@ -18,9 +18,9 @@ public class ClassDeclarationMatcher extends BaseMatcher<Declaration<?>> {
     private final MatchesDeclarationVisitor matchesDeclarationVisitor;
     private final Declaration declaration;
 
-    public ClassDeclarationMatcher(final ClassDeclaration classDeclaration) {
-        this.matchesDeclarationVisitor = new MatchesDeclarationVisitor(classDeclaration);
-        this.declaration = classDeclaration;
+    public ClassDeclarationMatcher(final ClassTypeDeclaration classTypeDeclaration) {
+        this.matchesDeclarationVisitor = new MatchesDeclarationVisitor(classTypeDeclaration);
+        this.declaration = classTypeDeclaration;
     }
 
     public void describeTo(final Description description) {
@@ -34,11 +34,11 @@ public class ClassDeclarationMatcher extends BaseMatcher<Declaration<?>> {
 
     private static class MatchesDeclarationVisitor implements DeclarationVisitor {
 
-        private final ClassDeclaration expectedClassDeclaration;
+        private final ClassTypeDeclaration expectedClassTypeDeclaration;
         private boolean matches;
 
-        private MatchesDeclarationVisitor(final ClassDeclaration classDeclaration) {
-            this.expectedClassDeclaration = classDeclaration;
+        private MatchesDeclarationVisitor(final ClassTypeDeclaration classTypeDeclaration) {
+            this.expectedClassTypeDeclaration = classTypeDeclaration;
             this.matches = true;
         }
 
@@ -46,32 +46,32 @@ public class ClassDeclarationMatcher extends BaseMatcher<Declaration<?>> {
             return matches;
         }
 
-        public void startClass(final ClassDeclaration classDeclaration) {
-            set(expectedClassDeclaration != null &&
-                expectedClassDeclaration.equals(classDeclaration) &&
-                expectedClassDeclaration.getAccess().equals(classDeclaration.getAccess()) &&
-                expectedClassDeclaration.getSuperType().equals(classDeclaration.getSuperType())&&
-                Arrays.equals(expectedClassDeclaration.getModifiers(), classDeclaration.getModifiers()) &&
-                Arrays.equals(expectedClassDeclaration.getInterfaceTypes(), classDeclaration.getInterfaceTypes()) &&
-                Arrays.equals(expectedClassDeclaration.getFieldDeclarations(), classDeclaration.getFieldDeclarations()) &&
-                Arrays.equals(expectedClassDeclaration.getConstructorDeclarations(), classDeclaration.getConstructorDeclarations()) &&
-                Arrays.equals(expectedClassDeclaration.getMethodDeclarations(), classDeclaration.getMethodDeclarations()));
+        public void startClass(final ClassTypeDeclaration classTypeDeclaration) {
+            set(expectedClassTypeDeclaration != null &&
+                expectedClassTypeDeclaration.equals(classTypeDeclaration) &&
+                expectedClassTypeDeclaration.getAccess().equals(classTypeDeclaration.getAccess()) &&
+                expectedClassTypeDeclaration.getSuperType().equals(classTypeDeclaration.getSuperType())&&
+                Arrays.equals(expectedClassTypeDeclaration.getModifiers(), classTypeDeclaration.getModifiers()) &&
+                Arrays.equals(expectedClassTypeDeclaration.getInterfaceTypes(), classTypeDeclaration.getInterfaceTypes()) &&
+                Arrays.equals(expectedClassTypeDeclaration.getFieldDeclarations(), classTypeDeclaration.getFieldDeclarations()) &&
+                Arrays.equals(expectedClassTypeDeclaration.getConstructorDeclarations(), classTypeDeclaration.getConstructorDeclarations()) &&
+                Arrays.equals(expectedClassTypeDeclaration.getMethodDeclarations(), classTypeDeclaration.getMethodDeclarations()));
         }
 
-        public void startInterface(final InterfaceDeclaration interfaceDeclaration) {
+        public void startInterface(final InterfaceTypeDeclaration interfaceTypeDeclaration) {
             set(false);
         }
 
         public void field(final FieldDeclaration fieldDeclaration) {
-            set(new FieldDeclarationMatcher(expectedClassDeclaration.getFieldDeclaration(fieldDeclaration.getFieldName())).matches(fieldDeclaration));
+            set(new FieldDeclarationMatcher(expectedClassTypeDeclaration.getFieldDeclaration(fieldDeclaration.getFieldName())).matches(fieldDeclaration));
         }
 
         public void constructor(final ConstructorDeclaration constructorDeclaration) {
-            set(new ConstructorDeclarationMatcher(expectedClassDeclaration.getConstructorDeclaration(constructorDeclaration.getConstructorTypes())).matches(constructorDeclaration));
+            set(new ConstructorDeclarationMatcher(expectedClassTypeDeclaration.getConstructorDeclaration(constructorDeclaration.getConstructorTypes())).matches(constructorDeclaration));
         }
 
         public void method(final MethodDeclaration methodDeclaration) {
-            set(new MethodDeclarationMatcher(expectedClassDeclaration.getMethodDeclaration(methodDeclaration.getMethodName(), methodDeclaration.getArgumentTypes())).matches(methodDeclaration));
+            set(new MethodDeclarationMatcher(expectedClassTypeDeclaration.getMethodDeclaration(methodDeclaration.getMethodName(), methodDeclaration.getArgumentTypes())).matches(methodDeclaration));
         }
         
         public void endClass() {}

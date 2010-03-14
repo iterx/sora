@@ -5,18 +5,17 @@ import org.iterx.sora.tool.meta.Instruction;
 import org.iterx.sora.tool.meta.MetaClassLoader;
 import org.iterx.sora.tool.meta.Type;
 import org.iterx.sora.tool.meta.Value;
+import org.iterx.sora.tool.meta.declaration.InterfaceTypeDeclaration;
 import org.iterx.sora.tool.meta.instruction.InvokeSuperInstruction;
 import org.iterx.sora.tool.meta.instruction.ReturnInstruction;
-import org.iterx.sora.tool.meta.value.Constant;
+import org.iterx.sora.tool.meta.type.ClassType;
+import org.iterx.sora.tool.meta.type.InterfaceType;
 import org.iterx.sora.tool.meta.value.Variable;
 import org.iterx.sora.tool.meta.instruction.GetFieldInstruction;
 import org.iterx.sora.tool.meta.instruction.PutFieldInstruction;
-import org.iterx.sora.tool.meta.type.ClassMetaType;
-import org.iterx.sora.tool.meta.type.InterfaceMetaType;
-import org.iterx.sora.tool.meta.declaration.ClassDeclaration;
+import org.iterx.sora.tool.meta.declaration.ClassTypeDeclaration;
 import org.iterx.sora.tool.meta.declaration.ConstructorDeclaration;
 import org.iterx.sora.tool.meta.declaration.FieldDeclaration;
-import org.iterx.sora.tool.meta.declaration.InterfaceDeclaration;
 import org.iterx.sora.tool.meta.declaration.MethodDeclaration;
 import org.objectweb.asm.AnnotationVisitor;
 import org.objectweb.asm.Attribute;
@@ -71,8 +70,8 @@ public final class AsmExtractor {
                           final String[] interfaceNames) {
             final String className = org.objectweb.asm.Type.getObjectType(name).getClassName();
             metaType = hasAsmOpcodes(access, ACC_INTERFACE)?
-                       InterfaceMetaType.newType(metaClassLoader, className) :
-                       ClassMetaType.newType(metaClassLoader, className);
+                       InterfaceType.newType(metaClassLoader, className) :
+                       ClassType.newType(metaClassLoader, className);
         }
     }
 
@@ -157,7 +156,7 @@ public final class AsmExtractor {
 
     private class InterfaceDeclarationExtractorClassVisitor extends DeclarationExtractorClassVisitor {
 
-        private InterfaceDeclaration interfaceDeclaration;
+        private InterfaceTypeDeclaration interfaceTypeDeclaration;
 
         public InterfaceDeclarationExtractorClassVisitor(final int access,
                                                          final String name,
@@ -165,13 +164,13 @@ public final class AsmExtractor {
                                                          final String superName,
                                                          final String[] interfaceNames) {
 
-            interfaceDeclaration = InterfaceDeclaration.newInterfaceDeclaration(metaClassLoader, toInterfaceType(org.objectweb.asm.Type.getObjectType(name))).
-                    setAccess(toAccess(access, InterfaceDeclaration.Access.values()));
-            if(interfaceNames != null) interfaceDeclaration.setInterfaceTypes(toInterfaceTypes(toObjectTypes(interfaceNames)));
+            interfaceTypeDeclaration = InterfaceTypeDeclaration.newInterfaceDeclaration(metaClassLoader, toInterfaceType(org.objectweb.asm.Type.getObjectType(name))).
+                    setAccess(toAccess(access, InterfaceTypeDeclaration.Access.values()));
+            if(interfaceNames != null) interfaceTypeDeclaration.setInterfaceTypes(toInterfaceTypes(toObjectTypes(interfaceNames)));
         }
 
-        public Declaration<InterfaceDeclaration> getDeclaration() {
-            return interfaceDeclaration;
+        public Declaration<InterfaceTypeDeclaration> getDeclaration() {
+            return interfaceTypeDeclaration;
         }
 
         @Override
@@ -186,7 +185,7 @@ public final class AsmExtractor {
                                        final String signature,
                                        final Object value) {
             //TODO: add support for value
-            interfaceDeclaration.add(FieldDeclaration.newFieldDeclaration(name, toType(org.objectweb.asm.Type.getType(description))).
+            interfaceTypeDeclaration.add(FieldDeclaration.newFieldDeclaration(name, toType(org.objectweb.asm.Type.getType(description))).
                     setAccess(toAccess(access, FieldDeclaration.Access.values())).
                     setModifiers(toModifiers(access, FieldDeclaration.Modifier.values())));
             return null;
@@ -200,13 +199,13 @@ public final class AsmExtractor {
                                          final String[] exceptions) {
             //TODO: add support for statics & generics
             if("<clinit>".equals(name)) {
-                System.err.println("<clinit> not supported for " + interfaceDeclaration.getInterfaceType());
+                System.err.println("<clinit> not supported for " + interfaceTypeDeclaration.getInterfaceType());
             }
             else if("<init>".equals(name)) {
                 throw new IllegalArgumentException();
             }
             else {
-                interfaceDeclaration.add(MethodDeclaration.newMethodDeclaration(name, toTypes(org.objectweb.asm.Type.getArgumentTypes(description))).
+                interfaceTypeDeclaration.add(MethodDeclaration.newMethodDeclaration(name, toTypes(org.objectweb.asm.Type.getArgumentTypes(description))).
                         setReturnType(toType(org.objectweb.asm.Type.getReturnType(description))).
                         setExceptionTypes(toTypes(toObjectTypes(exceptions))).
                         setAccess(toAccess(access, MethodDeclaration.Access.values())).
@@ -218,22 +217,22 @@ public final class AsmExtractor {
 
     private class ClassDeclarationExtractorClassVisitor extends DeclarationExtractorClassVisitor {
 
-        private ClassDeclaration classDeclaration;
+        private ClassTypeDeclaration classTypeDeclaration;
 
         public ClassDeclarationExtractorClassVisitor(final int access,
                                                      final String name,
                                                      final String signature,
                                                      final String superName,
                                                      final String[] interfaceNames) {
-            classDeclaration = ClassDeclaration.newClassDeclaration(metaClassLoader, toClassType(org.objectweb.asm.Type.getObjectType(name))).
-                    setAccess(toAccess(access, ClassDeclaration.Access.values())).
-                    setModifiers(toModifiers(access, ClassDeclaration.Modifier.values()));
-            if(superName != null) classDeclaration.setSuperType(toClassType(org.objectweb.asm.Type.getObjectType(superName)));
-            if(interfaceNames != null) classDeclaration.setInterfaceTypes(toInterfaceTypes(toObjectTypes(interfaceNames)));
+            classTypeDeclaration = ClassTypeDeclaration.newClassDeclaration(metaClassLoader, toClassType(org.objectweb.asm.Type.getObjectType(name))).
+                    setAccess(toAccess(access, ClassTypeDeclaration.Access.values())).
+                    setModifiers(toModifiers(access, ClassTypeDeclaration.Modifier.values()));
+            if(superName != null) classTypeDeclaration.setSuperType(toClassType(org.objectweb.asm.Type.getObjectType(superName)));
+            if(interfaceNames != null) classTypeDeclaration.setInterfaceTypes(toInterfaceTypes(toObjectTypes(interfaceNames)));
         }
 
-        public Declaration<ClassDeclaration> getDeclaration() {
-            return classDeclaration;
+        public Declaration<ClassTypeDeclaration> getDeclaration() {
+            return classTypeDeclaration;
         }
         
         @Override
@@ -248,7 +247,7 @@ public final class AsmExtractor {
                                        final String signature,
                                        final Object value) {
             //TODO: add support for value
-            classDeclaration.add(FieldDeclaration.newFieldDeclaration(name, toType(org.objectweb.asm.Type.getType(description))).
+            classTypeDeclaration.add(FieldDeclaration.newFieldDeclaration(name, toType(org.objectweb.asm.Type.getType(description))).
                     setAccess(toAccess(access, FieldDeclaration.Access.values())).
                     setModifiers(toModifiers(access, FieldDeclaration.Modifier.values())));
             return null;
@@ -261,14 +260,14 @@ public final class AsmExtractor {
                                          final String[] exceptions) {
             // add support for statics and generics
             if("<clinit>".equals(name)) {
-                System.err.println("<clinit> not supported for " + classDeclaration.getClassType());
+                System.err.println("<clinit> not supported for " + classTypeDeclaration.getClassType());
             }
             else if("<init>".equals(name)) {
                 final ConstructorDeclaration constructorDeclaration = ConstructorDeclaration.newConstructorDeclaration(toTypes(org.objectweb.asm.Type.getArgumentTypes(description))).
                         setExceptionTypes(toTypes(toObjectTypes(exceptions))).
                         setAccess(toAccess(access, ConstructorDeclaration.Access.values())).
                         setModifiers(toModifiers(access, ConstructorDeclaration.Modifier.values()));
-                classDeclaration.add(constructorDeclaration);
+                classTypeDeclaration.add(constructorDeclaration);
                 return new ConstructorDeclarationInstructionExtractorMethodVisitor(constructorDeclaration);
             }
             else {
@@ -277,7 +276,7 @@ public final class AsmExtractor {
                         setExceptionTypes(toTypes(toObjectTypes(exceptions))).
                         setAccess(toAccess(access, MethodDeclaration.Access.values())).
                         setModifiers(toModifiers(access, MethodDeclaration.Modifier.values()));
-                classDeclaration.add(methodDeclaration);
+                classTypeDeclaration.add(methodDeclaration);
                 return new MethodDeclarationInstructionExtractorMethodVisitor(methodDeclaration);
             }
             return null;
@@ -494,7 +493,7 @@ public final class AsmExtractor {
         protected AsmScope newAsmStack(final Type<?>[] argumentTypes) {
             final AsmScope asmScope = new AsmScope();
 
-            asmScope.push("this", Type.OBJECT_TYPE);
+            asmScope.push("<this>", Type.OBJECT_TYPE);
             for(int i = 0, size = argumentTypes.length; i != size; i++) asmScope.push("arg" + i, argumentTypes[i]);
             return asmScope;
         }
@@ -558,33 +557,33 @@ public final class AsmExtractor {
         return instanceTypes;
     }
 
-    private InterfaceMetaType toInterfaceType(final org.objectweb.asm.Type type) {
+    private InterfaceType toInterfaceType(final org.objectweb.asm.Type type) {
         try {
             return toType(type);
         }
         catch(final RuntimeException e) {
-            return InterfaceMetaType.newType(type.getClassName());
+            return InterfaceType.newType(type.getClassName());
         }
 
     }
 
-    private InterfaceMetaType[] toInterfaceTypes(final org.objectweb.asm.Type... types) {
-        final InterfaceMetaType[] interfaceTypes = new InterfaceMetaType[types.length];
+    private InterfaceType[] toInterfaceTypes(final org.objectweb.asm.Type... types) {
+        final InterfaceType[] interfaceTypes = new InterfaceType[types.length];
         for(int i = interfaceTypes.length; i-- != 0; ) interfaceTypes[i] = toInterfaceType(types[i]);
         return interfaceTypes;
     }
 
-    private ClassMetaType toClassType(final org.objectweb.asm.Type type) {
+    private ClassType toClassType(final org.objectweb.asm.Type type) {
         try {
             return toType(type);
         }
         catch(final RuntimeException e) {
-            return ClassMetaType.newType(type.getClassName());
+            return ClassType.newType(type.getClassName());
         }
     }
 
-    private ClassMetaType[] toClassTypes(final org.objectweb.asm.Type... types) {
-        final ClassMetaType[] classTypes = new ClassMetaType[types.length];
+    private ClassType[] toClassTypes(final org.objectweb.asm.Type... types) {
+        final ClassType[] classTypes = new ClassType[types.length];
         for(int i = classTypes.length; i-- != 0; ) classTypes[i] = toClassType(types[i]);
         return classTypes;
     }

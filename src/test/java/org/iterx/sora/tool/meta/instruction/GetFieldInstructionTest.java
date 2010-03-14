@@ -3,7 +3,7 @@ package org.iterx.sora.tool.meta.instruction;
 import org.iterx.sora.tool.meta.Declarations;
 import org.iterx.sora.tool.meta.Instructions;
 import org.iterx.sora.tool.meta.Type;
-import org.iterx.sora.tool.meta.declaration.ClassDeclaration;
+import org.iterx.sora.tool.meta.declaration.ClassTypeDeclaration;
 import org.iterx.sora.tool.meta.declaration.MethodDeclaration;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -41,8 +41,8 @@ public class GetFieldInstructionTest extends InstructionTestCase {
     }
 
     @Override
-    public void setUpClassDeclaration(final ClassDeclaration classDeclaration) {
-        classDeclaration.add(new Declarations(){{
+    public void setUpClassDeclaration(final ClassTypeDeclaration classTypeDeclaration) {
+        classTypeDeclaration.add(new Declarations(){{
             field(FIELD_NAME, getType());
         }});
     }

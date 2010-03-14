@@ -1,9 +1,15 @@
 package org.iterx.sora.tool.meta.value;
 
+import org.iterx.sora.tool.meta.AbstractValue;
 import org.iterx.sora.tool.meta.Type;
 import org.iterx.sora.tool.meta.Value;
 
-public final class Variable extends Value<Variable> {
+public final class Variable extends AbstractValue<Variable> {
+
+    public static Variable THIS = new Variable("<this>", Type.OBJECT_TYPE);
+    public static Variable SUPER = new Variable("<super>", Type.OBJECT_TYPE);
+    public static Variable OUTER = new Variable("<outer>", Type.OBJECT_TYPE);
+
     private final String name;
 
     private Variable(final String name, final Type<?> type) {
