@@ -8,6 +8,7 @@ import org.iterx.sora.tool.meta.Value;
 import org.iterx.sora.tool.meta.declaration.InterfaceTypeDeclaration;
 import org.iterx.sora.tool.meta.instruction.InvokeSuperInstruction;
 import org.iterx.sora.tool.meta.instruction.ReturnInstruction;
+import org.iterx.sora.tool.meta.support.asm.scope.BlockScope;
 import org.iterx.sora.tool.meta.type.ClassType;
 import org.iterx.sora.tool.meta.type.InterfaceType;
 import org.iterx.sora.tool.meta.value.Variable;
@@ -361,10 +362,10 @@ public final class AsmExtractor {
 
     private abstract class InstructionExtractorMethodVisitor implements MethodVisitor, Opcodes {
 
-        private final AsmScope asmScope;
+        private final BlockScope blockScope;
 
         private InstructionExtractorMethodVisitor(final Type... types) {
-            this.asmScope = newAsmStack(types);
+            this.blockScope = newBlockScope(types);
         }
 
         public AnnotationVisitor visitAnnotationDefault() {
@@ -395,7 +396,7 @@ public final class AsmExtractor {
                 case FRETURN:
                 case DRETURN:
                 case ARETURN:
-                   // add(ReturnInstruction.newReturnInstruction(pop(asmScope)));
+                   // add(ReturnInstruction.newReturnInstruction(pop(blockScope)));
                     break;
                 case RETURN:
                     add(ReturnInstruction.newReturnInstruction());
@@ -408,10 +409,10 @@ public final class AsmExtractor {
 
         public void visitVarInsn(final int opcode, final int variable) {
             if(hasAsmOpcodes(opcode, ILOAD|LLOAD|FLOAD|DLOAD|ALOAD))
-                asmScope.push(asmScope.getName(variable), asmScope.getType(variable));
+                blockScope.push(blockScope.getValue(variable));
             else if(hasAsmOpcodes(opcode, ISTORE|LSTORE|FSTORE|DSTORE|ASTORE))
-                asmScope.push("var" + variable, asmScope.getType(variable));
-            //TODO: RET
+                blockScope.push(blockScope.getValue(variable));  //TODO: is this correct
+           //TODO: RET
         }
 
 
@@ -424,13 +425,13 @@ public final class AsmExtractor {
                 case GETFIELD:
                     add(GetFieldInstruction.newGetFieldInstruction(name));
                     //method.add(GetFieldInstruction.newGetFieldInstruction(name, Variable.newVariable(name)));
-                    //asmScope.push(name, );
+                    //blockScope.push(name, );
                     break;
                 case PUTFIELD:
-                    final String valueName = asmScope.peek();
+                    final Value<?> value = blockScope.peek();
                     //TODO: do we need to support Variable types???
-                    add(PutFieldInstruction.newPutFieldInstruction(name, Variable.newVariable(valueName)));
-                    popAll(asmScope, 2);
+                    add(PutFieldInstruction.newPutFieldInstruction(name, value));
+                    popAll(blockScope, 2);
                     break;
                 default:
                     //throw new UnsupportedOperationException();
@@ -443,7 +444,7 @@ public final class AsmExtractor {
                 case INVOKESPECIAL:
                     if("<init>".equals(name)){
                         final int length = toArgumentTypes(description).length;
-                        add(InvokeSuperInstruction.invokeInitInstruction(popAll(asmScope, length)));
+                        add(InvokeSuperInstruction.invokeInitInstruction(popAll(blockScope, length)));
                         break;
                     }
 
@@ -490,29 +491,29 @@ public final class AsmExtractor {
         protected abstract void add(final Instruction<?> instruction);
 
 
-        protected AsmScope newAsmStack(final Type<?>[] argumentTypes) {
-            final AsmScope asmScope = new AsmScope();
+        protected BlockScope newBlockScope(final Type<?>[] argumentTypes) {
+            final BlockScope blockScope = new BlockScope();
 
-            asmScope.push("<this>", Type.OBJECT_TYPE);
-            for(int i = 0, size = argumentTypes.length; i != size; i++) asmScope.push("arg" + i, argumentTypes[i]);
-            return asmScope;
+            blockScope.push(Variable.THIS);
+            for(int i = 0, size = argumentTypes.length; i != size; i++) blockScope.push(Variable.newVariable("arg" + i, argumentTypes[i]));
+            return blockScope;
         }
 
-        private void pushAll(final AsmScope asmScope, final Value... values) {
+        private void pushAll(final BlockScope asmScope, final Value... values) {
 
 /*
             for(final Value value : values) {
                 final String name = (value.isVariable())? ((Variable) value).getName() : null;
-                asmScope.push(name, value);
+                blockScope.push(name, value);
             }
 */
         }
 
-        private Value pop(final AsmScope asmScope) {
+        private Value pop(final BlockScope asmScope) {
             return null;
         }
 
-        private Value[] popAll(final AsmScope asmScope, final int count) {
+        private Value[] popAll(final BlockScope asmScope, final int count) {
             return new Value[0];
         }
 

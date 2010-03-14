@@ -6,6 +6,7 @@ import org.iterx.sora.tool.meta.MetaClassLoader;
 import org.iterx.sora.tool.meta.Type;
 import org.iterx.sora.tool.meta.Value;
 import org.iterx.sora.tool.meta.declaration.ClassTypeDeclaration;
+import org.iterx.sora.tool.meta.support.asm.scope.BlockScope;
 import org.iterx.sora.tool.meta.type.ClassType;
 import org.iterx.sora.tool.meta.value.Constant;
 import org.iterx.sora.tool.meta.value.Variable;
@@ -39,34 +40,27 @@ public final class AsmCompiler {
 
     public byte[] compile(final Declaration<?> declaration) {
         final DeclarationReader declarationReader = new DeclarationReader(declaration);
-        final CompilerDeclarationVisitor compilerDeclarationVisitor = new CompilerDeclarationVisitor();
+        final CompilerDeclarationVisitor compilerDeclarationVisitor =  new CompilerDeclarationVisitor();
 
         declarationReader.accept(compilerDeclarationVisitor);
         return compilerDeclarationVisitor.getBytes();
     }
 
-    //TODO: separate out interface & class visitors
-    private static class CompilerDeclarationVisitor implements DeclarationVisitor, Opcodes {
+    private static final class ClassTypeDeclarationCompilerDeclarationVisitor extends CompilerDeclarationVisitor {
 
+        private final ClassTypeDeclaration classTypeDeclaration;
         private final ClassWriter classWriter;
-        private ClassTypeDeclaration classTypeDeclaration;
 
-        private CompilerDeclarationVisitor() {
+        private ClassTypeDeclarationCompilerDeclarationVisitor(final ClassTypeDeclaration classTypeDeclaration) {
             this.classWriter = new ClassWriter(ClassWriter.COMPUTE_MAXS);
-        }
-
-        public byte[] getBytes() {
-            return classWriter.toByteArray();
-        }
-
-        public void startClass(final ClassTypeDeclaration classTypeDeclaration) {
             this.classTypeDeclaration = classTypeDeclaration;
-            classWriter.visit(V1_7,
-                              toAccess(classTypeDeclaration.getAccess()) | toModifier(classTypeDeclaration.getModifiers()),
-                              toName(classTypeDeclaration.getClassType()),
-                              null,
-                              toName(classTypeDeclaration.getSuperType()),
-                              toNames(classTypeDeclaration.getInterfaceTypes()));
+            
+             classWriter.visit(V1_7,
+                               toAccess(classTypeDeclaration.getAccess()) | toModifier(classTypeDeclaration.getModifiers()),
+                               toName(classTypeDeclaration.getClassType()),
+                               null,
+                               toName(classTypeDeclaration.getSuperType()),
+                               toNames(classTypeDeclaration.getInterfaceTypes()));
 
             if(classTypeDeclaration.getOuterType() != Type.VOID_TYPE) {
                 classWriter.visitInnerClass(toName(classTypeDeclaration.getClassType()),
@@ -76,7 +70,87 @@ public final class AsmCompiler {
             }
         }
 
+        @Override
+        public byte[] getBytes() {
+            return classWriter.toByteArray();
+        }
+
+        @Override
+        public void startClass(final ClassTypeDeclaration classTypeDeclaration) {
+            throw new IllegalStateException();
+        }
+
+        @Override
         public void startInterface(final InterfaceTypeDeclaration interfaceTypeDeclaration) {
+            throw new IllegalStateException();
+        }
+
+        @Override
+        public void field(final FieldDeclaration fieldDeclaration) {
+            final FieldVisitor fieldVisitor = classWriter.visitField(toAccess(fieldDeclaration.getAccess()),
+                                                                          fieldDeclaration.getFieldName(),
+                                                                          toDescriptor(fieldDeclaration.getFieldType()),
+                                                                          null,
+                                                                          fieldDeclaration.getFieldValue());
+            fieldVisitor.visitEnd();
+        }
+
+        @Override
+        public void constructor(final ConstructorDeclaration constructorDeclaration) {
+            final MethodVisitor methodVisitor = classWriter.visitMethod(toAccess(constructorDeclaration.getAccess()) | toModifier(constructorDeclaration.getModifiers()),
+                                                                             "<init>",
+                                                                             toMethodDescriptor(Type.VOID_TYPE, constructorDeclaration.getConstructorTypes()),
+                                                                             null,
+                                                                             null);
+            methodVisitor.visitCode();
+            instructions(constructorDeclaration, methodVisitor);
+            methodVisitor.visitMaxs(0, 0);
+            methodVisitor.visitEnd();
+        }
+
+        @Override
+        public void method(final MethodDeclaration methodDeclaration) {
+            final MethodVisitor methodVisitor = classWriter.visitMethod(toAccess(methodDeclaration.getAccess()) | toModifier(methodDeclaration.getModifiers()),
+                                                                             methodDeclaration.getMethodName(),
+                                                                             toMethodDescriptor(methodDeclaration.getReturnType(), methodDeclaration.getArgumentTypes()),
+                                                                             null,
+                                                                             null);
+            methodVisitor.visitCode();
+            instructions(methodDeclaration, methodVisitor);
+            methodVisitor.visitMaxs(0, 0);
+            methodVisitor.visitEnd();
+        }
+
+        @Override
+        public void endClass() {
+            classWriter.visitEnd();
+        }
+
+        @Override
+        public void endInterface() {
+            throw new IllegalStateException();
+        }
+
+        private void instructions(final ConstructorDeclaration constructorDeclaration, final MethodVisitor methodVisitor) {
+            new InstructionReader(constructorDeclaration.getInstructions()).
+                    accept(new CompilerInstructionVisitor(classTypeDeclaration, constructorDeclaration, methodVisitor));
+        }
+
+        private void instructions(final MethodDeclaration methodDeclaration, final MethodVisitor methodVisitor) {
+            new InstructionReader(methodDeclaration.getInstructions()).
+                    accept(new CompilerInstructionVisitor(classTypeDeclaration, methodDeclaration, methodVisitor));
+        }
+    }
+
+    private static final class InterfaceTypeDeclarationCompilerDeclarationVisitor extends CompilerDeclarationVisitor {
+
+        private final InterfaceTypeDeclaration interfaceTypeDeclaration;
+        private final ClassWriter classWriter;
+
+        private InterfaceTypeDeclarationCompilerDeclarationVisitor(final InterfaceTypeDeclaration interfaceTypeDeclaration) {
+            this.classWriter = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+            this.interfaceTypeDeclaration = interfaceTypeDeclaration;
+
             classWriter.visit(V1_7,
                               ACC_INTERFACE | toAccess(interfaceTypeDeclaration.getAccess()) | toModifier(interfaceTypeDeclaration.getModifiers()),
                               toName(interfaceTypeDeclaration.getInterfaceType()),
@@ -85,74 +159,145 @@ public final class AsmCompiler {
                               toNames(interfaceTypeDeclaration.getInterfaceTypes()));
         }
 
+        @Override
+        public byte[] getBytes() {
+            return classWriter.toByteArray();
+        }
+
+        @Override
+        public void startClass(final ClassTypeDeclaration classTypeDeclaration) {
+            throw new IllegalStateException();
+        }
+
+        @Override
+        public void startInterface(final InterfaceTypeDeclaration interfaceTypeDeclaration) {
+            throw new IllegalStateException();
+        }
+
+        @Override
         public void field(final FieldDeclaration fieldDeclaration) {
-            final FieldVisitor fieldVisitor =  classWriter.visitField(toAccess(fieldDeclaration.getAccess()),
-                                                                      fieldDeclaration.getFieldName(),
-                                                                      toDescriptor(fieldDeclaration.getFieldType()),
-                                                                      null,
-                                                                      fieldDeclaration.getFieldValue());
+            final FieldVisitor fieldVisitor = classWriter.visitField(toAccess(fieldDeclaration.getAccess()),
+                                                                          fieldDeclaration.getFieldName(),
+                                                                          toDescriptor(fieldDeclaration.getFieldType()),
+                                                                          null,
+                                                                          fieldDeclaration.getFieldValue());
             fieldVisitor.visitEnd();
         }
 
+        @Override
         public void constructor(final ConstructorDeclaration constructorDeclaration) {
-            final MethodVisitor methodVisitor = classWriter.visitMethod(toAccess(constructorDeclaration.getAccess()) | toModifier(constructorDeclaration.getModifiers()),
-                                                                        "<init>",
-                                                                        toMethodDescriptor(Type.VOID_TYPE, constructorDeclaration.getConstructorTypes()),
-                                                                        null,
-                                                                        null);
-            methodVisitor.visitCode();
-            new InstructionReader(constructorDeclaration.getInstructions()).accept(new CompilerInstructionVisitor(classTypeDeclaration, constructorDeclaration, methodVisitor));
-            methodVisitor.visitMaxs(0, 0);
-            methodVisitor.visitEnd();
+            throw new IllegalStateException();
         }
 
+        @Override
         public void method(final MethodDeclaration methodDeclaration) {
             final MethodVisitor methodVisitor = classWriter.visitMethod(toAccess(methodDeclaration.getAccess()) | toModifier(methodDeclaration.getModifiers()),
-                                                                        methodDeclaration.getMethodName(),
-                                                                        toMethodDescriptor(methodDeclaration.getReturnType(), methodDeclaration.getArgumentTypes()),
-                                                                        null,
-                                                                        null);
+                                                                             methodDeclaration.getMethodName(),
+                                                                             toMethodDescriptor(methodDeclaration.getReturnType(), methodDeclaration.getArgumentTypes()),
+                                                                             null,
+                                                                             null);
             methodVisitor.visitCode();
-            new InstructionReader(methodDeclaration.getInstructions()).accept(new CompilerInstructionVisitor(classTypeDeclaration, methodDeclaration, methodVisitor));
+            instructions(methodDeclaration, methodVisitor);
             methodVisitor.visitMaxs(0, 0);
             methodVisitor.visitEnd();
         }
 
+        @Override
         public void endClass() {
-            this.classTypeDeclaration = null;
-            classWriter.visitEnd();
+            throw new IllegalStateException();
         }
 
+        @Override
         public void endInterface() {
             classWriter.visitEnd();
         }
+
+        private void instructions(final MethodDeclaration methodDeclaration, final MethodVisitor methodVisitor) {
+            if(methodDeclaration.getInstructions().length != 0) throw new IllegalStateException();
+        }
     }
+
+
+    private static class CompilerDeclarationVisitor implements DeclarationVisitor, Opcodes {
+
+        private CompilerDeclarationVisitor declarationVisitor;
+
+        public byte[] getBytes() {
+            return getDeclarationVisitor().getBytes();
+        }
+
+        public void startClass(final ClassTypeDeclaration classTypeDeclaration) {
+            newDeclarationVisitor(classTypeDeclaration);
+        }
+
+        public void startInterface(final InterfaceTypeDeclaration interfaceTypeDeclaration) {
+            throw new UnsupportedOperationException();
+        }
+
+        public void field(final FieldDeclaration fieldDeclaration) {
+            getDeclarationVisitor().field(fieldDeclaration);
+        }
+
+        public void constructor(final ConstructorDeclaration constructorDeclaration) {
+            getDeclarationVisitor().constructor(constructorDeclaration);
+        }
+
+        public void method(final MethodDeclaration methodDeclaration) {
+            getDeclarationVisitor().method(methodDeclaration);
+        }
+
+        public void endClass() {
+            getDeclarationVisitor().endClass();
+        }
+
+        public void endInterface() {
+            getDeclarationVisitor().endClass();
+        }
+        
+        protected CompilerDeclarationVisitor getDeclarationVisitor() {
+            if(declarationVisitor == null) throw new IllegalStateException();
+            return declarationVisitor;
+        }
+
+        private DeclarationVisitor newDeclarationVisitor(final ClassTypeDeclaration classTypeDeclaration) {
+            declarationVisitor = new ClassTypeDeclarationCompilerDeclarationVisitor(classTypeDeclaration);
+            return declarationVisitor;
+        }
+
+        private DeclarationVisitor newDeclarationVisitor(final InterfaceTypeDeclaration interfaceTypeDeclaration) {
+            declarationVisitor = new InterfaceTypeDeclarationCompilerDeclarationVisitor(interfaceTypeDeclaration);
+            return declarationVisitor;
+        }
+    }
+
 
     private static class CompilerInstructionVisitor implements InstructionVisitor, Opcodes {
 
         private final ClassTypeDeclaration classTypeDeclaration;
-        private final MethodDeclaration methodDeclaration;
-        private final ConstructorDeclaration constructorDeclaration;
+        private final Type<?>[] argumentTypes;
+        private final Type<?> returnType;
         private final MethodVisitor methodVisitor;
-        private final AsmScope asmScope;
+        private final BlockScope blockScope;
 
         private CompilerInstructionVisitor(final ClassTypeDeclaration classTypeDeclaration,
                                            final ConstructorDeclaration constructorDeclaration,
                                            final MethodVisitor methodVisitor) {
-            this.asmScope = newAsmStack(constructorDeclaration.getConstructorTypes());
+            this.blockScope = newBlockScope(constructorDeclaration.getConstructorTypes());
             this.classTypeDeclaration = classTypeDeclaration;
-            this.methodDeclaration = null;
-            this.constructorDeclaration = constructorDeclaration;
+            this.argumentTypes = constructorDeclaration.getConstructorTypes();
+            this.returnType = Type.VOID_TYPE;
             this.methodVisitor = methodVisitor;
         }
+
+
 
         private CompilerInstructionVisitor(final ClassTypeDeclaration classTypeDeclaration,
                                            final MethodDeclaration methodDeclaration,
                                            final MethodVisitor methodVisitor) {
-            this.asmScope = newAsmStack(methodDeclaration.getArgumentTypes());
+            this.blockScope = newBlockScope(methodDeclaration.getArgumentTypes());
             this.classTypeDeclaration = classTypeDeclaration;
-            this.methodDeclaration = methodDeclaration;
-            this.constructorDeclaration = null;
+            this.argumentTypes = methodDeclaration.getArgumentTypes();
+            this.returnType = methodDeclaration.getReturnType();
             this.methodVisitor = methodVisitor;
         }
 
@@ -165,7 +310,7 @@ public final class AsmCompiler {
                                                       this.classTypeDeclaration.getMetaClassLoader().loadDeclaration((ClassType) fieldOwner.getType());
             final FieldDeclaration fieldDeclaration = classTypeDeclaration.getFieldDeclaration(getFieldInstruction.getFieldName());
             //methodVisitor.visitVarInsn(ALOAD, 0);
-            loadValues(methodVisitor, asmScope, fieldOwner);
+            loadValues(methodVisitor, blockScope, fieldOwner);
             methodVisitor.visitFieldInsn(GETFIELD,
                                          toName(classTypeDeclaration.getClassType()),
                                          fieldDeclaration.getFieldName(),
@@ -179,7 +324,7 @@ public final class AsmCompiler {
         public void putField(final PutFieldInstruction putFieldInstruction) {
             final FieldDeclaration fieldDeclaration = classTypeDeclaration.getFieldDeclaration(putFieldInstruction.getFieldName());
             methodVisitor.visitVarInsn(ALOAD, 0);
-            loadValues(methodVisitor, asmScope, putFieldInstruction.getValue());
+            loadValues(methodVisitor, blockScope, putFieldInstruction.getValue());
             methodVisitor.visitFieldInsn(PUTFIELD,
                                          toName(classTypeDeclaration.getClassType()),
                                          fieldDeclaration.getFieldName(),
@@ -188,33 +333,30 @@ public final class AsmCompiler {
 
         public void store(final StoreInstruction storeInstruction) {
             final Variable variable = storeInstruction.getVariable();
-            final String valueName = variable.getName();
-            final Type valueType = variable.getType();
-
+            final int index = blockScope.push(variable);
             instructions(storeInstruction.getInstruction());
             //TODO: abstract out as store values???
-            asmScope.push(valueName, valueType);
-            methodVisitor.visitVarInsn(toType(valueType).getOpcode(ISTORE),
-                                       asmScope.getIndex(valueName));
+            methodVisitor.visitVarInsn(toType(variable.getType()).getOpcode(ISTORE),
+                                       index);
         }
 
         public void invokeSuper(final InvokeSuperInstruction invokeSuperInstruction) {
             methodVisitor.visitVarInsn(ALOAD, 0);
-            loadValues(methodVisitor, asmScope, invokeSuperInstruction.getValues());
+            loadValues(methodVisitor, blockScope, invokeSuperInstruction.getValues());
             methodVisitor.visitMethodInsn(INVOKESPECIAL,
                                           toName(classTypeDeclaration.getSuperType()),
                                           "<init>",
-                                          toMethodDescriptor(Type.VOID_TYPE, constructorDeclaration.getConstructorTypes()));
+                                          toMethodDescriptor(Type.VOID_TYPE, argumentTypes));
         }
 
         public void returnValue(final ReturnInstruction returnInstruction) {
-            if(constructorDeclaration != null) {
+            if(returnType == Type.VOID_TYPE) {
                 methodVisitor.visitInsn(RETURN);
             }
             else {
                 if(returnInstruction.getInstruction() != null) instructions(returnInstruction.getInstruction());
-                if(returnInstruction.getValue() != null) loadValues(methodVisitor, asmScope, returnInstruction.getValue());
-                methodVisitor.visitInsn(toType(methodDeclaration.getReturnType()).getOpcode(IRETURN));
+                if(returnInstruction.getValue() != null) loadValues(methodVisitor, blockScope, returnInstruction.getValue());
+                methodVisitor.visitInsn(toType(returnType).getOpcode(IRETURN));
             }
         }
 
@@ -222,10 +364,10 @@ public final class AsmCompiler {
             new InstructionReader(instructions).accept(this);
         }
 
-        private static void loadValues(final MethodVisitor methodVisitor, final AsmScope asmScope, final Value... values) {
+        private static void loadValues(final MethodVisitor methodVisitor, final BlockScope blockScope, final Value... values) {
             for(final Value value : values) {
                 if(value.isConstant()) loadConstant(methodVisitor, (Constant) value);
-                else if(value.isVariable()) loadVariable(methodVisitor, asmScope, (Variable) value);
+                else if(value.isVariable()) loadVariable(methodVisitor, blockScope, (Variable) value);
                 else throw new IllegalArgumentException();
             }
         }
@@ -262,20 +404,19 @@ public final class AsmCompiler {
             else if(type != Type.VOID_TYPE) methodVisitor.visitLdcInsn(value);
         }
 
-        private static void loadVariable(final MethodVisitor methodVisitor, final AsmScope asmScope, final Variable variable) {
-            final String variableName = variable.getName();
-            methodVisitor.visitVarInsn(toType(asmScope.getType(variableName)).getOpcode(ILOAD),
-                                       asmScope.getIndex(variableName));
-
+        private static void loadVariable(final MethodVisitor methodVisitor, final BlockScope blockScope, final Variable variable) {
+            //TODO: we shouldn't need to re-resolve values...
+            final Value value = blockScope.resolveValue(variable.getName());
+            methodVisitor.visitVarInsn(toType(value.getType()).getOpcode(ILOAD),
+                                       blockScope.getIndex(value));
         }
 
 
-        private static AsmScope newAsmStack(final Type<?>[] argumentTypes) {
-            final AsmScope asmScope = new AsmScope();
-
-            asmScope.push("<this>", Type.OBJECT_TYPE);
-            for(int i = 0, size = argumentTypes.length; i != size; i++) asmScope.push("arg" + i, argumentTypes[i]);
-            return asmScope;
+        private static BlockScope newBlockScope(final Type<?>[] argumentTypes) {
+            final BlockScope blockScope = new BlockScope();
+            blockScope.push(Variable.THIS);
+            for(int i = 0, size = argumentTypes.length; i != size; i++) blockScope.push(Variable.newVariable("arg" + i, argumentTypes[i]));
+            return blockScope;
         }
     }
 
