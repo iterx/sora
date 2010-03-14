@@ -62,6 +62,20 @@ public class MetaClassLoader extends SecureClassLoader implements Closeable {
         return SYSTEM_META_CLASS_LOADER;
     }
 
+    @SuppressWarnings("unchecked")
+    public <S extends AbstractTypeDeclaration<?, S>> S loadDeclaration(final String name) throws ClassNotFoundException {
+        final Declaration<?> declaration = getDeclaration(name);
+        return (declaration != null)? (S) declaration : (S) findDeclaration(name);
+    } 
+
+    @SuppressWarnings("unchecked")
+    //TODO: Fix generics
+    public <S extends AbstractTypeDeclaration> S loadDeclaration(final Type<?> type) throws ClassNotFoundException {
+        final Declaration<?> declaration = getDeclaration(type.getName());
+        return (declaration != null)? (S) declaration : (S) findDeclaration(type.getName());
+    }
+
+/*
     public ClassTypeDeclaration loadDeclaration(final ClassType type) throws ClassNotFoundException {
         return (ClassTypeDeclaration) loadDeclaration((Type<?>) type);
     }
@@ -69,6 +83,7 @@ public class MetaClassLoader extends SecureClassLoader implements Closeable {
     public InterfaceTypeDeclaration loadDeclaration(final InterfaceType type) throws ClassNotFoundException {
         return (InterfaceTypeDeclaration) loadDeclaration((Type<?>) type);
     }
+*/
 
     @SuppressWarnings("unchecked")
     public <T extends Type> T loadType(final String name) throws ClassNotFoundException {
@@ -133,10 +148,12 @@ public class MetaClassLoader extends SecureClassLoader implements Closeable {
         return super.defineClass(name, bytes, 0, bytes.length);
     }
 
+/*
     private Declaration<?> loadDeclaration(final Type<?> type) throws ClassNotFoundException {
         final Declaration<?> declaration = getDeclaration(type.getName());
         return (declaration != null)? declaration : findDeclaration(type.getName());
     }
+*/
 
     private byte[] compileDeclaration(final Declaration<?> declaration) {
         return asmCompiler.compile(declaration);

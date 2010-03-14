@@ -20,18 +20,21 @@ public final class InterfaceTypeDeclaration extends AbstractTypeDeclaration<Inte
 
     private final Set<FieldDeclaration> fieldDeclarations;
     private final Set<MethodDeclaration> methodDeclarations;
+    private final Set<Type<?>> innerTypes;
     private final InterfaceType interfaceType;
     private final transient MetaClassLoader metaClassLoader;
 
     private Access access;
+    private Type<?> outerType;
     private InterfaceType[] interfaceTypes;
 
     private InterfaceTypeDeclaration(final MetaClassLoader metaClassLoader, final InterfaceType interfaceType) {
         this.fieldDeclarations = new HashSet<FieldDeclaration>();
         this.methodDeclarations = new HashSet<MethodDeclaration>();
-        this.access = Access.PUBLIC;
-        this.interfaceTypes = EMPTY_INTERFACES;
+        this.innerTypes = new HashSet<Type<?>>();
         this.interfaceType = interfaceType;
+        this.interfaceTypes = EMPTY_INTERFACES;
+        this.access = Access.PUBLIC;
         this.metaClassLoader = metaClassLoader;
     }
 
@@ -66,6 +69,16 @@ public final class InterfaceTypeDeclaration extends AbstractTypeDeclaration<Inte
         return interfaceType;
     }
 
+    public Type<?> getOuterType() {
+        return outerType;
+    }
+
+    public InterfaceTypeDeclaration setOuterType(final Type<?> outerType) {
+        assertType(outerType);
+        this.outerType = outerType;
+        return this;
+    }
+
     public InterfaceType[] getInterfaceTypes() {
         return interfaceTypes;
     }
@@ -88,6 +101,20 @@ public final class InterfaceTypeDeclaration extends AbstractTypeDeclaration<Inte
 
     public Modifier[] getModifiers() {
         return new Modifier[] { Modifier.ABSTRACT };
+    }
+
+    public Type<?>[] getInnerTypes() {
+        return innerTypes.toArray(new Type<?>[innerTypes.size()]);
+    }
+
+    public InterfaceTypeDeclaration addInnerType(final Type<?> type) {
+        innerTypes.add(type);
+        return this;
+    }
+    
+    public InterfaceTypeDeclaration removeInnerType(final Type<?> type) {
+        innerTypes.remove(type);
+        return this;
     }
 
     public FieldDeclaration[] getFieldDeclarations() {

@@ -2,9 +2,7 @@ package org.iterx.sora.tool.meta;
 
 
 //TODO: make immutable & validate (problem: allows multiple instances???)
-
 //TODO: => so make mutable state inner object???
-//TODO: Class/Interface Declarations should also me Types!!
 public abstract class AbstractDeclaration<T extends Declaration<T>> implements Declaration<T> {
 
     public abstract Access getAccess();

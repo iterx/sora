@@ -6,8 +6,7 @@ import org.iterx.sora.tool.meta.MetaClassLoader;
 import org.iterx.sora.tool.meta.Type;
 import org.iterx.sora.tool.meta.Value;
 import org.iterx.sora.tool.meta.declaration.ClassTypeDeclaration;
-import org.iterx.sora.tool.meta.support.asm.scope.BlockScope;
-import org.iterx.sora.tool.meta.type.ClassType;
+import org.iterx.sora.tool.meta.support.asm.scope.StackScope;
 import org.iterx.sora.tool.meta.value.Constant;
 import org.iterx.sora.tool.meta.value.Variable;
 import org.iterx.sora.tool.meta.declaration.ConstructorDeclaration;
@@ -277,12 +276,12 @@ public final class AsmCompiler {
         private final Type<?>[] argumentTypes;
         private final Type<?> returnType;
         private final MethodVisitor methodVisitor;
-        private final BlockScope blockScope;
+        private final StackScope stackScope;
 
         private CompilerInstructionVisitor(final ClassTypeDeclaration classTypeDeclaration,
                                            final ConstructorDeclaration constructorDeclaration,
                                            final MethodVisitor methodVisitor) {
-            this.blockScope = newBlockScope(constructorDeclaration.getConstructorTypes());
+            this.stackScope = newBlockScope(constructorDeclaration.getConstructorTypes());
             this.classTypeDeclaration = classTypeDeclaration;
             this.argumentTypes = constructorDeclaration.getConstructorTypes();
             this.returnType = Type.VOID_TYPE;
@@ -294,7 +293,7 @@ public final class AsmCompiler {
         private CompilerInstructionVisitor(final ClassTypeDeclaration classTypeDeclaration,
                                            final MethodDeclaration methodDeclaration,
                                            final MethodVisitor methodVisitor) {
-            this.blockScope = newBlockScope(methodDeclaration.getArgumentTypes());
+            this.stackScope = newBlockScope(methodDeclaration.getArgumentTypes());
             this.classTypeDeclaration = classTypeDeclaration;
             this.argumentTypes = methodDeclaration.getArgumentTypes();
             this.returnType = methodDeclaration.getReturnType();
@@ -306,11 +305,11 @@ public final class AsmCompiler {
             try {
             final Variable fieldOwner = getFieldInstruction.getFieldOwner();
             final ClassTypeDeclaration classTypeDeclaration = (fieldOwner == Variable.THIS)?
-                                                      this.classTypeDeclaration :
-                                                      this.classTypeDeclaration.getMetaClassLoader().loadDeclaration((ClassType) fieldOwner.getType());
+                                                              this.classTypeDeclaration :
+                                                              this.classTypeDeclaration.getMetaClassLoader().<ClassTypeDeclaration>loadDeclaration(fieldOwner.getType());
             final FieldDeclaration fieldDeclaration = classTypeDeclaration.getFieldDeclaration(getFieldInstruction.getFieldName());
             //methodVisitor.visitVarInsn(ALOAD, 0);
-            loadValues(methodVisitor, blockScope, fieldOwner);
+            loadValues(methodVisitor, stackScope, fieldOwner);
             methodVisitor.visitFieldInsn(GETFIELD,
                                          toName(classTypeDeclaration.getClassType()),
                                          fieldDeclaration.getFieldName(),
@@ -324,7 +323,7 @@ public final class AsmCompiler {
         public void putField(final PutFieldInstruction putFieldInstruction) {
             final FieldDeclaration fieldDeclaration = classTypeDeclaration.getFieldDeclaration(putFieldInstruction.getFieldName());
             methodVisitor.visitVarInsn(ALOAD, 0);
-            loadValues(methodVisitor, blockScope, putFieldInstruction.getValue());
+            loadValues(methodVisitor, stackScope, putFieldInstruction.getValue());
             methodVisitor.visitFieldInsn(PUTFIELD,
                                          toName(classTypeDeclaration.getClassType()),
                                          fieldDeclaration.getFieldName(),
@@ -333,7 +332,7 @@ public final class AsmCompiler {
 
         public void store(final StoreInstruction storeInstruction) {
             final Variable variable = storeInstruction.getVariable();
-            final int index = blockScope.push(variable);
+            final int index = stackScope.push(variable);
             instructions(storeInstruction.getInstruction());
             //TODO: abstract out as store values???
             methodVisitor.visitVarInsn(toType(variable.getType()).getOpcode(ISTORE),
@@ -342,7 +341,7 @@ public final class AsmCompiler {
 
         public void invokeSuper(final InvokeSuperInstruction invokeSuperInstruction) {
             methodVisitor.visitVarInsn(ALOAD, 0);
-            loadValues(methodVisitor, blockScope, invokeSuperInstruction.getValues());
+            loadValues(methodVisitor, stackScope, invokeSuperInstruction.getValues());
             methodVisitor.visitMethodInsn(INVOKESPECIAL,
                                           toName(classTypeDeclaration.getSuperType()),
                                           "<init>",
@@ -355,7 +354,7 @@ public final class AsmCompiler {
             }
             else {
                 if(returnInstruction.getInstruction() != null) instructions(returnInstruction.getInstruction());
-                if(returnInstruction.getValue() != null) loadValues(methodVisitor, blockScope, returnInstruction.getValue());
+                if(returnInstruction.getValue() != null) loadValues(methodVisitor, stackScope, returnInstruction.getValue());
                 methodVisitor.visitInsn(toType(returnType).getOpcode(IRETURN));
             }
         }
@@ -364,10 +363,10 @@ public final class AsmCompiler {
             new InstructionReader(instructions).accept(this);
         }
 
-        private static void loadValues(final MethodVisitor methodVisitor, final BlockScope blockScope, final Value... values) {
+        private static void loadValues(final MethodVisitor methodVisitor, final StackScope stackScope, final Value... values) {
             for(final Value value : values) {
                 if(value.isConstant()) loadConstant(methodVisitor, (Constant) value);
-                else if(value.isVariable()) loadVariable(methodVisitor, blockScope, (Variable) value);
+                else if(value.isVariable()) loadVariable(methodVisitor, stackScope, (Variable) value);
                 else throw new IllegalArgumentException();
             }
         }
@@ -404,19 +403,19 @@ public final class AsmCompiler {
             else if(type != Type.VOID_TYPE) methodVisitor.visitLdcInsn(value);
         }
 
-        private static void loadVariable(final MethodVisitor methodVisitor, final BlockScope blockScope, final Variable variable) {
+        private static void loadVariable(final MethodVisitor methodVisitor, final StackScope stackScope, final Variable variable) {
             //TODO: we shouldn't need to re-resolve values...
-            final Value value = blockScope.resolveValue(variable.getName());
+            final Value value = stackScope.resolveValue(variable.getName());
             methodVisitor.visitVarInsn(toType(value.getType()).getOpcode(ILOAD),
-                                       blockScope.getIndex(value));
+                                       stackScope.getIndex(value));
         }
 
 
-        private static BlockScope newBlockScope(final Type<?>[] argumentTypes) {
-            final BlockScope blockScope = new BlockScope();
-            blockScope.push(Variable.THIS);
-            for(int i = 0, size = argumentTypes.length; i != size; i++) blockScope.push(Variable.newVariable("arg" + i, argumentTypes[i]));
-            return blockScope;
+        private static StackScope newBlockScope(final Type<?>[] argumentTypes) {
+            final StackScope stackScope = new StackScope();
+            stackScope.push(Variable.THIS);
+            for(int i = 0, size = argumentTypes.length; i != size; i++) stackScope.push(Variable.newVariable("arg" + i, argumentTypes[i]));
+            return stackScope;
         }
     }
 

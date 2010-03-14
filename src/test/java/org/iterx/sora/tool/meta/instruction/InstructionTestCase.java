@@ -61,7 +61,8 @@ public abstract class InstructionTestCase {
         final ClassTypeDeclaration expectedClassTypeDeclaration = newClassDeclaration(compileMetaClassLoader, type);
         extractMetaClassLoader.defineClass(expectedClassTypeDeclaration);
 
-        assertExtract(expectedClassTypeDeclaration, extractMetaClassLoader.loadDeclaration(expectedClassTypeDeclaration.getClassType()));
+        assertExtract(expectedClassTypeDeclaration,
+                      extractMetaClassLoader.loadDeclaration(expectedClassTypeDeclaration.getClassType()));
     }
 
     public abstract void setUpMethodDeclaration(final MethodDeclaration methodDeclaration);

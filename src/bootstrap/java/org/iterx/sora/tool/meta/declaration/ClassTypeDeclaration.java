@@ -12,7 +12,6 @@ import org.iterx.sora.tool.meta.type.InterfaceType;
 
 import java.util.Arrays;
 
-//TODO: should implement Type<ClassType>...
 public final class ClassTypeDeclaration extends AbstractTypeDeclaration<ClassType, ClassTypeDeclaration> {
 
     public static final InterfaceType[] EMPTY_INTERFACES = new InterfaceType[0];
@@ -24,6 +23,7 @@ public final class ClassTypeDeclaration extends AbstractTypeDeclaration<ClassTyp
     private final Set<FieldDeclaration> fieldDeclarations;
     private final Set<ConstructorDeclaration> constructorDeclarations;
     private final Set<MethodDeclaration> methodDeclarations;
+    private final Set<Type<?>> innerTypes;
     private final ClassType classType;
 
     private final transient MetaClassLoader metaClassLoader;
@@ -31,21 +31,21 @@ public final class ClassTypeDeclaration extends AbstractTypeDeclaration<ClassTyp
     private Access access;
     private Modifier[] modifiers;
     private ClassType superType;
-    private InterfaceType[] interfaceTypes;
     private Type<?> outerType;
-    //TODO: need to define inner classes -> will need to analyse them to make synethic methods
+    private InterfaceType[] interfaceTypes;
 
     private ClassTypeDeclaration(final MetaClassLoader metaClassLoader, final ClassType classType) {
         this.fieldDeclarations = new HashSet<FieldDeclaration>();
         this.constructorDeclarations = new HashSet<ConstructorDeclaration>();
         this.methodDeclarations = new HashSet<MethodDeclaration>();
-        this.superType = Type.OBJECT_TYPE;
+        this.innerTypes = new HashSet<Type<?>>();
+        this.superType = OBJECT_TYPE;
+        this.outerType = VOID_TYPE;
         this.interfaceTypes = EMPTY_INTERFACES;
         this.access = Access.PUBLIC;
         this.modifiers = EMPTY_MODIFIERS;
         this.classType = classType;
         this.metaClassLoader = metaClassLoader;
-        this.outerType = Type.VOID_TYPE;
     }
 
     public static ClassTypeDeclaration newClassDeclaration(final ClassType classType) {
@@ -79,6 +79,16 @@ public final class ClassTypeDeclaration extends AbstractTypeDeclaration<ClassTyp
         return classType;
     }
 
+    public Type<?> getOuterType() {
+        return outerType;
+    }
+
+    public ClassTypeDeclaration setOuterType(final Type<?> outerType) {
+        assertType(outerType);
+        this.outerType = outerType;
+        return this;
+    }
+
     public ClassType getSuperType() {
         return superType;
     }
@@ -99,16 +109,7 @@ public final class ClassTypeDeclaration extends AbstractTypeDeclaration<ClassTyp
         return this;
     }
 
-    public Type<?> getOuterType() {
-        return outerType;
-    }
 
-    public ClassTypeDeclaration setOuterType(final Type<?> outerType) {
-        assertType(outerType);
-        this.outerType = outerType;
-        return this;
-    }
-        
     public Access getAccess() {
         return access;
     }
@@ -129,6 +130,20 @@ public final class ClassTypeDeclaration extends AbstractTypeDeclaration<ClassTyp
         return this;
     }
 
+    public Type<?>[] getInnerTypes() {
+        return innerTypes.toArray(new Type<?>[innerTypes.size()]);
+    }
+
+    public ClassTypeDeclaration addInnerType(final Type<?> type) {
+        innerTypes.add(type);
+        return this;
+    }
+
+    public ClassTypeDeclaration removeInnerType(final Type<?> type) {
+        innerTypes.remove(type);
+        return this;
+    }
+    
     public FieldDeclaration[] getFieldDeclarations() {
         return fieldDeclarations.toArray(new FieldDeclaration[fieldDeclarations.size()]);
     }
@@ -203,6 +218,8 @@ public final class ClassTypeDeclaration extends AbstractTypeDeclaration<ClassTyp
         for(final MethodDeclaration methodDeclaration : declarations.getMethodDeclarations()) methodDeclarations.add(methodDeclaration);
         return this;
     }
+
+
 
     @Override
     public int hashCode() {

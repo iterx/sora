@@ -39,11 +39,7 @@ public class StubMetaClassLoader extends MetaClassLoader {
 
     @Override
     public Class<?> loadClass(final Type<?> type) throws ClassNotFoundException {
-        if(debug) {
-            if(type.getClass() == ClassType.class) debug(asmCompiler.compile(loadDeclaration((ClassType) type)));
-            else if(type.getClass() == InterfaceType.class) debug(asmCompiler.compile(loadDeclaration((InterfaceType) type)));
-            else throw new IllegalArgumentException();
-        }
+        if(debug) debug(asmCompiler.compile(loadDeclaration(type)));
         return super.loadClass(type);
     }
 

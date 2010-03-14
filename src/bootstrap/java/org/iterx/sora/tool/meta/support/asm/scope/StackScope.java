@@ -7,7 +7,7 @@ import org.iterx.sora.tool.meta.value.Variable;
 
 import java.util.Arrays;
 
-public final class BlockScope implements Scope<BlockScope> {
+public final class StackScope implements Scope<StackScope> {
 
     private static final int DEFAULT_CAPACITY = 16;
     private static final String NULL = null;
@@ -18,7 +18,7 @@ public final class BlockScope implements Scope<BlockScope> {
     private int capacity;
     private int size;
 
-    public BlockScope() {
+    public StackScope() {
         this.names = new String[DEFAULT_CAPACITY];
         this.values= new Value<?>[DEFAULT_CAPACITY];
         this.capacity = DEFAULT_CAPACITY;
