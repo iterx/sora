@@ -1,7 +1,5 @@
 package org.iterx.sora.tool.meta.declaration;
 
-import org.iterx.sora.collection.Set;
-import org.iterx.sora.collection.set.HashSet;
 import org.iterx.sora.tool.meta.AbstractTypeDeclaration;
 import org.iterx.sora.tool.meta.Declaration;
 import org.iterx.sora.tool.meta.Declarations;
@@ -11,6 +9,8 @@ import org.iterx.sora.tool.meta.type.ClassType;
 import org.iterx.sora.tool.meta.type.InterfaceType;
 
 import java.util.Arrays;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 public final class ClassTypeDeclaration extends AbstractTypeDeclaration<ClassType, ClassTypeDeclaration> {
 
@@ -35,10 +35,10 @@ public final class ClassTypeDeclaration extends AbstractTypeDeclaration<ClassTyp
     private InterfaceType[] interfaceTypes;
 
     private ClassTypeDeclaration(final MetaClassLoader metaClassLoader, final ClassType classType) {
-        this.fieldDeclarations = new HashSet<FieldDeclaration>();
-        this.constructorDeclarations = new HashSet<ConstructorDeclaration>();
-        this.methodDeclarations = new HashSet<MethodDeclaration>();
-        this.innerTypes = new HashSet<Type<?>>();
+        this.fieldDeclarations = new LinkedHashSet<FieldDeclaration>();
+        this.constructorDeclarations = new LinkedHashSet<ConstructorDeclaration>();
+        this.methodDeclarations = new LinkedHashSet<MethodDeclaration>();
+        this.innerTypes = new LinkedHashSet<Type<?>>();
         this.superType = OBJECT_TYPE;
         this.outerType = VOID_TYPE;
         this.interfaceTypes = EMPTY_INTERFACES;
@@ -58,7 +58,7 @@ public final class ClassTypeDeclaration extends AbstractTypeDeclaration<ClassTyp
     }
 
     @Override
-    public boolean isClassDeclaration() {
+    public boolean isClassTypeDeclaration() {
         return true;
     }
 
@@ -275,11 +275,11 @@ public final class ClassTypeDeclaration extends AbstractTypeDeclaration<ClassTyp
 
     private static void assertConstructorDeclaration(final ConstructorDeclaration constructorDeclaration) {
         if(constructorDeclaration == null) throw new IllegalArgumentException("constructorDeclaration == null");
-        //TODO: check that method is abstract or static
+        //TODO: check that startMethod is abstract or static
     }
     
     private static void assertMethodDeclaration(final MethodDeclaration methodDeclaration) {
         if(methodDeclaration == null) throw new IllegalArgumentException("methodDeclaration == null");
-        //TODO: check that method is abstract or static
+        //TODO: check that startMethod is abstract or static
     }
 }

@@ -99,7 +99,7 @@ public class MetaClassLoaderTest {
 
     public static abstract class TestClass {
 
-        public abstract void method();
+        public abstract void startMethod();
 
     }
 

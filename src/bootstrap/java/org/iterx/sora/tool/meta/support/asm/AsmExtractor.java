@@ -424,7 +424,7 @@ public final class AsmExtractor {
             switch(opcode){
                 case GETFIELD:
                     add(GetFieldInstruction.newGetFieldInstruction(name));
-                    //method.add(GetFieldInstruction.newGetFieldInstruction(name, Variable.newVariable(name)));
+                    //startMethod.add(GetFieldInstruction.newGetFieldInstruction(name, Variable.newVariable(name)));
                     //stackScope.push(name, );
                     break;
                 case PUTFIELD:

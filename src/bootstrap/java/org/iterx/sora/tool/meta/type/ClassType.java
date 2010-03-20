@@ -5,6 +5,9 @@ import org.iterx.sora.tool.meta.MetaClassLoader;
 
 public final class ClassType extends AbstractType<ClassType> {
 
+    public static final ClassType OBJECT_TYPE = ClassType.newType("java.lang.Object");
+    public static final ClassType STRING_TYPE = ClassType.newType("java.lang.String");
+
     private ClassType(final MetaClassLoader metaClassLoader, final String name) {
         super(metaClassLoader, name);
     }

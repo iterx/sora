@@ -1,7 +1,5 @@
 package org.iterx.sora.tool.meta.declaration;
 
-import org.iterx.sora.collection.Set;
-import org.iterx.sora.collection.set.HashSet;
 import org.iterx.sora.tool.meta.AbstractTypeDeclaration;
 import org.iterx.sora.tool.meta.Declaration;
 import org.iterx.sora.tool.meta.Declarations;
@@ -10,6 +8,8 @@ import org.iterx.sora.tool.meta.Type;
 import org.iterx.sora.tool.meta.type.InterfaceType;
 
 import java.util.Arrays;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 public final class InterfaceTypeDeclaration extends AbstractTypeDeclaration<InterfaceType, InterfaceTypeDeclaration> {
 
@@ -29,9 +29,9 @@ public final class InterfaceTypeDeclaration extends AbstractTypeDeclaration<Inte
     private InterfaceType[] interfaceTypes;
 
     private InterfaceTypeDeclaration(final MetaClassLoader metaClassLoader, final InterfaceType interfaceType) {
-        this.fieldDeclarations = new HashSet<FieldDeclaration>();
-        this.methodDeclarations = new HashSet<MethodDeclaration>();
-        this.innerTypes = new HashSet<Type<?>>();
+        this.fieldDeclarations = new LinkedHashSet<FieldDeclaration>();
+        this.methodDeclarations = new LinkedHashSet<MethodDeclaration>();
+        this.innerTypes = new LinkedHashSet<Type<?>>();
         this.interfaceType = interfaceType;
         this.interfaceTypes = EMPTY_INTERFACES;
         this.access = Access.PUBLIC;
@@ -53,7 +53,7 @@ public final class InterfaceTypeDeclaration extends AbstractTypeDeclaration<Inte
     }
 
     @Override
-    public boolean isInterfaceDeclaration() {
+    public boolean isInterfaceTypeDeclaration() {
         return true;
     }
 
@@ -226,6 +226,6 @@ public final class InterfaceTypeDeclaration extends AbstractTypeDeclaration<Inte
 
     private static void assertMethodDeclaration(final MethodDeclaration methodDeclaration) {
         if(methodDeclaration == null) throw new IllegalArgumentException("methodDeclaration == null");
-        //TODO: check that method is abstract or static
+        //TODO: check that startMethod is abstract or static
     }
 }

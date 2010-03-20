@@ -14,9 +14,9 @@ public interface Declaration<T extends Declaration<T>> {
 
     abstract Modifier[] getModifiers();
 
-    boolean isClassDeclaration();
+    boolean isClassTypeDeclaration();
 
-    boolean isInterfaceDeclaration();
+    boolean isInterfaceTypeDeclaration();
 
     boolean isFieldDeclaration();
 

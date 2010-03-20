@@ -62,6 +62,11 @@ public final class Constant extends AbstractValue<Constant> {
     }
 
     @Override
+    public String toString() {
+        return (value != null)? value.toString() : "null";
+    }
+
+    @Override
     public int hashCode() {
         return (value != null)? value.hashCode() : 0;
     }

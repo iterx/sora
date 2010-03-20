@@ -1,6 +1,6 @@
 package org.iterx.sora.tool.meta;
 
-public abstract class AbstractTypeDeclaration<T extends Type<T>, S extends Declaration<S>> extends AbstractDeclaration<S> implements Type<T> {
+public abstract class AbstractTypeDeclaration<T extends Type<T>, S extends Declaration<S>> extends AbstractDeclaration<S> implements TypeDeclaration<T, S> {
 
     public boolean isAnnotation() {
         return false;

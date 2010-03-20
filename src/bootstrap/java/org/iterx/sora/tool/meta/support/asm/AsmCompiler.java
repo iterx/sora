@@ -1,27 +1,12 @@
 package org.iterx.sora.tool.meta.support.asm;
 
-import org.iterx.sora.tool.meta.Declaration;
-import org.iterx.sora.tool.meta.Instruction;
 import org.iterx.sora.tool.meta.MetaClassLoader;
 import org.iterx.sora.tool.meta.Type;
-import org.iterx.sora.tool.meta.Value;
-import org.iterx.sora.tool.meta.declaration.ClassTypeDeclaration;
-import org.iterx.sora.tool.meta.support.asm.scope.StackScope;
-import org.iterx.sora.tool.meta.value.Constant;
-import org.iterx.sora.tool.meta.value.Variable;
-import org.iterx.sora.tool.meta.declaration.ConstructorDeclaration;
-import org.iterx.sora.tool.meta.declaration.FieldDeclaration;
-import org.iterx.sora.tool.meta.declaration.InterfaceTypeDeclaration;
-import org.iterx.sora.tool.meta.declaration.MethodDeclaration;
-import org.iterx.sora.tool.meta.instruction.GetFieldInstruction;
-import org.iterx.sora.tool.meta.instruction.InvokeSuperInstruction;
-import org.iterx.sora.tool.meta.instruction.PutFieldInstruction;
-import org.iterx.sora.tool.meta.instruction.ReturnInstruction;
-import org.iterx.sora.tool.meta.instruction.StoreInstruction;
-import org.iterx.sora.tool.meta.util.DeclarationReader;
-import org.iterx.sora.tool.meta.util.DeclarationVisitor;
-import org.iterx.sora.tool.meta.util.InstructionReader;
+import org.iterx.sora.tool.meta.TypeDeclaration;
 import org.iterx.sora.tool.meta.util.InstructionVisitor;
+import org.iterx.sora.tool.meta.util.TypeReader;
+import org.iterx.sora.tool.meta.util.TypeVisitor;
+import org.iterx.sora.tool.meta.value.Constant;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.FieldVisitor;
 import org.objectweb.asm.MethodVisitor;
@@ -37,14 +22,127 @@ public final class AsmCompiler {
         this.metaClassLoader = metaClassLoader;
     }
 
-    public byte[] compile(final Declaration<?> declaration) {
-        final DeclarationReader declarationReader = new DeclarationReader(declaration);
-        final CompilerDeclarationVisitor compilerDeclarationVisitor =  new CompilerDeclarationVisitor();
-
-        declarationReader.accept(compilerDeclarationVisitor);
-        return compilerDeclarationVisitor.getBytes();
+    public byte[] compile(final TypeDeclaration<?, ?> typeDeclaration) {
+        final ClassWriter classWriter = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        new TypeReader(typeDeclaration).accept(new CompilerTypeVisitor(classWriter));
+        return classWriter.toByteArray();
     }
 
+    private static class CompilerTypeVisitor implements TypeVisitor, Opcodes {
+
+        private final ClassWriter classWriter;
+
+        private CompilerTypeVisitor(final ClassWriter classWriter) {
+            this.classWriter = classWriter;
+        }
+
+        public void startClass(final Access access,
+                               final Modifier[] modifiers,
+                               final Type<?> type,
+                               final Type<?> superType,
+                               final Type<?>[] interfaceTypes) {
+            classWriter.visit(V1_7,
+                              toAccess(access)|toModifier(modifiers),
+                              toName(type),
+                              null,
+                              toName(superType),
+                              toNames(interfaceTypes));
+/*
+           if(classTypeDeclaration.getOuterType() != Type.VOID_TYPE) {
+               classWriter.visitOuterClass(toName(classTypeDeclaration.getOuterType()),
+                                           null,
+                                           null);
+           }
+           for(final Type<?> innerType : classTypeDeclaration.getInnerTypes()) {
+               classWriter.visitInnerClass(toName(classTypeDeclaration.getClassType()),
+                                           toName(innerType),
+                                           toName(classTypeDeclaration.getClassType()), //TODO: make this short name
+                                           toAccess(classTypeDeclaration.getAccess()));
+           }
+*/
+
+        }
+
+        public void startInterface(final Access access,
+                                   final Modifier[] modifiers,
+                                   final Type<?> type,
+                                   final Type<?>[] interfaceTypes) {
+            classWriter.visit(V1_7,
+                              ACC_INTERFACE|toAccess(access)|toModifier(modifiers),
+                              toName(type),
+                              null,
+                              toName(Type.OBJECT_TYPE),
+                              toNames(interfaceTypes));
+        }
+
+        public void field(final Access access,
+                          final Modifier[] modifiers,
+                          final String fieldName,
+                          final Type<?> fieldType,
+                          final Constant fieldValue) {
+            final FieldVisitor fieldVisitor = classWriter.visitField(toAccess(access)|toModifier(modifiers),
+                                                                     fieldName,
+                                                                     toDescriptor(fieldType),
+                                                                     null,
+                                                                     null); //TODO: fieldValue->
+            fieldVisitor.visitEnd();
+        }
+
+        public InstructionVisitor startConstructor(final Access access,
+                                                   final Modifier[] modifiers,
+                                                   final Type<?>[] constructorTypes,
+                                                   final Type<?>[] exceptionTypes) {
+            final MethodVisitor methodVisitor = classWriter.visitMethod(toAccess(access)|toModifier(modifiers),
+                                                                        "<init>",
+                                                                        toMethodDescriptor(Type.VOID_TYPE, constructorTypes),
+                                                                        null,
+                                                                        toNames(exceptionTypes));
+
+            //TODO: return as instruction visitor
+            methodVisitor.visitCode();
+            //instructions(constructorDeclaration, methodVisitor);
+            methodVisitor.visitMaxs(0, 0);
+            methodVisitor.visitEnd();
+            return null;
+        }
+
+        public void endConstructor() {
+        }
+
+        public InstructionVisitor startMethod(final Access access,
+                                         final Modifier[] modifiers,
+                                         final String methodName,
+                                         final Type<?> returnType,
+                                         final Type<?>[] argumentTypes,
+                                         final Type<?>[] exceptionTypes) {
+            final MethodVisitor methodVisitor = classWriter.visitMethod(toAccess(access)|toModifier(modifiers),
+                                                                        methodName,
+                                                                        toMethodDescriptor(returnType, argumentTypes),
+                                                                        null,
+                                                                        toNames(exceptionTypes));
+            //TODO: return as instructionVisitor
+            methodVisitor.visitCode();
+            //instructions(methodDeclaration, methodVisitor);
+            methodVisitor.visitMaxs(0, 0);
+            methodVisitor.visitEnd();
+
+            return null;
+        }
+
+        public void endMethod() {
+        }
+
+        public void endClass() {
+            classWriter.visitEnd();
+        }
+
+        public void endInterface() {
+            classWriter.visitEnd();
+        }
+
+    }
+
+/*
     private static final class ClassTypeDeclarationCompilerDeclarationVisitor extends CompilerDeclarationVisitor {
 
         private final ClassTypeDeclaration classTypeDeclaration;
@@ -54,19 +152,24 @@ public final class AsmCompiler {
             this.classWriter = new ClassWriter(ClassWriter.COMPUTE_MAXS);
             this.classTypeDeclaration = classTypeDeclaration;
             
-             classWriter.visit(V1_7,
-                               toAccess(classTypeDeclaration.getAccess()) | toModifier(classTypeDeclaration.getModifiers()),
-                               toName(classTypeDeclaration.getClassType()),
-                               null,
-                               toName(classTypeDeclaration.getSuperType()),
-                               toNames(classTypeDeclaration.getInterfaceTypes()));
+            classWriter.visit(V1_7,
+                              toAccess(classTypeDeclaration.getAccess()) | toModifier(classTypeDeclaration.getModifiers()),
+                              toName(classTypeDeclaration.getClassType()),
+                              null,
+                              toName(classTypeDeclaration.getSuperType()),
+                              toNames(classTypeDeclaration.getInterfaceTypes()));
 
-            if(classTypeDeclaration.getOuterType() != Type.VOID_TYPE) {
-                classWriter.visitInnerClass(toName(classTypeDeclaration.getClassType()),
-                                            toName(classTypeDeclaration.getOuterType()),
-                                            toName(classTypeDeclaration.getClassType()), //TODO: make this short name
-                                            toAccess(classTypeDeclaration.getAccess()));
-            }
+           if(classTypeDeclaration.getOuterType() != Type.VOID_TYPE) {
+               classWriter.visitOuterClass(toName(classTypeDeclaration.getOuterType()),
+                                           null,
+                                           null);
+           }
+           for(final Type<?> innerType : classTypeDeclaration.getInnerTypes()) {
+               classWriter.visitInnerClass(toName(classTypeDeclaration.getClassType()),
+                                           toName(innerType),
+                                           toName(classTypeDeclaration.getClassType()), //TODO: make this short name
+                                           toAccess(classTypeDeclaration.getAccess()));
+           }
         }
 
         @Override
@@ -95,12 +198,12 @@ public final class AsmCompiler {
         }
 
         @Override
-        public void constructor(final ConstructorDeclaration constructorDeclaration) {
+        public void startConstructor(final ConstructorDeclaration constructorDeclaration) {
             final MethodVisitor methodVisitor = classWriter.visitMethod(toAccess(constructorDeclaration.getAccess()) | toModifier(constructorDeclaration.getModifiers()),
-                                                                             "<init>",
-                                                                             toMethodDescriptor(Type.VOID_TYPE, constructorDeclaration.getConstructorTypes()),
-                                                                             null,
-                                                                             null);
+                                                                        "<init>",
+                                                                        toMethodDescriptor(Type.VOID_TYPE, constructorDeclaration.getConstructorTypes()),
+                                                                        null,
+                                                                        null);
             methodVisitor.visitCode();
             instructions(constructorDeclaration, methodVisitor);
             methodVisitor.visitMaxs(0, 0);
@@ -108,9 +211,9 @@ public final class AsmCompiler {
         }
 
         @Override
-        public void method(final MethodDeclaration methodDeclaration) {
+        public void startMethod(final MethodDeclaration methodDeclaration) {
             final MethodVisitor methodVisitor = classWriter.visitMethod(toAccess(methodDeclaration.getAccess()) | toModifier(methodDeclaration.getModifiers()),
-                                                                             methodDeclaration.getMethodName(),
+                                                                        methodDeclaration.getMethodName(),
                                                                              toMethodDescriptor(methodDeclaration.getReturnType(), methodDeclaration.getArgumentTypes()),
                                                                              null,
                                                                              null);
@@ -184,12 +287,12 @@ public final class AsmCompiler {
         }
 
         @Override
-        public void constructor(final ConstructorDeclaration constructorDeclaration) {
+        public void startConstructor(final ConstructorDeclaration constructorDeclaration) {
             throw new IllegalStateException();
         }
 
         @Override
-        public void method(final MethodDeclaration methodDeclaration) {
+        public void startMethod(final MethodDeclaration methodDeclaration) {
             final MethodVisitor methodVisitor = classWriter.visitMethod(toAccess(methodDeclaration.getAccess()) | toModifier(methodDeclaration.getModifiers()),
                                                                              methodDeclaration.getMethodName(),
                                                                              toMethodDescriptor(methodDeclaration.getReturnType(), methodDeclaration.getArgumentTypes()),
@@ -217,6 +320,7 @@ public final class AsmCompiler {
     }
 
 
+
     private static class CompilerDeclarationVisitor implements DeclarationVisitor, Opcodes {
 
         private CompilerDeclarationVisitor declarationVisitor;
@@ -230,19 +334,19 @@ public final class AsmCompiler {
         }
 
         public void startInterface(final InterfaceTypeDeclaration interfaceTypeDeclaration) {
-            throw new UnsupportedOperationException();
+            newDeclarationVisitor(interfaceTypeDeclaration);
         }
 
         public void field(final FieldDeclaration fieldDeclaration) {
             getDeclarationVisitor().field(fieldDeclaration);
         }
 
-        public void constructor(final ConstructorDeclaration constructorDeclaration) {
-            getDeclarationVisitor().constructor(constructorDeclaration);
+        public void startConstructor(final ConstructorDeclaration constructorDeclaration) {
+            getDeclarationVisitor().startConstructor(constructorDeclaration);
         }
 
-        public void method(final MethodDeclaration methodDeclaration) {
-            getDeclarationVisitor().method(methodDeclaration);
+        public void startMethod(final MethodDeclaration methodDeclaration) {
+            getDeclarationVisitor().startMethod(methodDeclaration);
         }
 
         public void endClass() {
@@ -250,7 +354,7 @@ public final class AsmCompiler {
         }
 
         public void endInterface() {
-            getDeclarationVisitor().endClass();
+            getDeclarationVisitor().endInterface();
         }
         
         protected CompilerDeclarationVisitor getDeclarationVisitor() {
@@ -269,7 +373,9 @@ public final class AsmCompiler {
         }
     }
 
+*/
 
+/*
     private static class CompilerInstructionVisitor implements InstructionVisitor, Opcodes {
 
         private final ClassTypeDeclaration classTypeDeclaration;
@@ -418,15 +524,16 @@ public final class AsmCompiler {
             return stackScope;
         }
     }
+*/
 
 
-    private static int toAccess(final Declaration.Access access) {
+    private static int toAccess(final TypeVisitor.Access access) {
         return getAsmOpcode("ACC_" + access.name());
     }
 
-    private static int toModifier(final Declaration.Modifier... modifiers) {
+    private static int toModifier(final TypeVisitor.Modifier... modifiers) {
         int access = 0;
-        for(final Declaration.Modifier modifier : modifiers) access |= getAsmOpcode("ACC_" + modifier.name());
+        for(final TypeVisitor.Modifier modifier : modifiers) access |= getAsmOpcode("ACC_" + modifier.name());
         return access;
     }
 

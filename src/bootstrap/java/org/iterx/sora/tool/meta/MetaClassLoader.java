@@ -1,7 +1,5 @@
 package org.iterx.sora.tool.meta;
 
-import org.iterx.sora.tool.meta.declaration.ClassTypeDeclaration;
-import org.iterx.sora.tool.meta.declaration.InterfaceTypeDeclaration;
 import org.iterx.sora.tool.meta.support.asm.AsmCompiler;
 import org.iterx.sora.tool.meta.support.asm.AsmExtractor;
 import org.iterx.sora.tool.meta.type.AnnotationType;
@@ -27,9 +25,19 @@ public class MetaClassLoader extends SecureClassLoader implements Closeable {
 
     //TODO: ClassDecl & InterfaceDecl -> should be class/interface meta types as well
 
-
-
     private static final MetaClassLoader SYSTEM_META_CLASS_LOADER = new MetaClassLoader();
+
+    private static final ClassType OBJECT_TYPE = ClassType.OBJECT_TYPE;
+    private static final ClassType STRING_TYPE = ClassType.STRING_TYPE;
+    private static final PrimitiveType VOID_TYPE = PrimitiveType.VOID_TYPE;
+    private static final PrimitiveType BYTE_TYPE = PrimitiveType.BYTE_TYPE;
+    private static final PrimitiveType BOOLEAN_TYPE = PrimitiveType.BOOLEAN_TYPE;
+    private static final PrimitiveType CHAR_TYPE = PrimitiveType.CHAR_TYPE;
+    private static final PrimitiveType SHORT_TYPE = PrimitiveType.SHORT_TYPE;
+    private static final PrimitiveType INT_TYPE = PrimitiveType.INT_TYPE;
+    private static final PrimitiveType LONG_TYPE = PrimitiveType.LONG_TYPE;
+    private static final PrimitiveType FLOAT_TYPE = PrimitiveType.FLOAT_TYPE;
+    private static final PrimitiveType DOUBLE_TYPE = PrimitiveType.DOUBLE_TYPE;
 
     private final ConcurrentMap<String, Declaration<?>> declarationByNames;
     private final ConcurrentMap<String, Type<?>> typeByNames;
@@ -63,16 +71,16 @@ public class MetaClassLoader extends SecureClassLoader implements Closeable {
     }
 
     @SuppressWarnings("unchecked")
-    public <S extends AbstractTypeDeclaration<?, S>> S loadDeclaration(final String name) throws ClassNotFoundException {
+    public <S extends TypeDeclaration> S loadDeclaration(final String name) throws ClassNotFoundException {
         final Declaration<?> declaration = getDeclaration(name);
         return (declaration != null)? (S) declaration : (S) findDeclaration(name);
     } 
 
     @SuppressWarnings("unchecked")
     //TODO: Fix generics
-    public <S extends AbstractTypeDeclaration> S loadDeclaration(final Type<?> type) throws ClassNotFoundException {
+    public <S extends TypeDeclaration> S loadDeclaration(final Type<?> type) {
         final Declaration<?> declaration = getDeclaration(type.getName());
-        return (declaration != null)? (S) declaration : (S) findDeclaration(type.getName());
+        return (declaration != null)? (S) declaration : (S) findDeclaration(type);
     }
 
 /*
@@ -92,7 +100,7 @@ public class MetaClassLoader extends SecureClassLoader implements Closeable {
     }
 
     @SuppressWarnings("unchecked")
-    public <T extends Type> T loadType(final Class<?> cls) throws ClassNotFoundException {
+    public <T extends Type> T loadType(final Class<?> cls) {
         final T type = getType(cls.getName());
         return (type != null)? type : (T) defineType(cls);
     }
@@ -115,8 +123,18 @@ public class MetaClassLoader extends SecureClassLoader implements Closeable {
 
     @Override
     protected Class<?> findClass(final String name) throws ClassNotFoundException {
-        final Declaration<?> declaration = getDeclaration(name);
-        return (declaration != null)? defineClass(name, declaration) : super.findClass(name);
+        final TypeDeclaration<?, ?> typeDeclaration = getDeclaration(name);
+        return (typeDeclaration != null)? defineClass(name, typeDeclaration) : super.findClass(name);
+    }
+
+    protected Declaration<?> findDeclaration(final Type<?> type) {
+        try {
+            final URL resource = getResource(toResource(type.getName()));
+            return defineDeclaration(loadResource(resource));
+        }
+        catch(final IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     protected Declaration<?> findDeclaration(final String name) throws ClassNotFoundException {
@@ -124,7 +142,7 @@ public class MetaClassLoader extends SecureClassLoader implements Closeable {
             final URL resource = getResource(toResource(name));
             return defineDeclaration(loadResource(resource));
         }
-        catch(final Exception e) {
+        catch(final IOException e) {
             throw new ClassNotFoundException("Undefined declaration '" + name + "'", e);
         }
     }
@@ -143,8 +161,8 @@ public class MetaClassLoader extends SecureClassLoader implements Closeable {
         }
     }
 
-    protected Class<?> defineClass(final String name, final Declaration<?> declaration) {
-        final byte[] bytes = asmCompiler.compile(declaration);
+    protected Class<?> defineClass(final String name, final TypeDeclaration<?, ?> typeDeclaration) {
+        final byte[] bytes = asmCompiler.compile(typeDeclaration);
         return super.defineClass(name, bytes, 0, bytes.length);
     }
 
@@ -155,8 +173,8 @@ public class MetaClassLoader extends SecureClassLoader implements Closeable {
     }
 */
 
-    private byte[] compileDeclaration(final Declaration<?> declaration) {
-        return asmCompiler.compile(declaration);
+    private byte[] compileDeclaration(final TypeDeclaration<?, ?> typeDeclaration) {
+        return asmCompiler.compile(typeDeclaration);
     }
 
     private Declaration<?> defineDeclaration(final byte[] bytes) {
@@ -167,14 +185,19 @@ public class MetaClassLoader extends SecureClassLoader implements Closeable {
         return asmExtractor.getType(bytes);
     }
 
-    private Type<?> defineType(final Class cls) throws ClassNotFoundException {
-        final String name = cls.getName();
-        return (cls.isInterface())? InterfaceType.newType(this, name) :
-               (cls.isPrimitive())? PrimitiveType.newType(this, name) :
-               (cls.isAnnotation())? AnnotationType.newType(this, name) :
-               (cls.isEnum())? EnumType.newType(this, name) :
-               (cls.isArray())? ArrayType.newType(this, loadType(toArrayType(name))) :
-               ClassType.newType(this, name);
+    private Type<?> defineType(final Class cls) {
+        try {
+            final String name = cls.getName();
+            return (cls.isInterface())? InterfaceType.newType(this, name) :
+                   (cls.isPrimitive())? PrimitiveType.newType(this, name) :
+                   (cls.isAnnotation())? AnnotationType.newType(this, name) :
+                   (cls.isEnum())? EnumType.newType(this, name) :
+                   (cls.isArray())? ArrayType.newType(this, loadType(toArrayType(name))) :
+                   ClassType.newType(this, name);
+        }
+        catch(final ClassNotFoundException e) {
+            throw new IllegalStateException(e);
+        }
     }
 
     private byte[] loadResource(final URL resource) throws IOException {

@@ -9,11 +9,11 @@ public abstract class AbstractDeclaration<T extends Declaration<T>> implements D
 
     public abstract Modifier[] getModifiers();
 
-    public boolean isClassDeclaration() {
+    public boolean isClassTypeDeclaration() {
         return false;
     }
 
-    public boolean isInterfaceDeclaration() {
+    public boolean isInterfaceTypeDeclaration() {
         return false;
     }
 

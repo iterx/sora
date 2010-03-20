@@ -1,20 +1,10 @@
 package org.iterx.sora.tool.meta.util;
 
-import org.iterx.sora.tool.meta.instruction.GetFieldInstruction;
-import org.iterx.sora.tool.meta.instruction.InvokeSuperInstruction;
-import org.iterx.sora.tool.meta.instruction.PutFieldInstruction;
-import org.iterx.sora.tool.meta.instruction.ReturnInstruction;
-import org.iterx.sora.tool.meta.instruction.StoreInstruction;
+import org.iterx.sora.tool.meta.Value;
 
-public interface InstructionVisitor {    
-    
-    void getField(GetFieldInstruction getFieldInstruction);
+public interface InstructionVisitor {
 
-    void putField(PutFieldInstruction putFieldInstruction);
+    void invokeSuper(final Value[] values);
 
-    void store(StoreInstruction storeInstruction);
-
-    void invokeSuper(InvokeSuperInstruction invokeSuperInstruction);
-
-    void returnValue(ReturnInstruction returnInstruction);
+    void returnValue(final Value value);
 }

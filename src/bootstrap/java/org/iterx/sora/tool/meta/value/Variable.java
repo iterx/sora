@@ -35,6 +35,11 @@ public final class Variable extends AbstractValue<Variable> {
     }
 
     @Override
+    public String toString() {
+        return name;
+    }
+
+    @Override
     public int hashCode() {
         return getName().hashCode();
     }

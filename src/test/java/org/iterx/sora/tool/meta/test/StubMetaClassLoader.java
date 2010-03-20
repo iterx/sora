@@ -1,12 +1,11 @@
 package org.iterx.sora.tool.meta.test;
 
+import org.iterx.sora.tool.meta.AbstractTypeDeclaration;
 import org.iterx.sora.tool.meta.Declaration;
 import org.iterx.sora.tool.meta.MetaClassLoader;
 import org.iterx.sora.tool.meta.Type;
-import org.iterx.sora.tool.meta.declaration.ClassTypeDeclaration;
+import org.iterx.sora.tool.meta.TypeDeclaration;
 import org.iterx.sora.tool.meta.support.asm.AsmCompiler;
-import org.iterx.sora.tool.meta.type.ClassType;
-import org.iterx.sora.tool.meta.type.InterfaceType;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.util.TraceClassVisitor;
 
@@ -28,10 +27,15 @@ public class StubMetaClassLoader extends MetaClassLoader {
     private final boolean debug;
 
     public StubMetaClassLoader() {
-        this(false);
+        this(MetaClassLoader.getSystemMetaClassLoader(), false);
     }
 
     public StubMetaClassLoader(final boolean debug) {
+        this(MetaClassLoader.getSystemMetaClassLoader(), debug);
+    }
+
+    public StubMetaClassLoader(final MetaClassLoader metaClassLoader, final boolean debug) {
+        super(metaClassLoader);
         this.classes = new HashMap<String, byte[]>();
         this.asmCompiler = new AsmCompiler(this);
         this.debug = debug;
@@ -55,15 +59,14 @@ public class StubMetaClassLoader extends MetaClassLoader {
     }
 
 
-    public void defineClass(final ClassTypeDeclaration classTypeDeclaration) {
-        classes.put(toResource(classTypeDeclaration.getClassType().getName()),
-                    asmCompiler.compile(classTypeDeclaration));
+    public void defineClass(final TypeDeclaration typeDeclaration) {
+        classes.put(toResource(typeDeclaration.getName()), asmCompiler.compile(typeDeclaration));
     }
 
     @Override
-    protected Class<?> defineClass(final String name, final Declaration<?> declaration) {
-        if(declaration.isClassDeclaration()) defineClass((ClassTypeDeclaration) declaration);
-        return super.defineClass(name, declaration);
+    protected Class<?> defineClass(final String name, final TypeDeclaration<?, ?> typeDeclaration) {
+        defineClass(typeDeclaration);
+        return super.defineClass(name, typeDeclaration);
     }
 
     private class ClassURLStreamHandler extends URLStreamHandler {

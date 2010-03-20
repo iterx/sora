@@ -6,18 +6,19 @@ import org.iterx.sora.tool.meta.type.PrimitiveType;
 
 public interface Type<T extends Type<T>> {
 
-    public static final PrimitiveType VOID_TYPE = PrimitiveType.newType("void");
-    public static final PrimitiveType BYTE_TYPE = PrimitiveType.newType("byte");
-    public static final PrimitiveType BOOLEAN_TYPE = PrimitiveType.newType("boolean");
-    public static final PrimitiveType CHAR_TYPE = PrimitiveType.newType("char");
-    public static final PrimitiveType SHORT_TYPE = PrimitiveType.newType("short");
-    public static final PrimitiveType INT_TYPE = PrimitiveType.newType("int");
-    public static final PrimitiveType LONG_TYPE = PrimitiveType.newType("long");
-    public static final PrimitiveType FLOAT_TYPE = PrimitiveType.newType("float");
-    public static final PrimitiveType DOUBLE_TYPE = PrimitiveType.newType("double");
+    public static final PrimitiveType VOID_TYPE = PrimitiveType.VOID_TYPE;
+    public static final PrimitiveType BYTE_TYPE = PrimitiveType.BYTE_TYPE;
+    public static final PrimitiveType BOOLEAN_TYPE = PrimitiveType.BOOLEAN_TYPE;
+    public static final PrimitiveType CHAR_TYPE = PrimitiveType.CHAR_TYPE;
+    public static final PrimitiveType SHORT_TYPE = PrimitiveType.SHORT_TYPE;
+    public static final PrimitiveType INT_TYPE = PrimitiveType.INT_TYPE;
+    public static final PrimitiveType LONG_TYPE = PrimitiveType.LONG_TYPE;
+    public static final PrimitiveType FLOAT_TYPE = PrimitiveType.FLOAT_TYPE;
+    public static final PrimitiveType DOUBLE_TYPE = PrimitiveType.DOUBLE_TYPE;
 
-    public static final ClassType OBJECT_TYPE = ClassType.newType("java.lang.Object");
-    public static final ClassType STRING_TYPE = ClassType.newType("java.lang.String");
+    public static final ClassType OBJECT_TYPE = ClassType.OBJECT_TYPE;
+    public static final ClassType STRING_TYPE = ClassType.STRING_TYPE;
+
 
     MetaClassLoader getMetaClassLoader();
 

@@ -3,6 +3,7 @@ package org.iterx.sora.tool.meta.declaration;
 import org.iterx.sora.tool.meta.AbstractDeclaration;
 import org.iterx.sora.tool.meta.Declaration;
 import org.iterx.sora.tool.meta.Type;
+import org.iterx.sora.tool.meta.value.Constant;
 
 
 public final class FieldDeclaration extends AbstractDeclaration<FieldDeclaration> {
@@ -16,12 +17,13 @@ public final class FieldDeclaration extends AbstractDeclaration<FieldDeclaration
     private Type<?> fieldType;
     private Access access;
     private Modifier[] modifiers;
-    private Object fieldValue;
+    private Constant fieldValue;
 
     private FieldDeclaration(final String fieldName) {
         this.access = Access.PRIVATE;
         this.modifiers = EMPTY_MODIFIERS;
         this.fieldName = fieldName;
+        this.fieldValue = Constant.VOID;
     }
 
     public static FieldDeclaration newFieldDeclaration(final String fieldName, final Type<?> fieldType) {
@@ -48,37 +50,18 @@ public final class FieldDeclaration extends AbstractDeclaration<FieldDeclaration
         return this;
     }
 
-    public Object getFieldValue() {
+    public Constant getFieldValue() {
         return fieldValue;
     }
 
-    public FieldDeclaration setFieldValue(final Integer fieldValue) {
-        this.fieldValue = fieldValue;
-        return this;
-    }
-    public FieldDeclaration setFieldValue(final Long fieldValue) {
-        this.fieldValue = fieldValue;
-        return this;
-    }
-
-    public FieldDeclaration setFieldValue(final Float fieldValue) {
-        this.fieldValue = fieldValue;
-        return this;
-    }
-
-    public FieldDeclaration setFieldValue(final Double fieldValue) {
-        this.fieldValue = fieldValue;
-        return this;
-    }
-
-    public FieldDeclaration setFieldValue(final String fieldValue) {
+    public FieldDeclaration setFieldValue(final Constant fieldValue) {
         this.fieldValue = fieldValue;
         return this;
     }
 
     public Access getAccess() {
         return access;
-    }
+    }                 
 
     public FieldDeclaration setAccess(final Access access) {
         assertAccess(access);

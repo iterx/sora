@@ -1,28 +1,23 @@
 package org.iterx.sora.tool.meta.instruction;
 
-import org.iterx.sora.tool.meta.Declaration;
+import org.hamcrest.Matchers;
 import org.iterx.sora.tool.meta.Declarations;
 import org.iterx.sora.tool.meta.Instructions;
 import org.iterx.sora.tool.meta.MetaClassLoader;
 import org.iterx.sora.tool.meta.Type;
+import org.iterx.sora.tool.meta.TypeDeclaration;
 import org.iterx.sora.tool.meta.declaration.ClassTypeDeclaration;
 import org.iterx.sora.tool.meta.declaration.MethodDeclaration;
 import org.iterx.sora.tool.meta.test.StubMetaClassLoader;
-import org.iterx.sora.tool.meta.test.matcher.ClassDeclarationMatcher;
+import org.iterx.sora.tool.meta.test.matcher.TypeMatcher;
 import org.iterx.sora.tool.meta.type.ClassType;
-import org.iterx.sora.tool.meta.util.DeclarationReader;
-import org.iterx.sora.tool.meta.util.trace.TraceDeclarationVisitor;
-import org.jmock.Expectations;
+import org.iterx.sora.tool.meta.util.trace.TracerTypeVisitor;
+import org.iterx.sora.tool.meta.util.TypeReader;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.objectweb.asm.ClassReader;
-import org.objectweb.asm.util.TraceClassVisitor;
 
 import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.PrintWriter;
 
 public abstract class InstructionTestCase {
 
@@ -33,7 +28,6 @@ public abstract class InstructionTestCase {
 
     private final Type<?> type;
     private final Object result;
-
 
     public InstructionTestCase(final Type<?> type, final Object result) {
         this.type = type;
@@ -52,8 +46,7 @@ public abstract class InstructionTestCase {
     public void shouldCompileInstruction() throws Throwable {
         final ClassTypeDeclaration classTypeDeclaration = newClassDeclaration(compileMetaClassLoader, type);
         final Class<?> cls = compileMetaClassLoader.loadClass(classTypeDeclaration.getClassType());
-
-        assertCompile(compileMetaClassLoader, cls, type, result);
+        assertCompile(classTypeDeclaration, result, cls, cls.getDeclaredMethod(METHOD_NAME).invoke(cls.newInstance()));
     }
 
     @Test
@@ -72,8 +65,8 @@ public abstract class InstructionTestCase {
 
     @Before
     public void setUp() {
-        compileMetaClassLoader = new StubMetaClassLoader(false);
-        extractMetaClassLoader = new StubMetaClassLoader(false);
+        compileMetaClassLoader = new StubMetaClassLoader(true);
+        extractMetaClassLoader = new StubMetaClassLoader(true);
     }
 
     private ClassTypeDeclaration newClassDeclaration(final MetaClassLoader metaClassLoader, final Type type) {
@@ -93,19 +86,6 @@ public abstract class InstructionTestCase {
         return classTypeDeclaration;
     }
 
-    private static void assertCompile(final ClassLoader classLoader, final Class<?> cls, final Type type, final Object expectedValue) throws Throwable {
-        final Object instance = cls.newInstance();
-
-        Assert.assertTrue("Actual:\n" + toString(classLoader.getResourceAsStream(toResource(cls))),
-                          Expectations.equal(expectedValue).matches(cls.getDeclaredMethod(METHOD_NAME).invoke(instance)));
-    }
-
-    private static void assertExtract(final ClassTypeDeclaration expectedClassTypeDeclaration, final Declaration<?> actualDeclaration) {
-
-        Assert.assertTrue("Actual:\n" + toString(actualDeclaration),
-                          new ClassDeclarationMatcher(expectedClassTypeDeclaration).matches(actualDeclaration));
-    }
-
     private static String toName(final String... names) {
         final StringBuilder stringBuilder = new StringBuilder(names[0]);
         for(int i = 1, size = names.length; i < size; i++) stringBuilder.append(names[i].toUpperCase().substring(0, 1)).append(names[i].substring(1));
@@ -118,19 +98,39 @@ public abstract class InstructionTestCase {
         return (index != -1)? string.substring(index + 1) : string;
     }
 
-    private static String toString(final Declaration<?> declaration) {
+    private static void assertCompile(final TypeDeclaration expectedTypeDeclaration,
+                                      final Object expectedValue,
+                                      final Class actualClass,
+                                      final Object actualValue) throws Throwable {
+        if(!TypeMatcher.newTypeMatcher(expectedTypeDeclaration).matches(actualClass) ||
+           !Matchers.equalTo(expectedValue).matches(actualValue)) {
+            Assert.assertEquals("Compile failure",
+                                toString(expectedTypeDeclaration),
+                                toString(actualClass));
+            throw new IllegalStateException();
+        }
+    }
+
+    private static void assertExtract(final TypeDeclaration expectedTypeDeclaration, final TypeDeclaration actualDeclaration) {
+        if(!TypeMatcher.newTypeMatcher(expectedTypeDeclaration).matches(actualDeclaration)) {
+            Assert.assertEquals("Extract failure",
+                                toString(expectedTypeDeclaration),
+                                toString(actualDeclaration));
+            throw new IllegalStateException();
+        }
+    }
+
+    private static String toString(final Class cls) {
         final ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-        new DeclarationReader(declaration).accept(new TraceDeclarationVisitor(byteArrayOutputStream));
+        new TypeReader(cls).accept(new TracerTypeVisitor(byteArrayOutputStream));
         return new String(byteArrayOutputStream.toByteArray());
     }
 
-    private static String toString(final InputStream inputStream) throws IOException {
+    private static String toString(final TypeDeclaration typeDeclaration) {
         final ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-        new ClassReader(inputStream).accept(new TraceClassVisitor(new PrintWriter(byteArrayOutputStream)), 0);
+        new TypeReader(typeDeclaration).accept(new TracerTypeVisitor(byteArrayOutputStream));
         return new String(byteArrayOutputStream.toByteArray());
     }
 
-    private static String toResource(final Class cls) {
-        return cls.getName().replace('.', '/') + ".class";
-    }
+
 }
