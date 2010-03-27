@@ -120,20 +120,4 @@ public class TracerTypeVisitor extends AbstractTracer<TracerTypeVisitor> impleme
         }
         return this;
     }
-
-    private TracerTypeVisitor print(final Value... values) {
-        if(values.length > 0) {
-            print(values[0].toString());
-            for(int i = 1, length = values.length; i < length; i++) print(", ").print(values[i].toString());
-        }
-        return this;
-    }
-
-    private TracerTypeVisitor print(final Type... types) {
-        if(types.length > 0) {
-            print(types[0].getName());
-            for(int i = 1, length = types.length; i < length; i++) print(", ").print(types[i].getName());
-        }
-        return this;
-    }
 }

@@ -3,10 +3,16 @@ package org.iterx.sora.tool.meta.support.asm;
 import org.iterx.sora.tool.meta.MetaClassLoader;
 import org.iterx.sora.tool.meta.Type;
 import org.iterx.sora.tool.meta.TypeDeclaration;
+import org.iterx.sora.tool.meta.Value;
+import org.iterx.sora.tool.meta.ValueInstruction;
+import org.iterx.sora.tool.meta.support.asm.scope.ClassScope;
+import org.iterx.sora.tool.meta.support.asm.scope.StackScope;
+import org.iterx.sora.tool.meta.util.InstructionReader;
 import org.iterx.sora.tool.meta.util.InstructionVisitor;
 import org.iterx.sora.tool.meta.util.TypeReader;
 import org.iterx.sora.tool.meta.util.TypeVisitor;
 import org.iterx.sora.tool.meta.value.Constant;
+import org.iterx.sora.tool.meta.value.Variable;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.FieldVisitor;
 import org.objectweb.asm.MethodVisitor;
@@ -31,6 +37,8 @@ public final class AsmCompiler {
     private static class CompilerTypeVisitor implements TypeVisitor, Opcodes {
 
         private final ClassWriter classWriter;
+        private MethodVisitor methodVisitor;
+        private ClassScope classScope;
 
         private CompilerTypeVisitor(final ClassWriter classWriter) {
             this.classWriter = classWriter;
@@ -47,6 +55,7 @@ public final class AsmCompiler {
                               null,
                               toName(superType),
                               toNames(interfaceTypes));
+            classScope = new ClassScope(superType, type);
 /*
            if(classTypeDeclaration.getOuterType() != Type.VOID_TYPE) {
                classWriter.visitOuterClass(toName(classTypeDeclaration.getOuterType()),
@@ -73,6 +82,7 @@ public final class AsmCompiler {
                               null,
                               toName(Type.OBJECT_TYPE),
                               toNames(interfaceTypes));
+            classScope = new ClassScope(Type.OBJECT_TYPE, type);
         }
 
         public void field(final Access access,
@@ -84,7 +94,7 @@ public final class AsmCompiler {
                                                                      fieldName,
                                                                      toDescriptor(fieldType),
                                                                      null,
-                                                                     null); //TODO: fieldValue->
+                                                                     fieldValue.getValue());
             fieldVisitor.visitEnd();
         }
 
@@ -92,44 +102,41 @@ public final class AsmCompiler {
                                                    final Modifier[] modifiers,
                                                    final Type<?>[] constructorTypes,
                                                    final Type<?>[] exceptionTypes) {
-            final MethodVisitor methodVisitor = classWriter.visitMethod(toAccess(access)|toModifier(modifiers),
-                                                                        "<init>",
-                                                                        toMethodDescriptor(Type.VOID_TYPE, constructorTypes),
-                                                                        null,
-                                                                        toNames(exceptionTypes));
+            methodVisitor = classWriter.visitMethod(toAccess(access)|toModifier(modifiers),
+                                                    "<init>",
+                                                    toMethodDescriptor(Type.VOID_TYPE, constructorTypes),
+                                                    null,
+                                                    toNames(exceptionTypes));
 
-            //TODO: return as instruction visitor
             methodVisitor.visitCode();
-            //instructions(constructorDeclaration, methodVisitor);
-            methodVisitor.visitMaxs(0, 0);
-            methodVisitor.visitEnd();
-            return null;
+            return new CompilerInstructionVisitor(methodVisitor, newStackScope(constructorTypes));
         }
 
         public void endConstructor() {
+            methodVisitor.visitMaxs(0, 0);
+            methodVisitor.visitEnd();
+            methodVisitor = null;
         }
 
         public InstructionVisitor startMethod(final Access access,
-                                         final Modifier[] modifiers,
-                                         final String methodName,
-                                         final Type<?> returnType,
-                                         final Type<?>[] argumentTypes,
-                                         final Type<?>[] exceptionTypes) {
-            final MethodVisitor methodVisitor = classWriter.visitMethod(toAccess(access)|toModifier(modifiers),
-                                                                        methodName,
-                                                                        toMethodDescriptor(returnType, argumentTypes),
-                                                                        null,
-                                                                        toNames(exceptionTypes));
-            //TODO: return as instructionVisitor
+                                              final Modifier[] modifiers,
+                                              final String methodName,
+                                              final Type<?> returnType,
+                                              final Type<?>[] argumentTypes,
+                                              final Type<?>[] exceptionTypes) {
+            methodVisitor = classWriter.visitMethod(toAccess(access)|toModifier(modifiers),
+                                                    methodName,
+                                                    toMethodDescriptor(returnType, argumentTypes),
+                                                    null,
+                                                    toNames(exceptionTypes));
             methodVisitor.visitCode();
-            //instructions(methodDeclaration, methodVisitor);
-            methodVisitor.visitMaxs(0, 0);
-            methodVisitor.visitEnd();
-
-            return null;
+            return new CompilerInstructionVisitor(methodVisitor, newStackScope(argumentTypes));
         }
 
         public void endMethod() {
+            methodVisitor.visitMaxs(0, 0);
+            methodVisitor.visitEnd();
+            methodVisitor = null;
         }
 
         public void endClass() {
@@ -140,6 +147,150 @@ public final class AsmCompiler {
             classWriter.visitEnd();
         }
 
+        private StackScope newStackScope(final Type<?>[] argumentTypes) {
+            final StackScope stackScope = new StackScope(classScope);
+            stackScope.push(Variable.THIS);
+            for(int i = 0, size = argumentTypes.length; i != size; i++) stackScope.push(Variable.newVariable("arg" + i, argumentTypes[i]));
+            return stackScope;
+        }
+    }
+
+    private static class CompilerInstructionVisitor implements InstructionVisitor, Opcodes {
+
+        private final MethodVisitor methodVisitor;
+        private final StackScope stackScope;
+
+        private CompilerInstructionVisitor(final MethodVisitor methodVisitor, final StackScope stackScope) {
+            this.methodVisitor = methodVisitor;
+            this.stackScope = stackScope;
+        }
+
+        public void invokeSuper(final Type<?> target,
+                                final String methodName,
+                                final Type<?> returnType,
+                                final Value<?>[] values) {
+            final Type<?>[] argumentTypes = getTypes(stackScope, values);
+            loadValues(methodVisitor, stackScope, Variable.THIS);
+            loadValues(methodVisitor, stackScope, values);
+            methodVisitor.visitMethodInsn(INVOKESPECIAL,
+                                          toName(target),
+                                          methodName,
+                                          toMethodDescriptor(returnType, argumentTypes));
+        }
+
+        public void invokeMethod(final Type<?> target,
+                                 final String methodName,
+                                 final Type<?> returnType,
+                                 final Value<?>[] values) {
+            final Type<?>[] argumentTypes = getTypes(stackScope, values);
+            loadValues(methodVisitor, stackScope, Variable.THIS);
+            loadValues(methodVisitor, stackScope, values);
+            //TODO: need to resolve if target is private -> i.e INVOKESPECIAL
+            methodVisitor.visitMethodInsn((target.isInterface())? INVOKEINTERFACE : INVOKEVIRTUAL,
+                                          toName(target),
+                                          methodName,
+                                          toMethodDescriptor(returnType, argumentTypes));
+        }
+
+        public void returnValue(final Value<?> value) {
+            final Type returnType = value.getType();
+
+            loadValues(methodVisitor, stackScope, value);
+            if(Type.VOID_TYPE != returnType) methodVisitor.visitInsn(toType(returnType).getOpcode(IRETURN));
+            else methodVisitor.visitInsn(RETURN);
+        }
+
+        public void store(final Variable variable, final Value<?> value) {
+            loadValues(methodVisitor, stackScope, value);
+            methodVisitor.visitVarInsn(toType(variable.getType()).getOpcode(ISTORE),
+                                       stackScope.push(variable));
+
+        }
+
+        public void getField(final Variable owner,
+                             final String fieldName,
+                             final Type<?> fieldType) {
+            loadValues(methodVisitor, stackScope, owner);
+            methodVisitor.visitFieldInsn(GETFIELD,
+                                         toName(getType(stackScope, owner)),
+                                         fieldName,
+                                         toDescriptor(fieldType));
+        }
+
+        public void putField(final Variable owner,
+                             final String fieldName,
+                             final Type<?> fieldType,
+                             final Value<?> value) {
+            loadValues(methodVisitor, stackScope, owner);
+            loadValues(methodVisitor, stackScope, value);
+            methodVisitor.visitFieldInsn(PUTFIELD,
+                                         toName(getType(stackScope, owner)),
+                                         fieldName,
+                                         toDescriptor(fieldType));
+        }
+
+        private static Type<?> getType(final StackScope stackScope, final Value value) {
+            if(value == Variable.THIS) return stackScope.getClassScope().getThis();
+            else if(value == Variable.SUPER) return stackScope.getClassScope().getSuper();
+            else return value.getType();
+        }
+
+        private static Type<?>[] getTypes(final StackScope stackScope, final Value[] values) {
+            final Type<?>[] types = new Type<?>[values.length];
+            for(int i = values.length; i-- != 0;) types[i] = getType(stackScope, values[i]);
+            return types;
+        }
+
+        private static void loadValues(final MethodVisitor methodVisitor, final StackScope stackScope, final Value... values) {
+            for(final Value value : values) {
+                if(value.isConstant()) loadConstant(methodVisitor, (Constant) value);
+                else if(value.isVariable()) loadVariable(methodVisitor, stackScope, (Variable) value);
+                else if(value.isInstruction()) loadInstruction(methodVisitor, stackScope, (ValueInstruction) value);
+                else throw new IllegalArgumentException();
+            }
+        }
+
+        private static void loadConstant(final MethodVisitor methodVisitor, final Constant constant) {
+            final Type type = constant.getType();
+            final Object value = constant.getValue();
+
+            if(type == Type.OBJECT_TYPE) methodVisitor.visitInsn(ACONST_NULL);
+            else if(type == Type.INT_TYPE) {
+                final int i = ((Number) value).intValue();
+                if(i == -1) methodVisitor.visitInsn(ICONST_M1);
+                else if(i >= 0 && i <= 5) methodVisitor.visitInsn(getAsmOpcode("ICONST_" + i));
+                else if(i >= Byte.MIN_VALUE && i <= Byte.MAX_VALUE) methodVisitor.visitIntInsn(BIPUSH, i);
+                else if(i >= Short.MIN_VALUE && i <= Short.MAX_VALUE) methodVisitor.visitIntInsn(SIPUSH, i);
+                else methodVisitor.visitLdcInsn(i);
+            }
+            else if(type == Type.FLOAT_TYPE) {
+                final float f = ((Number) value).floatValue();
+                if(f == 0f || f == 1f || f == 2f) methodVisitor.visitInsn(getAsmOpcode("FCONST_" + (int) f));
+                else methodVisitor.visitLdcInsn(f);
+            }
+            else if(type == Type.LONG_TYPE) {
+                final long l = ((Number) value).longValue();
+                if(l == 0 || l == 1) methodVisitor.visitInsn(getAsmOpcode("LCONST_" + l));
+                else methodVisitor.visitLdcInsn(l);
+            }
+            else if(type == Type.DOUBLE_TYPE) {
+                final double d = ((Number) value).doubleValue();
+                if(d == 0d || d == 1d) methodVisitor.visitInsn(getAsmOpcode("DCONST_" + (int) d ));
+                else methodVisitor.visitLdcInsn(d);
+            }
+            else if(type != Type.VOID_TYPE) methodVisitor.visitLdcInsn(value);
+        }
+
+        private static void loadVariable(final MethodVisitor methodVisitor, final StackScope stackScope, final Variable variable) {
+            //TODO: we shouldn't need to re-resolve values...
+            final Value value = stackScope.resolveValue(variable.getName());
+            methodVisitor.visitVarInsn(toType(value.getType()).getOpcode(ILOAD),
+                                       stackScope.getIndex(value));
+        }
+
+        private static void loadInstruction(final MethodVisitor methodVisitor, final StackScope stackScope, final ValueInstruction valueInstruction) {
+            new InstructionReader(valueInstruction).accept(new CompilerInstructionVisitor(methodVisitor, stackScope));
+        }
     }
 
 /*
@@ -445,16 +596,16 @@ public final class AsmCompiler {
                                        index);
         }
 
-        public void invokeSuper(final InvokeSuperInstruction invokeSuperInstruction) {
+        public void invokeSuper(final InvokeSuperInstruction newInvokeSuperInstruction) {
             methodVisitor.visitVarInsn(ALOAD, 0);
-            loadValues(methodVisitor, stackScope, invokeSuperInstruction.getValues());
+            loadValues(methodVisitor, stackScope, newInvokeSuperInstruction.getValues());
             methodVisitor.visitMethodInsn(INVOKESPECIAL,
                                           toName(classTypeDeclaration.getSuperType()),
                                           "<init>",
                                           toMethodDescriptor(Type.VOID_TYPE, argumentTypes));
         }
 
-        public void returnValue(final ReturnInstruction returnInstruction) {
+        public void returnValue(final ReturnValueInstruction returnInstruction) {
             if(returnType == Type.VOID_TYPE) {
                 methodVisitor.visitInsn(RETURN);
             }
@@ -550,6 +701,7 @@ public final class AsmCompiler {
         }
         return org.objectweb.asm.Type.getMethodDescriptor(returnType, new org.objectweb.asm.Type[0]);
     }
+
 
     private static String toName(final Type type) {
         return toType(type).getInternalName();

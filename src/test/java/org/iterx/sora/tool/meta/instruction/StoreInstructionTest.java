@@ -3,7 +3,7 @@ package org.iterx.sora.tool.meta.instruction;
 import org.iterx.sora.tool.meta.Instructions;
 import org.iterx.sora.tool.meta.Type;
 import org.iterx.sora.tool.meta.declaration.MethodDeclaration;
-import org.iterx.sora.tool.meta.value.Constant;
+import org.iterx.sora.tool.meta.value.Variable;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -11,9 +11,9 @@ import java.util.Arrays;
 import java.util.Collection;
 
 @RunWith(Parameterized.class)
-public class ReturnInstructionTest extends InstructionTestCase {
+public class StoreInstructionTest extends InstructionTestCase {
 
-    public ReturnInstructionTest(final Type<?> type, final Object result) {
+    public StoreInstructionTest(final Type<?> type, final Object result) {
         super(type, result);
     }
 
@@ -43,7 +43,9 @@ public class ReturnInstructionTest extends InstructionTestCase {
 
     public void setUpMethodDeclaration(final MethodDeclaration methodDeclaration) {
         methodDeclaration.add(new Instructions() {{
-            returnValue(toConstant(getType(), getResult()));
+            final Variable variable = variable(getType(), "var");
+            store(variable, toConstant(getType(), getResult()));
+            returnValue(variable);
         }});
     }
 }

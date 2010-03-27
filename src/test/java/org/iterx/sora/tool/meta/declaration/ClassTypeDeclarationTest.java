@@ -51,7 +51,6 @@ public class ClassTypeDeclarationTest  extends TypeDeclarationTestCase {
         );
     }
 
-
     public static class SuperClass {}
 
     public static interface Interface {}

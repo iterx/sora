@@ -1,10 +1,21 @@
 package org.iterx.sora.tool.meta.util;
 
+import org.iterx.sora.tool.meta.Type;
 import org.iterx.sora.tool.meta.Value;
+import org.iterx.sora.tool.meta.value.Variable;
 
-public interface InstructionVisitor {
+public interface InstructionVisitor {    
 
-    void invokeSuper(final Value[] values);
+    void invokeSuper(Type<?> target, String methodName, Type<?> returnType, Value<?>[] values);
 
-    void returnValue(final Value value);
+    void invokeMethod(Type<?> target, String methodName, Type<?> returnType, Value<?>[] values);
+
+    void returnValue(Value<?> value);
+
+    void store(Variable variable, Value<?> value);
+        
+    void getField(Variable owner, String fieldName, Type<?> fieldType);
+
+    void putField(Variable owner, String fieldName, Type<?> fieldType, Value<?> value);
+
 }

@@ -20,4 +20,8 @@ public abstract class AbstractValue<T extends Value<T>> implements Value<T> {
     public boolean isVariable() {
         return false;
     }
+
+    public boolean isInstruction() {
+        return false;
+    }
 }

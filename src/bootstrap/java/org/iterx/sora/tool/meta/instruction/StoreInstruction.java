@@ -1,28 +1,28 @@
 package org.iterx.sora.tool.meta.instruction;
 
 import org.iterx.sora.tool.meta.AbstractInstruction;
-import org.iterx.sora.tool.meta.Instruction;
+import org.iterx.sora.tool.meta.Value;
 import org.iterx.sora.tool.meta.value.Variable;
 
 public final class StoreInstruction extends AbstractInstruction<StoreInstruction> {
 
-    private final Instruction<?> instruction;
     private final Variable variable;
+    private final Value<?> value;
 
-    private StoreInstruction(final Variable variable, final Instruction<?> instruction) {
-        this.instruction = instruction;
+    private StoreInstruction(final Variable variable, final Value<?> value) {
         this.variable = variable;
+        this.value = value;
     }
 
-    public static StoreInstruction newStoreInstruction(final Variable variable, final Instruction<?> instruction) {
-        return new StoreInstruction(variable, instruction);
+    public static StoreInstruction newStoreInstruction(final Variable variable, final Value<?> value) {
+        return new StoreInstruction(variable, value);
     }
 
     public Variable getVariable() {
         return variable;
     }
 
-    public Instruction<?> getInstruction() {
-        return instruction;
+    public Value<?> getValue() {
+        return value;
     }
 }

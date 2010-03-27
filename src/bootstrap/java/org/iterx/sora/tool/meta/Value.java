@@ -13,4 +13,6 @@ public interface Value<T extends Value<T>> {
     boolean isConstant();
 
     boolean isVariable();
+
+    boolean isInstruction();
 }

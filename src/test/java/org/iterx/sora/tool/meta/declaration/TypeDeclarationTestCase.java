@@ -1,7 +1,5 @@
 package org.iterx.sora.tool.meta.declaration;
 
-import org.iterx.sora.tool.meta.ClassReader;
-import org.iterx.sora.tool.meta.MetaClassLoader;
 import org.iterx.sora.tool.meta.TypeDeclaration;
 import org.iterx.sora.tool.meta.test.StubMetaClassLoader;
 import org.iterx.sora.tool.meta.test.matcher.TypeMatcher;
@@ -44,8 +42,8 @@ public abstract class TypeDeclarationTestCase {
 
     @Before
     public void setUp() {
-        compileMetaClassLoader = new StubMetaClassLoader(MetaClassLoader.getSystemMetaClassLoader(), false);
-        extractMetaClassLoader = new StubMetaClassLoader(null, false);
+        compileMetaClassLoader = new StubMetaClassLoader(false);
+        extractMetaClassLoader = new StubMetaClassLoader(false);
     }
 
     public static ClassType newClassType() {

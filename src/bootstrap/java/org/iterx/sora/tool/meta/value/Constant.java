@@ -17,19 +17,19 @@ public final class Constant extends AbstractValue<Constant> {
     }
 
     public static Constant newConstant(final boolean value) {
-        return new Constant(Type.BOOLEAN_TYPE, value);
+        return new Constant(Type.INT_TYPE, (value)? 1 : 0);
     }
 
     public static Constant newConstant(final byte value) {
-        return new Constant(Type.BYTE_TYPE, value);
+        return new Constant(Type.INT_TYPE, (int) value);
     }
 
     public static Constant newConstant(final char value) {
-        return new Constant(Type.CHAR_TYPE, value);
+        return new Constant(Type.INT_TYPE, (int) value);
     }
 
     public static Constant newConstant(final short value) {
-        return new Constant(Type.SHORT_TYPE, value);
+        return new Constant(Type.INT_TYPE, (int) value);
     }
 
     public static Constant newConstant(final int value) {

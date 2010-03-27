@@ -10,6 +10,7 @@ import org.iterx.sora.tool.meta.util.InstructionVisitor;
 import org.iterx.sora.tool.meta.util.TypeReader;
 import org.iterx.sora.tool.meta.util.TypeVisitor;
 import org.iterx.sora.tool.meta.value.Constant;
+import org.iterx.sora.tool.meta.value.Variable;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -143,12 +144,50 @@ public final class TypeMatcher<T> extends BaseMatcher {
         public void endInterface() {
         }
 
-
-        public void invokeSuper(final Value[] values) {
+        public void invokeSuper(final Type<?> target,
+                                final String methodName,
+                                final Type<?> returnType,
+                                final Value<?>[] values) {
+            matches(target);
+            matches(methodName);
+            matches(returnType);
             matches(values);
         }
 
-        public void returnValue(final Value value) {
+        public void invokeMethod(final Type<?> target,
+                                 final String methodName,
+                                 final Type<?> returnType,
+                                 final Value<?>[] values) {
+            matches(target);
+            matches(methodName);
+            matches(returnType);
+            matches(values);
+        }
+
+        public void returnValue(final Value<?> value) {
+            matches(value);
+        }
+
+        public void store(final Variable variable, final Value<?> value) {
+            matches(variable);
+            matches(value);
+        }
+
+        public void getField(final Variable owner,
+                             final String fieldName,
+                             final Type<?> fieldType) {
+            matches(owner);
+            matches(fieldName);
+            matches(fieldType);
+        }
+
+        public void putField(final Variable owner,
+                             final String fieldName,
+                             final Type<?> fieldType,
+                             final Value<?> value) {
+            matches(owner);
+            matches(fieldName);
+            matches(fieldType);
             matches(value);
         }
 
@@ -254,11 +293,50 @@ public final class TypeMatcher<T> extends BaseMatcher {
         public void endInterface() {
         }
 
-        public void invokeSuper(final Value[] values) {
+        public void invokeSuper(final Type<?> target,
+                                final String methodName,
+                                final Type<?> returnType,
+                                final Value<?>[] values) {
+            matches(Matchers.equalTo(target));
+            matches(Matchers.equalTo(methodName));
+            matches(Matchers.equalTo(returnType));
             matches(Matchers.equalTo(values));
         }
 
-        public void returnValue(final Value value) {
+        public void invokeMethod(final Type<?> target,
+                                 final String methodName,
+                                 final Type<?> returnType,
+                                 final Value<?>[] values) {
+            matches(Matchers.equalTo(target));
+            matches(Matchers.equalTo(methodName));
+            matches(Matchers.equalTo(returnType));
+            matches(Matchers.equalTo(values));
+        }
+
+        public void returnValue(final Value<?> value) {
+            matches(Matchers.equalTo(value));
+        }
+
+        public void store(final Variable variable, final Value<?> value) {
+            matches(Matchers.equalTo(variable));
+            matches(Matchers.equalTo(value));
+        }
+
+        public void getField(final Variable owner,
+                             final String fieldName,
+                             final Type<?> fieldType) {
+            matches(Matchers.equalTo(owner));
+            matches(Matchers.equalTo(fieldName));
+            matches(Matchers.equalTo(fieldType));
+        }
+
+        public void putField(final Variable owner,
+                             final String fieldName,
+                             final Type<?> fieldType,
+                             final Value<?> value) {
+            matches(Matchers.equalTo(owner));
+            matches(Matchers.equalTo(fieldName));
+            matches(Matchers.equalTo(fieldType));
             matches(Matchers.equalTo(value));
         }
 

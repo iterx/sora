@@ -19,16 +19,17 @@ public final class FieldDeclaration extends AbstractDeclaration<FieldDeclaration
     private Modifier[] modifiers;
     private Constant fieldValue;
 
-    private FieldDeclaration(final String fieldName) {
+    private FieldDeclaration(final Type<?> fieldType, final String fieldName) {
         this.access = Access.PRIVATE;
         this.modifiers = EMPTY_MODIFIERS;
+        this.fieldType = fieldType;
         this.fieldName = fieldName;
         this.fieldValue = Constant.VOID;
     }
 
-    public static FieldDeclaration newFieldDeclaration(final String fieldName, final Type<?> fieldType) {
+    public static FieldDeclaration newFieldDeclaration(final Type<?> fieldType, final String fieldName) {
         assertFieldName(fieldName);
-        return new FieldDeclaration(fieldName).setFieldType(fieldType);
+        return new FieldDeclaration(fieldType, fieldName);
     }
 
     @Override
@@ -42,12 +43,6 @@ public final class FieldDeclaration extends AbstractDeclaration<FieldDeclaration
 
     public Type<?> getFieldType() {
         return fieldType;
-    }
-
-    public FieldDeclaration setFieldType(final Type<?> fieldType) {
-        assertType(fieldType);
-        this.fieldType = fieldType;
-        return this;
     }
 
     public Constant getFieldValue() {

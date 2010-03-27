@@ -37,7 +37,7 @@ public abstract class Declarations {
     }
 
     protected FieldDeclaration field(final String fieldName, final Type fieldType) {
-        return store(fieldDeclarations, FieldDeclaration.newFieldDeclaration(fieldName, fieldType));
+        return store(fieldDeclarations, FieldDeclaration.newFieldDeclaration(fieldType, fieldName));
     }
 
     protected ConstructorDeclaration constructor(final ConstructorDeclaration constructorDeclaration) {

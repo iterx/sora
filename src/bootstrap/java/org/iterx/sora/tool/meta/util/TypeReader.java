@@ -11,15 +11,12 @@ import org.iterx.sora.tool.meta.declaration.ConstructorDeclaration;
 import org.iterx.sora.tool.meta.declaration.FieldDeclaration;
 import org.iterx.sora.tool.meta.declaration.InterfaceTypeDeclaration;
 import org.iterx.sora.tool.meta.declaration.MethodDeclaration;
-import org.iterx.sora.tool.meta.instruction.InvokeSuperInstruction;
 
 import java.lang.reflect.Method;
-
 
 public final class TypeReader {
 
     private static final Map<Class, Method> TYPE_DECLARATION_DISPATCH_TABLE = newTypeDeclarationDispatchTable();
-    private static final Map<Class, Method> INSTRUCTION_DISPATCH_TABLE = newInstructionDispatchTable();
 
     private final TypeDeclaration<?, ?> typeDeclaration;
 
@@ -89,30 +86,17 @@ public final class TypeReader {
 
     private void accept(final TypeVisitor typeVisitor, final MethodDeclaration methodDeclaration) {
         final InstructionVisitor instructionVisitor = typeVisitor.startMethod(toAccess(methodDeclaration.getAccess()),
-                                                                         toModifiers(methodDeclaration.getModifiers()),
-                                                                         methodDeclaration.getMethodName(),
-                                                                         methodDeclaration.getReturnType(),
-                                                                         methodDeclaration.getArgumentTypes(),
-                                                                         methodDeclaration.getExceptionTypes());
+                                                                              toModifiers(methodDeclaration.getModifiers()),
+                                                                              methodDeclaration.getMethodName(),
+                                                                              methodDeclaration.getReturnType(),
+                                                                              methodDeclaration.getArgumentTypes(),
+                                                                              methodDeclaration.getExceptionTypes());
         if(instructionVisitor != null) accept(instructionVisitor, methodDeclaration.getInstructions());
         typeVisitor.endMethod();
     }
 
-    private void accept(final InstructionVisitor instructionVisitor, final Instruction[] instructions) {
-        for(final Instruction instruction : instructions) {
-            try {
-                final Method method = INSTRUCTION_DISPATCH_TABLE.get(instruction.getClass());
-                if(method != null) method.invoke(this, instructionVisitor, instruction);
-                //INSTRUCTION_DISPATCH_TABLE.get(instruction.getClass()).invoke(this, instructionVisitor, instruction);
-            }
-            catch(final Exception e) {
-                throw new RuntimeException(e);
-            }
-        }
-    }
-
-    private void accept(final InstructionVisitor instructionVisitor, final InvokeSuperInstruction invokeSuperInstruction) {
-        instructionVisitor.invokeSuper(invokeSuperInstruction.getValues());
+    private void accept(final InstructionVisitor instructionVisitor, final Instruction... instructions) {
+        new InstructionReader(instructions).accept(instructionVisitor);
     }
 
     private TypeVisitor.Access toAccess(final TypeDeclaration.Access value) {
@@ -132,17 +116,6 @@ public final class TypeReader {
             if("accept".equals(method.getName()) &&
                parameterTypes.length == 2 &&
                TypeVisitor.class.equals(method.getParameterTypes()[0])) dispatchTable.put(method.getParameterTypes()[1], method);
-        }
-        return dispatchTable;
-    }
-
-    private static Map<Class, Method> newInstructionDispatchTable() {
-        final Map<Class, Method> dispatchTable = new HashMap<Class, Method>();
-        for(final Method method : TypeReader.class.getDeclaredMethods()) {
-            final Class[] parameterTypes = method.getParameterTypes();
-            if("accept".equals(method.getName()) &&
-               parameterTypes.length == 2 &&
-               InstructionVisitor.class.equals(method.getParameterTypes()[0])) dispatchTable.put(method.getParameterTypes()[1], method);
         }
         return dispatchTable;
     }

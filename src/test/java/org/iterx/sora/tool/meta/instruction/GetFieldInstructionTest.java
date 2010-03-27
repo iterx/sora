@@ -23,27 +23,31 @@ public class GetFieldInstructionTest extends InstructionTestCase {
 
     @Parameterized.Parameters
     public static Collection<Object[]> data() {
-        return Arrays.asList(new Object[]{ Type.SHORT_TYPE, (short) 0 },
-                             new Object[]{ Type.BYTE_TYPE, (byte) 0 },
-                             new Object[]{ Type.CHAR_TYPE, '\0' },
-                             new Object[]{ Type.BOOLEAN_TYPE, false },
-                             new Object[]{ Type.INT_TYPE, 0 },
-                             new Object[]{ Type.LONG_TYPE, 0L },
-                             new Object[]{ Type.FLOAT_TYPE, 0f },
-                             new Object[]{ Type.DOUBLE_TYPE, 0d },
+        return Arrays.asList(new Object[]{ Type.SHORT_TYPE, (short) 1 },
+                             new Object[]{ Type.BYTE_TYPE, (byte) 2 },
+                             new Object[]{ Type.CHAR_TYPE, 'a' },
+                             new Object[]{ Type.BOOLEAN_TYPE, true },
+                             new Object[]{ Type.INT_TYPE, 100 },
+                             new Object[]{ Type.LONG_TYPE, 1000L },
+                             new Object[]{ Type.FLOAT_TYPE, 10.0f },
+                             new Object[]{ Type.DOUBLE_TYPE, 100.0d },
+                             new Object[]{ Type.STRING_TYPE, "string"},
                              new Object[]{ Type.OBJECT_TYPE, null });
     }
 
     public void setUpMethodDeclaration(final MethodDeclaration methodDeclaration) {
-        methodDeclaration.add(new Instructions() {{
-            returnInstruction(getField(FIELD_NAME));
-        }});
+        methodDeclaration.
+                add(new Instructions() {{
+                    returnValue(getField(getType(), FIELD_NAME));
+                }});
+
     }
 
     @Override
     public void setUpClassDeclaration(final ClassTypeDeclaration classTypeDeclaration) {
-        classTypeDeclaration.add(new Declarations(){{
-            field(FIELD_NAME, getType());
-        }});
+        classTypeDeclaration.
+                add(new Declarations(){{
+                    field(FIELD_NAME, getType()).setFieldValue(toConstant(getType(), getResult()));
+                }});
     }
 }

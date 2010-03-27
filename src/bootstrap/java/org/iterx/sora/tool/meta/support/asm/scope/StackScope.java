@@ -12,6 +12,7 @@ public final class StackScope implements Scope<StackScope> {
     private static final int DEFAULT_CAPACITY = 16;
     private static final String NULL = null;
 
+    private ClassScope classScope;
     private String[] names;
     private Value<?>[] values;
 
@@ -19,10 +20,20 @@ public final class StackScope implements Scope<StackScope> {
     private int size;
 
     public StackScope() {
+        this(null);
+    }
+
+    public StackScope(final ClassScope classScope) {
         this.names = new String[DEFAULT_CAPACITY];
         this.values= new Value<?>[DEFAULT_CAPACITY];
         this.capacity = DEFAULT_CAPACITY;
+        this.classScope = classScope;
     }
+
+    public ClassScope getClassScope() {
+        return classScope;
+    }
+
 
     public int getIndex(final Value<?> value) {
         if(value != null) for(int i = 0; i != size;  i++) if(value.equals(values[i])) return i;
@@ -34,18 +45,24 @@ public final class StackScope implements Scope<StackScope> {
         throw new IllegalArgumentException("Unresolved index '" + index + "'");
     }
 
+    public Value<?> setValue(final int index, final Value<?> value) {
+        values[index] = value;
+        names[index] = nameOf(value);
+        return value;
+    }
+        
     public Value<?> resolveValue(final String name) {
         if(name != null) for(int i = size; i-- != 0;) if(name.equals(names[i])) return values[i];
         throw new IllegalArgumentException("Unresolved name '" + name + "'");
     }
 
     public Value<?> peek() {
-        final int index = (values[size] == null)? size - 1 : size;
+        final int index = (values[size - 1] == null)? size - 2 : size - 1;
         return values[index];
     }
 
     public Value<?> pop() {
-        final int index = (values[size] == null)? size - 1 : size;
+        final int index = (values[size - 1] == null)? size - 2 : size - 1;
         final Value<?> value = values[index];
 
         names[index] = null;
@@ -53,6 +70,13 @@ public final class StackScope implements Scope<StackScope> {
         size -= sizeOf(value);
         return value;
     }
+
+    public Value<?>[] popAll(final int length) {
+        final Value<?>[] values = new Value<?>[length];
+        for(int i = 0; i < length; i++) values[i] = pop();
+        return values;
+    }
+
 
     public int push(final Value<?> value) {
         final int sizeOf = sizeOf(value);
@@ -63,6 +87,10 @@ public final class StackScope implements Scope<StackScope> {
         values[index] = value;
         size += sizeOf;
         return index;
+    }
+
+    public void pushAll(final Value<?>... values) {
+        for(final Value<?> value : values) push(value);
     }
 
     public void clear() {

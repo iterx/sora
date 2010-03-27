@@ -7,13 +7,13 @@ import org.iterx.sora.tool.meta.Type;
 import org.iterx.sora.tool.meta.Value;
 import org.iterx.sora.tool.meta.declaration.InterfaceTypeDeclaration;
 import org.iterx.sora.tool.meta.instruction.InvokeSuperInstruction;
-import org.iterx.sora.tool.meta.instruction.ReturnInstruction;
+import org.iterx.sora.tool.meta.instruction.ReturnValueInstruction;
+import org.iterx.sora.tool.meta.instruction.StoreInstruction;
 import org.iterx.sora.tool.meta.support.asm.scope.StackScope;
 import org.iterx.sora.tool.meta.type.ClassType;
 import org.iterx.sora.tool.meta.type.InterfaceType;
+import org.iterx.sora.tool.meta.value.Constant;
 import org.iterx.sora.tool.meta.value.Variable;
-import org.iterx.sora.tool.meta.instruction.GetFieldInstruction;
-import org.iterx.sora.tool.meta.instruction.PutFieldInstruction;
 import org.iterx.sora.tool.meta.declaration.ClassTypeDeclaration;
 import org.iterx.sora.tool.meta.declaration.ConstructorDeclaration;
 import org.iterx.sora.tool.meta.declaration.FieldDeclaration;
@@ -186,7 +186,7 @@ public final class AsmExtractor {
                                        final String signature,
                                        final Object value) {
             //TODO: add support for value
-            interfaceTypeDeclaration.add(FieldDeclaration.newFieldDeclaration(name, toType(org.objectweb.asm.Type.getType(description))).
+            interfaceTypeDeclaration.add(FieldDeclaration.newFieldDeclaration(toType(org.objectweb.asm.Type.getType(description)), name).
                     setAccess(toAccess(access, FieldDeclaration.Access.values())).
                     setModifiers(toModifiers(access, FieldDeclaration.Modifier.values())));
             return null;
@@ -248,7 +248,7 @@ public final class AsmExtractor {
                                        final String signature,
                                        final Object value) {
             //TODO: add support for value
-            classTypeDeclaration.add(FieldDeclaration.newFieldDeclaration(name, toType(org.objectweb.asm.Type.getType(description))).
+            classTypeDeclaration.add(FieldDeclaration.newFieldDeclaration(toType(org.objectweb.asm.Type.getType(description)), name).
                     setAccess(toAccess(access, FieldDeclaration.Access.values())).
                     setModifiers(toModifiers(access, FieldDeclaration.Modifier.values())));
             return null;
@@ -343,6 +343,10 @@ public final class AsmExtractor {
         protected void add(final Instruction<?> instruction) {
             methodDeclaration.add(instruction);
         }
+
+        protected void remove(final Instruction<?> instruction) {
+            methodDeclaration.remove(instruction);
+        }
     }
 
     private class ConstructorDeclarationInstructionExtractorMethodVisitor extends InstructionExtractorMethodVisitor {
@@ -356,6 +360,10 @@ public final class AsmExtractor {
 
         protected void add(final Instruction<?> instruction) {
             constructorDeclaration.add(instruction);
+        }
+
+        protected void remove(final Instruction<?> instruction) {
+            constructorDeclaration.remove(instruction);
         }
     }
 
@@ -391,28 +399,100 @@ public final class AsmExtractor {
 
         public void visitInsn(final int opcode) {
             switch(opcode) {
+                case ACONST_NULL:
+                    stackScope.push(Constant.NULL);
+                    break;
+                case ICONST_M1:
+                    stackScope.push(Constant.newConstant(-1));
+                    break;
+                case ICONST_0:
+                    stackScope.push(Constant.newConstant(0));
+                    break;
+                case ICONST_1:
+                    stackScope.push(Constant.newConstant(1));
+                    break;
+                case ICONST_2:
+                    stackScope.push(Constant.newConstant(2));
+                    break;
+                case ICONST_3:
+                    stackScope.push(Constant.newConstant(3));
+                    break;
+                case ICONST_4:
+                    stackScope.push(Constant.newConstant(4));
+                    break;
+                case ICONST_5:
+                    stackScope.push(Constant.newConstant(5));
+                    break;
+                case LCONST_0:
+                    stackScope.push(Constant.newConstant(0L));
+                    break;
+                case LCONST_1:
+                    stackScope.push(Constant.newConstant(1L));
+                    break;
+                case FCONST_0:
+                    stackScope.push(Constant.newConstant(0F));
+                    break;
+                case FCONST_1:
+                    stackScope.push(Constant.newConstant(1F));
+                    break;
+                case FCONST_2:
+                    stackScope.push(Constant.newConstant(2F));
+                    break;
+                case DCONST_0:
+                    stackScope.push(Constant.newConstant(0D));
+                    break;
+                case DCONST_1:
+                    stackScope.push(Constant.newConstant(1D));
+                    break;
                 case IRETURN:
                 case LRETURN:
                 case FRETURN:
                 case DRETURN:
                 case ARETURN:
-                   // add(ReturnInstruction.newReturnInstruction(pop(stackScope)));
-                    break;
                 case RETURN:
-                    add(ReturnInstruction.newReturnInstruction());
+                    final Value<?> value = stackScope.pop();
+                    if(value.isInstruction()) remove((Instruction<?>) value);
+                    add(ReturnValueInstruction.newReturnInstruction(value));
+                    break;
+/*
+                    add(ReturnValueInstruction.newReturnInstruction(Value.VOID));
+                    break;
+*/
+            }
+        }
+
+        public void visitIntInsn(final int opcode, final int operand) {
+            switch(opcode) {
+                case BIPUSH:
+                case SIPUSH:
+                    stackScope.push(Constant.newConstant(operand));
                     break;
             }
         }
 
-        public void visitIntInsn(final int i, final int i1) {
-        }
-
         public void visitVarInsn(final int opcode, final int variable) {
-            if(hasAsmOpcodes(opcode, ILOAD|LLOAD|FLOAD|DLOAD|ALOAD))
-                stackScope.push(stackScope.getValue(variable));
-            else if(hasAsmOpcodes(opcode, ISTORE|LSTORE|FSTORE|DSTORE|ASTORE))
-                stackScope.push(stackScope.getValue(variable));  //TODO: is this correct
-           //TODO: RET
+            switch(opcode) {
+                case ILOAD:
+                case LLOAD:
+                case FLOAD:
+                case DLOAD:
+                case ALOAD:
+                    stackScope.push(stackScope.getValue(variable));
+                    break;
+                case ISTORE:
+                case LSTORE:
+                case FSTORE:
+                case DSTORE:
+                case ASTORE:
+                    final Variable var = Variable.newVariable("var");
+                    final Value<?> val = stackScope.getValue(variable);
+                    stackScope.setValue(variable, var);
+                    add(StoreInstruction.newStoreInstruction(var, val));
+                    break;
+                case RET:
+                    //TODO
+                    break;
+            }
         }
 
 
@@ -423,15 +503,15 @@ public final class AsmExtractor {
 
             switch(opcode){
                 case GETFIELD:
-                    add(GetFieldInstruction.newGetFieldInstruction(name));
+                    //add(GetFieldInstruction.newGetFieldInstruction(name));
                     //startMethod.add(GetFieldInstruction.newGetFieldInstruction(name, Variable.newVariable(name)));
                     //stackScope.push(name, );
                     break;
                 case PUTFIELD:
-                    final Value<?> value = stackScope.peek();
+                    //final Value<?> value = stackScope.peek();
                     //TODO: do we need to support Variable types???
-                    add(PutFieldInstruction.newPutFieldInstruction(name, value));
-                    popAll(stackScope, 2);
+                    //add(PutFieldInstruction.newPutFieldInstruction(name, value));
+                    //stackScope.popAll(2);
                     break;
                 default:
                     //throw new UnsupportedOperationException();
@@ -440,14 +520,16 @@ public final class AsmExtractor {
 
         public void visitMethodInsn(final int opcode, final String owner, final String name, final String description) {
             switch(opcode) {
-
                 case INVOKESPECIAL:
-                    if("<init>".equals(name)){
-                        final int length = toArgumentTypes(description).length;
-                        add(InvokeSuperInstruction.invokeInitInstruction(popAll(stackScope, length)));
-                        break;
-                    }
-
+                    final int length = toArgumentTypes(description).length;
+                    final InvokeSuperInstruction invokeSuperInstruction =
+                            InvokeSuperInstruction.newInvokeSuperInstruction(toType(org.objectweb.asm.Type.getObjectType(owner)),
+                                                                          stackScope.popAll(length)).
+                                    setMethodName(name).
+                                    setReturnType(toType(toReturnType(description)));
+                    add(invokeSuperInstruction);
+                    stackScope.push(invokeSuperInstruction);
+                    break;
                 default:
             }
         }
@@ -458,7 +540,12 @@ public final class AsmExtractor {
         public void visitLabel(final Label label) {
         }
 
-        public void visitLdcInsn(final Object o) {
+        public void visitLdcInsn(final Object object) {
+            if(object instanceof Integer) stackScope.push(Constant.newConstant((Integer) object));
+            else if(object instanceof Long) stackScope.push(Constant.newConstant((Long) object));
+            else if(object instanceof Float) stackScope.push(Constant.newConstant((Float) object));
+            else if(object instanceof Double) stackScope.push(Constant.newConstant((Double) object));
+            else if(object instanceof String) stackScope.push(Constant.newConstant((String) object));
         }
 
         public void visitIincInsn(final int i, final int i1) {
@@ -490,6 +577,8 @@ public final class AsmExtractor {
 
         protected abstract void add(final Instruction<?> instruction);
 
+        protected abstract void remove(final Instruction<?> instruction);
+
 
         protected StackScope newBlockScope(final Type<?>[] argumentTypes) {
             final StackScope stackScope = new StackScope();
@@ -499,7 +588,8 @@ public final class AsmExtractor {
             return stackScope;
         }
 
-        private void pushAll(final StackScope asmScope, final Value... values) {
+
+//        private void pushAll(final StackScope asmScope, final Value... values) {
 
 /*
             for(final Value value : values) {
@@ -507,16 +597,9 @@ public final class AsmExtractor {
                 stackScope.push(name, value);
             }
 */
-        }
+//        }
 
-        private Value pop(final StackScope asmScope) {
-            return null;
-        }
-
-        private Value[] popAll(final StackScope asmScope, final int count) {
-            return new Value[0];
-        }
-
+/*
         private Type<?> toType(final int opcode) {
             if(hasAsmOpcodes(opcode, ILOAD)) return Type.INT_TYPE;
             else if(hasAsmOpcodes(opcode, ALOAD))  return Type.OBJECT_TYPE;
@@ -525,19 +608,20 @@ public final class AsmExtractor {
             else if(hasAsmOpcodes(opcode, DLOAD))  return Type.DOUBLE_TYPE;
             throw new IllegalArgumentException();
         }
+*/
     }
 
-    private static org.objectweb.asm.Type[] toObjectTypes(final String... names) {
+    private org.objectweb.asm.Type[] toObjectTypes(final String... names) {
         final org.objectweb.asm.Type[] types = (names != null)? new org.objectweb.asm.Type[names.length] : new org.objectweb.asm.Type[0];
         for(int i = types.length; i-- != 0; ) types[i] = org.objectweb.asm.Type.getObjectType(names[i]);
         return types;
     }
 
-    private static org.objectweb.asm.Type[] toArgumentTypes(final String description) {
+    private org.objectweb.asm.Type[] toArgumentTypes(final String description) {
         return org.objectweb.asm.Type.getArgumentTypes(description);
     }
 
-    private static org.objectweb.asm.Type toReturnType(final String description) {
+    private  org.objectweb.asm.Type toReturnType(final String description) {
         return org.objectweb.asm.Type.getReturnType(description);
     }
 
@@ -603,8 +687,9 @@ public final class AsmExtractor {
         return Arrays.copyOf(values, matches);
     }
 
-    private boolean hasAsmOpcodes(final int opcodes, final int values) {
-        return ((opcodes & values) != 0);
+    private boolean hasAsmOpcodes(final int opcodes, final int... values) {
+        for(final int value : values) if(opcodes == value) return true;
+        return false;
     }
 
     private int getAsmOpcode(final String name) {

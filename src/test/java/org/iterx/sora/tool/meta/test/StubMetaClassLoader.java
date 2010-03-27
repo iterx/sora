@@ -6,6 +6,8 @@ import org.iterx.sora.tool.meta.MetaClassLoader;
 import org.iterx.sora.tool.meta.Type;
 import org.iterx.sora.tool.meta.TypeDeclaration;
 import org.iterx.sora.tool.meta.support.asm.AsmCompiler;
+import org.iterx.sora.tool.meta.util.TypeReader;
+import org.iterx.sora.tool.meta.util.trace.TracerTypeVisitor;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.util.TraceClassVisitor;
 
@@ -43,7 +45,7 @@ public class StubMetaClassLoader extends MetaClassLoader {
 
     @Override
     public Class<?> loadClass(final Type<?> type) throws ClassNotFoundException {
-        if(debug) debug(asmCompiler.compile(loadDeclaration(type)));
+        if(debug) debug(loadDeclaration(type));
         return super.loadClass(type);
     }
 
@@ -90,8 +92,11 @@ public class StubMetaClassLoader extends MetaClassLoader {
         }
     }
 
-    private static void debug(final byte[] bytes) {
-        new ClassReader(bytes).accept(new TraceClassVisitor(new PrintWriter(System.out)), 0);
+    private void debug(final TypeDeclaration<?, ?> typeDeclaration) {
+        System.out.println("TypeDeclaration:");
+        new TypeReader(typeDeclaration).accept(new TracerTypeVisitor(System.out));
+        System.out.println("Asm:");
+        new ClassReader(asmCompiler.compile(typeDeclaration)).accept(new TraceClassVisitor(new PrintWriter(System.out)), 0);
     }
 
     private static String toResource(final String name) {
