@@ -4,22 +4,23 @@ import org.iterx.sora.collection.Arrays;
 import org.iterx.sora.io.connector.multiplexor.Multiplexor;
 import org.iterx.sora.io.connector.session.Channel;
 
+import java.nio.ByteBuffer;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-public final class GeneralSelectorFactory implements SelectorFactory<Channel<?>> {
+public final class GeneralSelectorFactory implements SelectorFactory<Channel<ByteBuffer, ByteBuffer>> {
 
-    public Selector<Channel<?>> newSelector() {
+    public Selector<Channel<ByteBuffer, ByteBuffer>> newSelector() {
         return new GeneralSelector();
     }
 
-    private static final class GeneralSelector implements Selector<Channel<?>> {
+    private static final class GeneralSelector implements Selector<Channel<ByteBuffer, ByteBuffer>> {
 
         private final Lock lock;
 
-        private volatile Multiplexor.Handler<? extends Channel<?>>[] readMultiplexorHandlers;
-        private volatile Multiplexor.Handler<? extends Channel<?>>[] writeMultiplexorHandlers;
+        private volatile Multiplexor.Handler<? extends Channel<ByteBuffer, ByteBuffer>>[] readMultiplexorHandlers;
+        private volatile Multiplexor.Handler<? extends Channel<ByteBuffer, ByteBuffer>>[] writeMultiplexorHandlers;
 
         private GeneralSelector() {
             this.readMultiplexorHandlers = Arrays.newArray(Multiplexor.Handler.class, 0);
@@ -39,7 +40,7 @@ public final class GeneralSelectorFactory implements SelectorFactory<Channel<?>>
             return doWrite() | doRead();
         }
 
-        public boolean register(final Multiplexor.Handler<? extends Channel<?>> multiplexorHandler, final int ops) {
+        public boolean register(final Multiplexor.Handler<? extends Channel<ByteBuffer, ByteBuffer>> multiplexorHandler, final int ops) {
             lock.lock();
             try {
                 if((ops & Multiplexor.READ_OP) != 0) readMultiplexorHandlers = Arrays.add(readMultiplexorHandlers, multiplexorHandler);
@@ -51,7 +52,7 @@ public final class GeneralSelectorFactory implements SelectorFactory<Channel<?>>
             }
         }
 
-        public boolean deregister(final Multiplexor.Handler<? extends Channel<?>> multiplexorHandler, final int ops) {
+        public boolean deregister(final Multiplexor.Handler<? extends Channel<ByteBuffer, ByteBuffer>> multiplexorHandler, final int ops) {
             lock.lock();
             try {
                 if((ops & Multiplexor.READ_OP) != 0) readMultiplexorHandlers = Arrays.remove(readMultiplexorHandlers, multiplexorHandler);

@@ -13,21 +13,21 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.file.StandardOpenOption;
 
-public final class FileSession extends AbstractSession<FileChannel, ByteBuffer> {
+public final class FileSession extends AbstractSession<FileChannel, ByteBuffer, ByteBuffer> {
 
     private final FileChannelProvider fileChannelProvider;
-    private final Callback<? super FileSession> sessionCallback;
+    private final SessionCallback<? super FileSession> sessionCallback;
     private final Multiplexor<? super FileChannel> multiplexor;
 
     public FileSession(final Multiplexor<? super FileChannel> multiplexor,
-                       final Callback<? super FileSession> sessionCallback,
+                       final SessionCallback<? super FileSession> sessionCallback,
                        final ConnectorEndpoint connectorEndpoint) {
         this.fileChannelProvider = new ConnectorFileChannelProvider(connectorEndpoint);
         this.multiplexor = multiplexor;
         this.sessionCallback = sessionCallback;
     }
 
-    public FileChannel newChannel(final Channel.Callback<? super FileChannel, ByteBuffer> channelCallback) {
+    public FileChannel newChannel(final Channel.ChannelCallback<? super FileChannel, ByteBuffer, ByteBuffer> channelCallback) {
         assertState(State.OPEN);
         return fileChannelProvider.newChannel(channelCallback);
     }
@@ -67,7 +67,7 @@ public final class FileSession extends AbstractSession<FileChannel, ByteBuffer> 
         public void open() {
         }
 
-        abstract FileChannel newChannel(Channel.Callback<? super FileChannel, ByteBuffer> channelCallback);
+        abstract FileChannel newChannel(Channel.ChannelCallback<? super FileChannel, ByteBuffer, ByteBuffer> channelCallback);
 
         public void close() {
         }
@@ -85,7 +85,7 @@ public final class FileSession extends AbstractSession<FileChannel, ByteBuffer> 
             this.file = toFile(connectorEndpoint.getUri());
         }
 
-        public FileChannel newChannel(final Channel.Callback<? super FileChannel, ByteBuffer> channelCallback) {
+        public FileChannel newChannel(final Channel.ChannelCallback<? super FileChannel, ByteBuffer, ByteBuffer> channelCallback) {
             return new FileChannel(multiplexor, channelCallback, newFileChannel());
         }
 

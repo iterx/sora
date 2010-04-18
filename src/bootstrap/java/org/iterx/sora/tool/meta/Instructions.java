@@ -2,9 +2,9 @@ package org.iterx.sora.tool.meta;
 
 import org.iterx.sora.tool.meta.instruction.GetFieldInstruction;
 import org.iterx.sora.tool.meta.instruction.InvokeMethodInstruction;
-import org.iterx.sora.tool.meta.instruction.InvokeSuperInstruction;
+import org.iterx.sora.tool.meta.instruction.ReturnInstruction;
+import org.iterx.sora.tool.meta.instruction.SuperInstruction;
 import org.iterx.sora.tool.meta.instruction.PutFieldInstruction;
-import org.iterx.sora.tool.meta.instruction.ReturnValueInstruction;
 import org.iterx.sora.tool.meta.instruction.StoreInstruction;
 import org.iterx.sora.tool.meta.value.Constant;
 import org.iterx.sora.tool.meta.value.Variable;
@@ -66,7 +66,7 @@ public abstract class Instructions {
         return Variable.newVariable(name, type);
     }
 
-    protected GetFieldInstruction getField(final Type<?> fieldType, final String fieldName) {
+    protected GetFieldInstruction GETFIELD(final Type<?> fieldType, final String fieldName) {
         return store(instructions, GetFieldInstruction.newGetFieldInstruction(fieldType, fieldName));
     }
 
@@ -78,8 +78,8 @@ public abstract class Instructions {
         return store(instructions, StoreInstruction.newStoreInstruction(variable, remove(instructions, value)));
     }    
 
-    protected InvokeSuperInstruction invokeSuper(final Type<?> target, final Value<?>... values) {
-        return store(instructions, InvokeSuperInstruction.newInvokeSuperInstruction(target, values));
+    protected SuperInstruction SUPER(final Type<?> target, final Value<?>... values) {
+        return store(instructions, SuperInstruction.newSuperInstruction(values));
     }
 
     protected Object invokeStatic(final Type<?> target, final String methodName, final Value<?>... values) {
@@ -90,8 +90,8 @@ public abstract class Instructions {
         return store(instructions, InvokeMethodInstruction.newInvokeMethodInstruction(target, methodName, values));
     }
 
-    protected ReturnValueInstruction returnValue(final Value<?> value) {
-        return store(instructions, ReturnValueInstruction.newReturnInstruction(remove(instructions, value)));
+    protected ReturnInstruction RETURN(final Value<?> value) {
+        return store(instructions, ReturnInstruction.newReturnInstruction(remove(instructions, value)));
     }
 
     private static <T> T store(final List<? super T> values, final T value) {

@@ -30,8 +30,8 @@ public abstract class AbstractBlockingQueue<T> implements BlockingQueue<T> {
     AbstractBlockingQueue(final Lock enqueueLock,
                           final Lock dequeueLock,
                           final int capacity) {
-        this.enqueueCondition = dequeueLock.newCondition();
-        this.dequeueCondition = enqueueLock.newCondition();
+        this.enqueueCondition = enqueueLock.newCondition();
+        this.dequeueCondition = dequeueLock.newCondition();
         this.queue = Arrays.newArray(Object.class, capacity);
         this.enqueueLock = enqueueLock;
         this.dequeueLock = dequeueLock;

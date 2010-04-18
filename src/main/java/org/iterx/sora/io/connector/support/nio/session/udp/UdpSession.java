@@ -26,14 +26,14 @@ import java.nio.channels.spi.SelectorProvider;
 import java.util.Iterator;
 import java.util.Set;
 
-public final class UdpSession extends AbstractSession<UdpChannel, ByteBuffer>  {
+public final class UdpSession extends AbstractSession<UdpChannel, ByteBuffer, ByteBuffer>  {
     
     private final Multiplexor<? super NioChannel> multiplexor;
-    private final Callback<? super UdpSession> sessionCallback;
+    private final SessionCallback<? super UdpSession> sessionCallback;
     private final UdpChannelProvider udpChannelProvider;
 
     public UdpSession(final Multiplexor<? super NioChannel> multiplexor,
-                      final Callback<? super UdpSession> sessionCallback,
+                      final SessionCallback<? super UdpSession> sessionCallback,
                       final AcceptorEndpoint acceptorEndpoint) {
         this.multiplexor = multiplexor;
         this.sessionCallback = sessionCallback;
@@ -41,14 +41,14 @@ public final class UdpSession extends AbstractSession<UdpChannel, ByteBuffer>  {
     }
 
     public UdpSession(final Multiplexor<? super NioChannel> multiplexor,
-                      final Callback<? super UdpSession> sessionCallback,
+                      final SessionCallback<? super UdpSession> sessionCallback,
                       final ConnectorEndpoint connectorEndpoint) {
         this.udpChannelProvider = new ConnectorUdpChannelProvider(connectorEndpoint);
         this.multiplexor = multiplexor;
         this.sessionCallback = sessionCallback;
     }
 
-    public UdpChannel newChannel(final Channel.Callback<? super UdpChannel, ByteBuffer> channelCallback) {
+    public UdpChannel newChannel(final Channel.ChannelCallback<? super UdpChannel, ByteBuffer, ByteBuffer> channelCallback) {
         return udpChannelProvider.newChannel(channelCallback);
     }
 
@@ -91,7 +91,7 @@ public final class UdpSession extends AbstractSession<UdpChannel, ByteBuffer>  {
         public void open() {
         }
 
-        abstract UdpChannel newChannel(Channel.Callback<? super UdpChannel, ByteBuffer> channelCallback);
+        abstract UdpChannel newChannel(Channel.ChannelCallback<? super UdpChannel, ByteBuffer, ByteBuffer> channelCallback);
 
         public void close() {
         }
@@ -121,7 +121,7 @@ public final class UdpSession extends AbstractSession<UdpChannel, ByteBuffer>  {
             this.socketAddress = toSocketAddress(connectorEndpoint.getUri());
         }
 
-        public UdpChannel newChannel(final Channel.Callback<? super UdpChannel, ByteBuffer> channelCallback) {
+        public UdpChannel newChannel(final Channel.ChannelCallback<? super UdpChannel, ByteBuffer, ByteBuffer> channelCallback) {
             try {
                 final DatagramChannel datagramChannel = newDatagramChannel().connect(socketAddress);
 
@@ -153,7 +153,7 @@ public final class UdpSession extends AbstractSession<UdpChannel, ByteBuffer>  {
             acceptorUdpChannel.open();
         }
 
-        public UdpChannel newChannel(final Channel.Callback<? super UdpChannel, ByteBuffer> channelCallback) {
+        public UdpChannel newChannel(final Channel.ChannelCallback<? super UdpChannel, ByteBuffer, ByteBuffer> channelCallback) {
             try {
                 final DatagramChannel datagramChannel = acceptorUdpChannel.accept();
                 final UdpChannel udpChannel = new UdpChannel(proxyMultiplexor, channelCallback, datagramChannel);

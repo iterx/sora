@@ -4,7 +4,6 @@ import org.iterx.sora.collection.queue.SingleProducerSingleConsumerBlockingQueue
 import org.iterx.sora.io.IoException;
 import org.iterx.sora.io.connector.multiplexor.Multiplexor;
 import org.iterx.sora.io.connector.session.AbstractChannel;
-import org.iterx.sora.collection.queue.MultiProducerSingleConsumerBlockingQueue;
 import org.iterx.sora.io.connector.support.nio.session.NioChannel;
 
 import java.io.IOException;
@@ -18,10 +17,10 @@ import java.util.concurrent.locks.ReentrantLock;
 import static org.iterx.sora.util.Exception.rethrow;
 import static org.iterx.sora.util.Exception.swallow;
 
-public final class FileChannel extends AbstractChannel<ByteBuffer> implements NioChannel<java.nio.channels.FileChannel> {
+public final class FileChannel extends AbstractChannel<ByteBuffer, ByteBuffer> implements NioChannel<java.nio.channels.FileChannel> {
 
     private final Multiplexor<? super FileChannel> multiplexor;
-    private final Callback<? super FileChannel, ByteBuffer> channelCallback;
+    private final ChannelCallback<? super FileChannel, ByteBuffer, ByteBuffer> channelCallback;
     private final java.nio.channels.FileChannel fileChannel;
     private final MultiplexorHandler multiplexorHandler;
 
@@ -34,7 +33,7 @@ public final class FileChannel extends AbstractChannel<ByteBuffer> implements Ni
     private volatile int interestOps;
 
     public FileChannel(final Multiplexor<? super FileChannel> multiplexor,
-                       final Callback<? super FileChannel, ByteBuffer> channelCallback,
+                       final ChannelCallback<? super FileChannel, ByteBuffer, ByteBuffer> channelCallback,
                        final java.nio.channels.FileChannel fileChannel) {
         this.readBlockingQueue = new SingleProducerSingleConsumerBlockingQueue<ByteBuffer>(128);
         this.writeBlockingQueue = new SingleProducerSingleConsumerBlockingQueue<ByteBuffer>(128);
@@ -193,7 +192,7 @@ public final class FileChannel extends AbstractChannel<ByteBuffer> implements Ni
                         }
                     }
                     if(buffer.position() != 0) {
-                        FileChannel.this.doRead(dequeue(readBlockingQueue, Multiplexor.READ_OP));
+                        FileChannel.this.doRead((ByteBuffer) dequeue(readBlockingQueue, Multiplexor.READ_OP).flip());
                         if(!buffer.hasRemaining() && (remaining > 0)) continue;
                     }
                     break;

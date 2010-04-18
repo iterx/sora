@@ -3,7 +3,6 @@ package org.iterx.sora.tool.meta.instruction;
 import org.iterx.sora.tool.meta.Instructions;
 import org.iterx.sora.tool.meta.Type;
 import org.iterx.sora.tool.meta.declaration.MethodDeclaration;
-import org.iterx.sora.tool.meta.value.Constant;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -43,7 +42,7 @@ public class ReturnInstructionTest extends InstructionTestCase {
 
     public void setUpMethodDeclaration(final MethodDeclaration methodDeclaration) {
         methodDeclaration.add(new Instructions() {{
-            returnValue(toConstant(getType(), getResult()));
+            RETURN(toConstant(getType(), getResult()));
         }});
     }
 }

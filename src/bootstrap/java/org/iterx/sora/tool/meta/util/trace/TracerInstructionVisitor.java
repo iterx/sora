@@ -21,11 +21,11 @@ public class TracerInstructionVisitor extends AbstractTracer<TracerInstructionVi
         this.indent = indent;
     }
 
-    public void invokeSuper(final Type<?> target,
-                            final String methodName,
-                            final Type<?> returnType,
-                            final Value<?>[] values) {
-        print("invokeSuper").print(".").print(methodName);
+    public void SUPER(
+            final String methodName,
+            final Type<?> returnType,
+            final Value<?>[] values) {
+        print("SUPER").print(".").print(methodName);
         print("(").print(values).print(")").print(returnType).newline();
     }
 
@@ -37,9 +37,9 @@ public class TracerInstructionVisitor extends AbstractTracer<TracerInstructionVi
         print("(").print(values).print(")").print(returnType).newline();
     }
 
-    public void returnValue(final Value<?> value) {
+    public void RETURN(final Value<?> value) {
         //TODO: need to redispatch if value => value instruction....
-        print("returnValue(");
+        print("RETURN(");
         if(value.isInstruction()) {
             new InstructionReader((ValueInstruction) value).accept(this);
         }
@@ -51,10 +51,10 @@ public class TracerInstructionVisitor extends AbstractTracer<TracerInstructionVi
         print("store(").print(variable.getName()).print(", ").print(value).print(")").newline();
     }
 
-    public void getField(final Variable owner,
+    public void GETFIELD(final Variable owner,
                          final String fieldName,
                          final Type<?> fieldType) {
-        print(owner).print(".getField(").print(fieldName).print(")").print(fieldType).newline();
+        print(owner).print(".GETFIELD(").print(fieldName).print(")").print(fieldType).newline();
     }
 
 

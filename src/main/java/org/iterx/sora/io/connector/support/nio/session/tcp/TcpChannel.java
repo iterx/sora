@@ -4,7 +4,6 @@ import org.iterx.sora.collection.queue.SingleProducerSingleConsumerBlockingQueue
 import org.iterx.sora.io.IoException;
 import org.iterx.sora.io.connector.multiplexor.Multiplexor;
 import org.iterx.sora.io.connector.session.AbstractChannel;
-import org.iterx.sora.collection.queue.MultiProducerSingleConsumerBlockingQueue;
 import org.iterx.sora.io.connector.support.nio.session.NioChannel;
 
 import java.io.IOException;
@@ -20,10 +19,10 @@ import java.util.concurrent.locks.ReentrantLock;
 import static org.iterx.sora.util.Exception.rethrow;
 import static org.iterx.sora.util.Exception.swallow;
 
-public final class TcpChannel extends AbstractChannel<ByteBuffer> implements NioChannel<SocketChannel> {
+public final class TcpChannel extends AbstractChannel<ByteBuffer, ByteBuffer> implements NioChannel<SocketChannel> {
 
     private final Multiplexor<? super NioChannel<SocketChannel>> multiplexor;
-    private final Callback<? super TcpChannel, ByteBuffer> channelCallback;
+    private final ChannelCallback<? super TcpChannel, ByteBuffer, ByteBuffer> channelCallback;
     private final SocketChannel socketChannel;
     private final SocketAddress socketAddress;
     private final MultiplexorHandler multiplexorHandler;
@@ -37,7 +36,7 @@ public final class TcpChannel extends AbstractChannel<ByteBuffer> implements Nio
     private volatile int interestOps;
 
     public TcpChannel(final Multiplexor<? super NioChannel<SocketChannel>> multiplexor,
-                      final Callback<? super TcpChannel, ByteBuffer> channelCallback,
+                      final ChannelCallback<? super TcpChannel, ByteBuffer, ByteBuffer> channelCallback,
                       final SocketChannel socketChannel,
                       final SocketAddress socketAddress) {
         this.readBlockingQueue = new SingleProducerSingleConsumerBlockingQueue<ByteBuffer>(128);
@@ -188,7 +187,6 @@ public final class TcpChannel extends AbstractChannel<ByteBuffer> implements Nio
         return super.onClosed();
     }
 
-
     private void doRead(final ByteBuffer buffer) {
         channelCallback.onRead(this, buffer);
     }
@@ -223,7 +221,7 @@ public final class TcpChannel extends AbstractChannel<ByteBuffer> implements Nio
                         }
                     }
                     if(buffer.position() != 0) {
-                        TcpChannel.this.doRead(dequeue(readBlockingQueue, Multiplexor.READ_OP));
+                        TcpChannel.this.doRead((ByteBuffer) dequeue(readBlockingQueue, Multiplexor.READ_OP).flip());
                         if(!buffer.hasRemaining() && (remaining > 0)) continue;
                     }
                     break;

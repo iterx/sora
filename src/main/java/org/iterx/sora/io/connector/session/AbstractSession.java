@@ -1,14 +1,11 @@
 package org.iterx.sora.io.connector.session;
 
-import org.iterx.sora.io.connector.session.Channel;
-import org.iterx.sora.io.connector.session.Session;
-
 import static org.iterx.sora.util.Exception.swallow;
 
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-public abstract class AbstractSession<C extends Channel<T>, T> implements Session<C, T> {
+public abstract class AbstractSession<C extends Channel<R, W>, R, W> implements Session<C, R, W> {
 
     private final Lock stateLock;
     private volatile State state;
@@ -55,7 +52,7 @@ public abstract class AbstractSession<C extends Channel<T>, T> implements Sessio
         stateLock.lock();
         try {
             if(state.allowState(newState)) {
-                for(State nextState = newState; state != nextState; ) {
+                for(State nextState = newState; nextState != null && state != nextState; ) {
                     try {
                         state = nextState;
                         nextState = state.run(this, arguments);

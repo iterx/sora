@@ -13,4 +13,9 @@ public final class ConnectorEndpoint implements Endpoint {
     public Uri getUri() {
         return uri;
     }
+
+    @Override
+    public String toString() {
+        return Helper.toString(this);
+    }
 }

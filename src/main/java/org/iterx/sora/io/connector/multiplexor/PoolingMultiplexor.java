@@ -4,6 +4,7 @@ import org.iterx.sora.io.connector.multiplexor.selector.Selector;
 import org.iterx.sora.io.connector.multiplexor.selector.SelectorFactory;
 import org.iterx.sora.io.connector.session.Channel;
 
+import java.nio.ByteBuffer;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
@@ -14,7 +15,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import static org.iterx.sora.util.Exception.rethrow;
 import static org.iterx.sora.util.Exception.swallow;
 
-public final class PoolingMultiplexor <T extends Channel<?>> implements Multiplexor<T> {
+public final class PoolingMultiplexor <T extends Channel<ByteBuffer, ByteBuffer>> implements Multiplexor<T> {
 
     private final Worker<T> openCloseWorker;
     private final Worker<T> writeWorker;
@@ -28,13 +29,13 @@ public final class PoolingMultiplexor <T extends Channel<?>> implements Multiple
         this.readWorker = readWorker;
     }
 
-    public static <T extends Channel<?>> PoolingMultiplexor<T> newSinglePoolingMultiplexor(final ThreadFactory threadFactory,
+    public static <T extends Channel<ByteBuffer, ByteBuffer>> PoolingMultiplexor<T> newSinglePoolingMultiplexor(final ThreadFactory threadFactory,
                                                                                            final SelectorFactory<T> selectorFactory) {
         final Worker<T> readWriteOpenCloseWorker = new Worker<T>(threadFactory, selectorFactory.newSelector(), READ_OP|WRITE_OP|OPEN_OP|CLOSE_OP);
         return new PoolingMultiplexor<T>(readWriteOpenCloseWorker, readWriteOpenCloseWorker, readWriteOpenCloseWorker);
     }
 
-    public static <T extends Channel<?>> PoolingMultiplexor<T> newOpenReadWritePoolingMultiplexor(final ThreadFactory threadFactory,
+    public static <T extends Channel<ByteBuffer, ByteBuffer>> PoolingMultiplexor<T> newOpenReadWritePoolingMultiplexor(final ThreadFactory threadFactory,
                                                                                                   final SelectorFactory<T> selectorFactory) {
         final Worker<T> readWorker = new Worker<T>(threadFactory, selectorFactory.newSelector(), READ_OP);
         final Worker<T> writeWorker = new Worker<T>(threadFactory, selectorFactory.newSelector(), WRITE_OP);
@@ -63,7 +64,7 @@ public final class PoolingMultiplexor <T extends Channel<?>> implements Multiple
         readWorker.destroy();
     }
 
-    private static final class Worker<T extends Channel<?>> implements Runnable {
+    private static final class Worker<T extends Channel<ByteBuffer, ByteBuffer>> implements Runnable {
 
         private final Thread thread;
         private final CountDownLatch startSignal;

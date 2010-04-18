@@ -12,28 +12,18 @@ public final class StackScope implements Scope<StackScope> {
     private static final int DEFAULT_CAPACITY = 16;
     private static final String NULL = null;
 
-    private ClassScope classScope;
     private String[] names;
     private Value<?>[] values;
 
     private int capacity;
     private int size;
 
-    public StackScope() {
-        this(null);
-    }
 
-    public StackScope(final ClassScope classScope) {
+    public StackScope() {
         this.names = new String[DEFAULT_CAPACITY];
         this.values= new Value<?>[DEFAULT_CAPACITY];
         this.capacity = DEFAULT_CAPACITY;
-        this.classScope = classScope;
     }
-
-    public ClassScope getClassScope() {
-        return classScope;
-    }
-
 
     public int getIndex(final Value<?> value) {
         if(value != null) for(int i = 0; i != size;  i++) if(value.equals(values[i])) return i;

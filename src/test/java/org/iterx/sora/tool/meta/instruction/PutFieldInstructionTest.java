@@ -5,7 +5,6 @@ import org.iterx.sora.tool.meta.Instructions;
 import org.iterx.sora.tool.meta.Type;
 import org.iterx.sora.tool.meta.Value;
 import org.iterx.sora.tool.meta.declaration.ClassTypeDeclaration;
-import org.iterx.sora.tool.meta.value.Variable;
 import org.iterx.sora.tool.meta.declaration.MethodDeclaration;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -40,7 +39,7 @@ public class PutFieldInstructionTest extends InstructionTestCase {
     public void setUpMethodDeclaration(final MethodDeclaration methodDeclaration) {
         methodDeclaration.
                 add(new Instructions() {{
-                    returnValue(getField(getType(), FIELD_NAME));
+                    RETURN(GETFIELD(getType(), FIELD_NAME));
                 }});
     }
 
@@ -52,9 +51,9 @@ public class PutFieldInstructionTest extends InstructionTestCase {
                     field(FIELD_NAME, getType());
                     constructor().
                             add(new Instructions() {{
-                                invokeSuper(Type.OBJECT_TYPE);
+                                SUPER(Type.OBJECT_TYPE);
                                 putField(getType(), FIELD_NAME, toConstant(getType(), getResult()));
-                                returnValue(Value.VOID);
+                                RETURN(Value.VOID);
                             }});
                 }});
     }
@@ -77,9 +76,9 @@ public class PutFieldInstructionTest extends InstructionTestCase {
     public void setUpMethodDeclaration(final MethodDeclaration methodDeclaration) {
         methodDeclaration.add(new Instructions() {{
             final Variable variable = variable(getType(), "<variable>");
-            //store(variable, getField(GET_FIELD_NAME));
+            //store(variable, GETFIELD(GET_FIELD_NAME));
             putField(PUT_FIELD_NAME, variable);
-            //returnValue(getField(PUT_FIELD_NAME));
+            //RETURN(GETFIELD(PUT_FIELD_NAME));
         }});
     }
 

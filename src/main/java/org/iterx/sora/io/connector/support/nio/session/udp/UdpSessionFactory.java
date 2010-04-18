@@ -12,7 +12,7 @@ import org.iterx.sora.io.connector.support.nio.session.NioChannel;
 import java.nio.ByteBuffer;
 import java.util.regex.Pattern;
 
-public final class UdpSessionFactory implements SessionFactory<UdpSession, ByteBuffer> {
+public final class UdpSessionFactory implements SessionFactory<UdpSession, UdpSession, ByteBuffer, ByteBuffer> {
 
     private static final Pattern URI_PATTERN = Pattern.compile("udp://([^#]*)?(#.*)?");
 
@@ -27,14 +27,14 @@ public final class UdpSessionFactory implements SessionFactory<UdpSession, ByteB
     }
 
     public UdpSession newSession(final Connector connector,
-                                 final Session.Callback<? super UdpSession> sessionCallback,
+                                 final Session.SessionCallback<? super UdpSession> sessionCallback,
                                  final AcceptorEndpoint acceptorEndpoint) {
         assertEndpoint(acceptorEndpoint);
         return new UdpSession(multiplexor, sessionCallback, acceptorEndpoint);
     }
 
     public UdpSession newSession(final Connector connector,
-                                 final Session.Callback<? super UdpSession> sessionCallback,
+                                 final Session.SessionCallback<? super UdpSession> sessionCallback,
                                  final ConnectorEndpoint connectorEndpoint) {
         assertEndpoint(connectorEndpoint);
         return new UdpSession(multiplexor, sessionCallback, connectorEndpoint);

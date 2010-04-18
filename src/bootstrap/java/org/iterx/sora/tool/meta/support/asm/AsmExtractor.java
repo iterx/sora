@@ -6,8 +6,8 @@ import org.iterx.sora.tool.meta.MetaClassLoader;
 import org.iterx.sora.tool.meta.Type;
 import org.iterx.sora.tool.meta.Value;
 import org.iterx.sora.tool.meta.declaration.InterfaceTypeDeclaration;
-import org.iterx.sora.tool.meta.instruction.InvokeSuperInstruction;
-import org.iterx.sora.tool.meta.instruction.ReturnValueInstruction;
+import org.iterx.sora.tool.meta.instruction.ReturnInstruction;
+import org.iterx.sora.tool.meta.instruction.SuperInstruction;
 import org.iterx.sora.tool.meta.instruction.StoreInstruction;
 import org.iterx.sora.tool.meta.support.asm.scope.StackScope;
 import org.iterx.sora.tool.meta.type.ClassType;
@@ -452,10 +452,10 @@ public final class AsmExtractor {
                 case RETURN:
                     final Value<?> value = stackScope.pop();
                     if(value.isInstruction()) remove((Instruction<?>) value);
-                    add(ReturnValueInstruction.newReturnInstruction(value));
+                    add(ReturnInstruction.newReturnInstruction(value));
                     break;
 /*
-                    add(ReturnValueInstruction.newReturnInstruction(Value.VOID));
+                    add(ReturnInstruction.newReturnInstruction(Value.VOID));
                     break;
 */
             }
@@ -522,13 +522,13 @@ public final class AsmExtractor {
             switch(opcode) {
                 case INVOKESPECIAL:
                     final int length = toArgumentTypes(description).length;
-                    final InvokeSuperInstruction invokeSuperInstruction =
-                            InvokeSuperInstruction.newInvokeSuperInstruction(toType(org.objectweb.asm.Type.getObjectType(owner)),
-                                                                          stackScope.popAll(length)).
+                    final SuperInstruction superInstruction =
+                            SuperInstruction.newSuperInstruction(
+                                    stackScope.popAll(length)).
                                     setMethodName(name).
                                     setReturnType(toType(toReturnType(description)));
-                    add(invokeSuperInstruction);
-                    stackScope.push(invokeSuperInstruction);
+                    add(superInstruction);
+                    stackScope.push(superInstruction);
                     break;
                 default:
             }

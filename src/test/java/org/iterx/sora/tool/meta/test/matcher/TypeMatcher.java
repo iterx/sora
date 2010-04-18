@@ -144,11 +144,9 @@ public final class TypeMatcher<T> extends BaseMatcher {
         public void endInterface() {
         }
 
-        public void invokeSuper(final Type<?> target,
-                                final String methodName,
-                                final Type<?> returnType,
-                                final Value<?>[] values) {
-            matches(target);
+        public void SUPER(final String methodName,
+                          final Type<?> returnType,
+                          final Value<?>[] values) {
             matches(methodName);
             matches(returnType);
             matches(values);
@@ -164,7 +162,7 @@ public final class TypeMatcher<T> extends BaseMatcher {
             matches(values);
         }
 
-        public void returnValue(final Value<?> value) {
+        public void RETURN(final Value<?> value) {
             matches(value);
         }
 
@@ -173,7 +171,7 @@ public final class TypeMatcher<T> extends BaseMatcher {
             matches(value);
         }
 
-        public void getField(final Variable owner,
+        public void GETFIELD(final Variable owner,
                              final String fieldName,
                              final Type<?> fieldType) {
             matches(owner);
@@ -293,11 +291,9 @@ public final class TypeMatcher<T> extends BaseMatcher {
         public void endInterface() {
         }
 
-        public void invokeSuper(final Type<?> target,
-                                final String methodName,
-                                final Type<?> returnType,
-                                final Value<?>[] values) {
-            matches(Matchers.equalTo(target));
+        public void SUPER(final String methodName,
+                          final Type<?> returnType,
+                          final Value<?>[] values) {
             matches(Matchers.equalTo(methodName));
             matches(Matchers.equalTo(returnType));
             matches(Matchers.equalTo(values));
@@ -313,7 +309,7 @@ public final class TypeMatcher<T> extends BaseMatcher {
             matches(Matchers.equalTo(values));
         }
 
-        public void returnValue(final Value<?> value) {
+        public void RETURN(final Value<?> value) {
             matches(Matchers.equalTo(value));
         }
 
@@ -322,7 +318,7 @@ public final class TypeMatcher<T> extends BaseMatcher {
             matches(Matchers.equalTo(value));
         }
 
-        public void getField(final Variable owner,
+        public void GETFIELD(final Variable owner,
                              final String fieldName,
                              final Type<?> fieldType) {
             matches(Matchers.equalTo(owner));

@@ -2,13 +2,9 @@ package org.iterx.sora.tool.meta.instruction;
 
 import org.iterx.sora.tool.meta.Declarations;
 import org.iterx.sora.tool.meta.Instructions;
-import org.iterx.sora.tool.meta.MetaClassLoader;
 import org.iterx.sora.tool.meta.Type;
 import org.iterx.sora.tool.meta.declaration.ClassTypeDeclaration;
-import org.iterx.sora.tool.meta.declaration.InterfaceTypeDeclaration;
 import org.iterx.sora.tool.meta.declaration.MethodDeclaration;
-import org.iterx.sora.tool.meta.type.ClassType;
-import org.iterx.sora.tool.meta.value.Variable;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -44,7 +40,7 @@ public class InvokeMethodInstructionTest extends InstructionTestCase {
         methodDeclaration.
                 setReturnType(getType()).
                 add(new Instructions() {{
-                    returnValue(invokeMethod(classTypeDeclaration, TARGET_METHOD_NAME).setReturnType(getType()));
+                    RETURN(invokeMethod(classTypeDeclaration, TARGET_METHOD_NAME).setReturnType(getType()));
                 }});
     }
 
@@ -55,7 +51,7 @@ public class InvokeMethodInstructionTest extends InstructionTestCase {
                     method(TARGET_METHOD_NAME).setAccess(MethodDeclaration.Access.PRIVATE).
                             setReturnType(getType()).
                             add(new Instructions() {{
-                                returnValue(toConstant(getType(), getResult()));
+                                RETURN(toConstant(getType(), getResult()));
                             }});
                 }});
     }

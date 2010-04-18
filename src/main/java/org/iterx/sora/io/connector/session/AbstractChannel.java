@@ -1,13 +1,11 @@
 package org.iterx.sora.io.connector.session;
 
-import org.iterx.sora.io.connector.session.Channel;
-
 import static org.iterx.sora.util.Exception.swallow;
 
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-public abstract class AbstractChannel<T> implements Channel<T> {
+public abstract class AbstractChannel<R, W> implements Channel<R, W> {
 
     private final Lock stateLock;
     private volatile State state;
@@ -54,8 +52,9 @@ public abstract class AbstractChannel<T> implements Channel<T> {
         stateLock.lock();
         try {
             if(state.allowState(newState)) {
-                for(State nextState = newState; state != nextState; ) {
+                for(State nextState = newState; nextState != null && state != nextState; ) {
                     try {
+                        System.out.println(this + " " + state + "->" + nextState);
                         state = nextState;
                         nextState = state.run(this, arguments);
                     }

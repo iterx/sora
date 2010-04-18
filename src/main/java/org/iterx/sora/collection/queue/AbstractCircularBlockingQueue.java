@@ -35,8 +35,8 @@ public abstract class AbstractCircularBlockingQueue<T> implements CircularBlocki
                                   final Lock dequeueLock,
                                   final int capacity,
                                   final boolean overwrite) {
-        this.enqueueCondition = dequeueLock.newCondition();
-        this.dequeueCondition = enqueueLock.newCondition();
+        this.enqueueCondition = enqueueLock.newCondition();
+        this.dequeueCondition = dequeueLock.newCondition();
         this.queue = Arrays.newArray(Object.class, capacity);
         this.enqueueLock = enqueueLock;
         this.dequeueLock = dequeueLock;

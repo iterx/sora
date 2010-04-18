@@ -20,14 +20,14 @@ import java.nio.channels.SocketChannel;
 
 import static org.iterx.sora.util.Exception.swallow;
 
-public final class TcpSession extends AbstractSession<TcpChannel, ByteBuffer> {
+public final class TcpSession extends AbstractSession<TcpChannel, ByteBuffer, ByteBuffer> {
 
     private final TcpChannelProvider socketChannelProvider;
-    private final Callback<? super TcpSession> sessionCallback;
+    private final SessionCallback<? super TcpSession> sessionCallback;
     private final Multiplexor<? super NioChannel> multiplexor;
 
     public TcpSession(final Multiplexor<? super NioChannel> multiplexor,
-                      final Callback<? super TcpSession> sessionCallback,
+                      final SessionCallback<? super TcpSession> sessionCallback,
                       final AcceptorEndpoint acceptorEndpoint) {
         this.socketChannelProvider = new AcceptorTcpChannelProvider(acceptorEndpoint);
         this.multiplexor = multiplexor;
@@ -35,15 +35,14 @@ public final class TcpSession extends AbstractSession<TcpChannel, ByteBuffer> {
     }
 
     public TcpSession(final Multiplexor<? super NioChannel> multiplexor,
-                      final Callback<? super TcpSession> sessionCallback,
+                      final SessionCallback<? super TcpSession> sessionCallback,
                       final ConnectorEndpoint connectorEndpoint) {
         this.socketChannelProvider = new ConnectorTcpChannelProvider(connectorEndpoint);
         this.multiplexor = multiplexor;
         this.sessionCallback = sessionCallback;
     }
 
-
-    public TcpChannel newChannel(final Channel.Callback<? super TcpChannel, ByteBuffer> channelCallback) {
+    public TcpChannel newChannel(final Channel.ChannelCallback<? super TcpChannel, ByteBuffer, ByteBuffer> channelCallback) {
         assertState(State.OPEN);
         return socketChannelProvider.newChannel(channelCallback);
     }
@@ -87,7 +86,7 @@ public final class TcpSession extends AbstractSession<TcpChannel, ByteBuffer> {
         public void open() {
         }
 
-        abstract TcpChannel newChannel(Channel.Callback<? super TcpChannel, ByteBuffer> channelCallback);
+        abstract TcpChannel newChannel(Channel.ChannelCallback<? super TcpChannel, ByteBuffer, ByteBuffer> channelCallback);
 
         public void close() {
         }
@@ -105,7 +104,7 @@ public final class TcpSession extends AbstractSession<TcpChannel, ByteBuffer> {
             this.socketAddress = toSocketAddress(connectorEndpoint.getUri());
         }
 
-        public TcpChannel newChannel(final Channel.Callback<? super TcpChannel, ByteBuffer> channelCallback) {
+        public TcpChannel newChannel(final Channel.ChannelCallback<? super TcpChannel, ByteBuffer, ByteBuffer> channelCallback) {
             final SocketChannel socketChannel = newSocketChannel();
             return new TcpChannel(multiplexor, channelCallback, socketChannel, socketAddress);
         }
@@ -144,7 +143,7 @@ public final class TcpSession extends AbstractSession<TcpChannel, ByteBuffer> {
             acceptorTcpChannel.close();
         }
 
-        public TcpChannel newChannel(final Channel.Callback<? super TcpChannel, ByteBuffer> channelCallback) {
+        public TcpChannel newChannel(final Channel.ChannelCallback<? super TcpChannel, ByteBuffer, ByteBuffer> channelCallback) {
             try {
                 final SocketChannel socketChannel = acceptBlockingQueue.poll();
                 if(socketChannel != null) {

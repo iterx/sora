@@ -1,12 +1,10 @@
 package org.iterx.sora.tool.meta.instruction;
 
-import org.hamcrest.Matchers;
 import org.iterx.sora.tool.meta.Declarations;
 import org.iterx.sora.tool.meta.Instructions;
 import org.iterx.sora.tool.meta.MetaClassLoader;
 import org.iterx.sora.tool.meta.Type;
 import org.iterx.sora.tool.meta.TypeDeclaration;
-import org.iterx.sora.tool.meta.Value;
 import org.iterx.sora.tool.meta.declaration.ClassTypeDeclaration;
 import org.iterx.sora.tool.meta.declaration.MethodDeclaration;
 import org.iterx.sora.tool.meta.test.StubMetaClassLoader;
@@ -103,7 +101,7 @@ public abstract class InstructionTestCase {
                 add(new Declarations() {{
                     constructor().
                             add(new Instructions() {{
-                                returnValue(invokeSuper(Type.OBJECT_TYPE));
+                                RETURN(SUPER(Type.OBJECT_TYPE));
                             }});
                     method(methodDeclaration);
                 }});

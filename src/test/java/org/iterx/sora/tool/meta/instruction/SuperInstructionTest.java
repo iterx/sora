@@ -14,13 +14,13 @@ import java.util.Arrays;
 import java.util.Collection;
 
 @RunWith(Parameterized.class)
-public class InvokeSuperInstructionTest extends InstructionTestCase {
+public class SuperInstructionTest extends InstructionTestCase {
 
     private static final MetaClassLoader META_CLASS_LOADER = MetaClassLoader.getSystemMetaClassLoader();
 
     private final ClassType superClassType;
 
-    public InvokeSuperInstructionTest(final Type<?> type, final Object result) throws ClassNotFoundException{
+    public SuperInstructionTest(final Type<?> type, final Object result) throws ClassNotFoundException{
         super(type, result);
         this.superClassType = newSuperClass(type);
     }
@@ -42,7 +42,7 @@ public class InvokeSuperInstructionTest extends InstructionTestCase {
     public void setUpMethodDeclaration(final MethodDeclaration methodDeclaration) {       
         methodDeclaration.
                 add(new Instructions() {{
-                    returnValue(invokeSuper(superClassType).setMethodName(METHOD_NAME).setReturnType(getType()));
+                    RETURN(SUPER(superClassType).setMethodName(METHOD_NAME).setReturnType(getType()));
                 }});
     }
 
@@ -53,7 +53,7 @@ public class InvokeSuperInstructionTest extends InstructionTestCase {
                 remove(classTypeDeclaration.getConstructorDeclaration()).
                 add(new Declarations(){{
                     constructor().add(new Instructions() {{
-                        returnValue(invokeSuper(superClassType));
+                        RETURN(SUPER(superClassType));
                     }});
                 }});
     }
@@ -70,12 +70,12 @@ public class InvokeSuperInstructionTest extends InstructionTestCase {
                     new Declarations() {{
                         constructor().
                                 add(new Instructions() {{
-                                    returnValue(invokeSuper(Type.OBJECT_TYPE));
+                                    RETURN(SUPER(Type.OBJECT_TYPE));
                             }});
                         method(METHOD_NAME).
                                 setReturnType(type).
                                 add(new Instructions() {{
-                                    returnValue(toConstant(type, getResult()));
+                                    RETURN(toConstant(type, getResult()));
                                 }});
                     }});
             META_CLASS_LOADER.loadClass(superClassType);

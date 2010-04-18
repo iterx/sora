@@ -4,7 +4,6 @@ import org.iterx.sora.collection.queue.SingleProducerSingleConsumerBlockingQueue
 import org.iterx.sora.io.IoException;
 import org.iterx.sora.io.connector.multiplexor.Multiplexor;
 import org.iterx.sora.io.connector.session.AbstractChannel;
-import org.iterx.sora.collection.queue.MultiProducerSingleConsumerBlockingQueue;
 import org.iterx.sora.io.connector.support.nio.session.NioChannel;
 
 import java.io.IOException;
@@ -19,10 +18,10 @@ import java.util.concurrent.locks.ReentrantLock;
 import static org.iterx.sora.util.Exception.rethrow;
 import static org.iterx.sora.util.Exception.swallow;
 
-public final class UdpChannel extends AbstractChannel<ByteBuffer> implements NioChannel<DatagramChannel> {
+public final class UdpChannel extends AbstractChannel<ByteBuffer, ByteBuffer> implements NioChannel<DatagramChannel> {
 
     private final Multiplexor<? super NioChannel<DatagramChannel>> multiplexor;
-    private final Callback<? super UdpChannel, ByteBuffer> channelCallback;
+    private final ChannelCallback<? super UdpChannel, ByteBuffer, ByteBuffer> channelCallback;
     private final DatagramChannel datagramChannel;
     private final MultiplexorHandler multiplexorHandler;
 
@@ -35,7 +34,7 @@ public final class UdpChannel extends AbstractChannel<ByteBuffer> implements Nio
     private volatile int interestOps;
 
     public UdpChannel(final Multiplexor<? super NioChannel<DatagramChannel>> multiplexor,
-                      final Callback<? super UdpChannel, ByteBuffer> channelCallback,
+                      final ChannelCallback<? super UdpChannel, ByteBuffer, ByteBuffer> channelCallback,
                       final DatagramChannel datagramChannel) {
         this.readBlockingQueue = new SingleProducerSingleConsumerBlockingQueue<ByteBuffer>(128);
         this.writeBlockingQueue = new SingleProducerSingleConsumerBlockingQueue<ByteBuffer>(128);
@@ -198,7 +197,7 @@ public final class UdpChannel extends AbstractChannel<ByteBuffer> implements Nio
                         }
                     }
                     if(buffer.position() != 0) {
-                        UdpChannel.this.doRead(dequeue(readBlockingQueue, Multiplexor.READ_OP));
+                        UdpChannel.this.doRead((ByteBuffer) dequeue(readBlockingQueue, Multiplexor.READ_OP).flip());
                         if(!buffer.hasRemaining() && (remaining > 0)) continue;
                     }
                     break;

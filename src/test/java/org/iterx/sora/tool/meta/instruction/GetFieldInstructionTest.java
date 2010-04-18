@@ -38,7 +38,7 @@ public class GetFieldInstructionTest extends InstructionTestCase {
     public void setUpMethodDeclaration(final MethodDeclaration methodDeclaration) {
         methodDeclaration.
                 add(new Instructions() {{
-                    returnValue(getField(getType(), FIELD_NAME));
+                    RETURN(GETFIELD(getType(), FIELD_NAME));
                 }});
 
     }

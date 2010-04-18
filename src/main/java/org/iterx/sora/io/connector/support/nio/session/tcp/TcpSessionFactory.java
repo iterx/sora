@@ -12,7 +12,7 @@ import org.iterx.sora.io.connector.support.nio.session.NioChannel;
 import java.nio.ByteBuffer;
 import java.util.regex.Pattern;
 
-public final class TcpSessionFactory implements SessionFactory<TcpSession, ByteBuffer> {
+public final class TcpSessionFactory implements SessionFactory<TcpSession, TcpSession, ByteBuffer, ByteBuffer> {
 
     private static final Pattern URI_PATTERN = Pattern.compile("tcp://([^#]*)?(#.*)?");
 
@@ -27,14 +27,14 @@ public final class TcpSessionFactory implements SessionFactory<TcpSession, ByteB
     }
 
     public TcpSession newSession(final Connector connector,
-                                 final Session.Callback<? super TcpSession> sessionCallback,
+                                 final Session.SessionCallback<? super TcpSession> sessionCallback,
                                  final AcceptorEndpoint acceptorEndpoint) {
         assertEndpoint(acceptorEndpoint);
         return new TcpSession(multiplexor, sessionCallback, acceptorEndpoint);
     }
 
     public TcpSession newSession(final Connector connector,
-                                 final Session.Callback<? super TcpSession> sessionCallback,
+                                 final Session.SessionCallback<? super TcpSession> sessionCallback,
                                  final ConnectorEndpoint connectorEndpoint) {
         assertEndpoint(connectorEndpoint);
         return new TcpSession(multiplexor, sessionCallback, connectorEndpoint);

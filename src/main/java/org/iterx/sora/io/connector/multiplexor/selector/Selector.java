@@ -3,9 +3,10 @@ package org.iterx.sora.io.connector.multiplexor.selector;
 import org.iterx.sora.io.connector.multiplexor.Multiplexor;
 import org.iterx.sora.io.connector.session.Channel;
 
+import java.nio.ByteBuffer;
 import java.util.concurrent.TimeUnit;
 
-public interface Selector<T extends Channel<?>> {
+public interface Selector<T extends Channel<ByteBuffer, ByteBuffer>> {
 
     boolean supports(Multiplexor.Handler<?> multiplexorHandler);
 

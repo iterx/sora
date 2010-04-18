@@ -5,9 +5,9 @@ import org.iterx.sora.collection.map.HashMap;
 import org.iterx.sora.tool.meta.Instruction;
 import org.iterx.sora.tool.meta.instruction.GetFieldInstruction;
 import org.iterx.sora.tool.meta.instruction.InvokeMethodInstruction;
-import org.iterx.sora.tool.meta.instruction.InvokeSuperInstruction;
+import org.iterx.sora.tool.meta.instruction.SuperInstruction;
 import org.iterx.sora.tool.meta.instruction.PutFieldInstruction;
-import org.iterx.sora.tool.meta.instruction.ReturnValueInstruction;
+import org.iterx.sora.tool.meta.instruction.ReturnInstruction;
 import org.iterx.sora.tool.meta.instruction.StoreInstruction;
 
 import java.lang.reflect.Method;
@@ -35,11 +35,11 @@ public final class InstructionReader {
         }
     }
 
-    private void accept(final InstructionVisitor instructionVisitor, final InvokeSuperInstruction invokeSuperInstruction) {
-        instructionVisitor.invokeSuper(invokeSuperInstruction.getTarget(),
-                                       invokeSuperInstruction.getMethodName(),
-                                       invokeSuperInstruction.getReturnType(),
-                                       invokeSuperInstruction.getValues());
+    private void accept(final InstructionVisitor instructionVisitor, final SuperInstruction superInstruction) {
+        instructionVisitor.SUPER(
+                superInstruction.getMethodName(),
+                                       superInstruction.getReturnType(),
+                                       superInstruction.getValues());
     }
 
     private void accept(final InstructionVisitor instructionVisitor, final InvokeMethodInstruction invokeMethodInstruction) {
@@ -49,8 +49,8 @@ public final class InstructionReader {
                                         invokeMethodInstruction.getValues());
     }
 
-    private void accept(final InstructionVisitor instructionVisitor, final ReturnValueInstruction returnValueInstruction) {
-        instructionVisitor.returnValue(returnValueInstruction.getValue());
+    private void accept(final InstructionVisitor instructionVisitor, final ReturnInstruction returnInstruction) {
+        instructionVisitor.RETURN(returnInstruction.getValue());
     }
     
     private void accept(final InstructionVisitor instructionVisitor, final StoreInstruction storeInstruction) {
@@ -58,7 +58,7 @@ public final class InstructionReader {
     }
 
     private void accept(final InstructionVisitor instructionVisitor, final GetFieldInstruction getFieldInstruction) {
-        instructionVisitor.getField(getFieldInstruction.getOwner(),
+        instructionVisitor.GETFIELD(getFieldInstruction.getOwner(),
                                     getFieldInstruction.getFieldName(),
                                     getFieldInstruction.getFieldType());
     }

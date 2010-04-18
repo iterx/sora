@@ -45,7 +45,7 @@ public class StoreInstructionTest extends InstructionTestCase {
         methodDeclaration.add(new Instructions() {{
             final Variable variable = variable(getType(), "var");
             store(variable, toConstant(getType(), getResult()));
-            returnValue(variable);
+            RETURN(variable);
         }});
     }
 }

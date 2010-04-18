@@ -11,7 +11,7 @@ import org.iterx.sora.io.connector.session.SessionFactory;
 import java.nio.ByteBuffer;
 import java.util.regex.Pattern;
 
-public final class FileSessionFactory implements SessionFactory<FileSession, ByteBuffer> {
+public final class FileSessionFactory implements SessionFactory<FileSession, FileSession, ByteBuffer, ByteBuffer> {
 
     private static final Pattern URI_PATTERN = Pattern.compile("(file:)?//(/[^#]*)?(#.*)?");
 
@@ -26,13 +26,13 @@ public final class FileSessionFactory implements SessionFactory<FileSession, Byt
     }
 
     public FileSession newSession(final Connector connector,
-                                  final Session.Callback<? super FileSession> sessionCallback,
+                                  final Session.SessionCallback<? super FileSession> sessionCallback,
                                   final AcceptorEndpoint acceptorEndpoint) {
         throw new UnsupportedOperationException();
     }
 
     public FileSession newSession(final Connector connector,
-                                  final Session.Callback<? super FileSession> sessionCallback,
+                                  final Session.SessionCallback<? super FileSession> sessionCallback,
                                   final ConnectorEndpoint connectorEndpoint) {
         assertEndpoint(connectorEndpoint);
         return new FileSession(multiplexor, sessionCallback, connectorEndpoint);
