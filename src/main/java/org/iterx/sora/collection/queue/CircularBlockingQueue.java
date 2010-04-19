@@ -7,4 +7,6 @@ public interface CircularBlockingQueue<T> extends BlockingQueue<T> {
     T get(long index);
 
     void rewind(long index);
+
+    int capacity();
 }

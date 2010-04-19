@@ -54,7 +54,6 @@ public abstract class AbstractChannel<R, W> implements Channel<R, W> {
             if(state.allowState(newState)) {
                 for(State nextState = newState; nextState != null && state != nextState; ) {
                     try {
-                        System.out.println(this + " " + state + "->" + nextState);
                         state = nextState;
                         nextState = state.run(this, arguments);
                     }

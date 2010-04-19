@@ -1,7 +1,6 @@
 package org.iterx.sora.io.connector.session.http;
 
 import org.iterx.sora.collection.queue.CircularBlockingQueue;
-import org.iterx.sora.collection.queue.SingleProducerSingleConsumerBlockingQueue;
 import org.iterx.sora.collection.queue.SingleProducerSingleConsumerCircularBlockingQueue;
 import org.iterx.sora.io.connector.session.AbstractChannel;
 import org.iterx.sora.io.connector.session.Channel;
@@ -14,17 +13,17 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import static org.iterx.sora.util.Exception.rethrow;
 import static org.iterx.sora.util.Exception.swallow;
 
-//TODO: represent reusable connection to server -> can pipe HTTP Requests over it... -> alter path but
-//TODO: not connection info
-
 public final class HttpChannel<R extends HttpMessage, W extends HttpMessage> extends AbstractChannel<R, W> {
 
-    private static final int CAPACITY = 4;
-    private static final int BUFFER_SIZE = 4096;
+    private static final EOFException EOF_EXCEPTION = new EOFException();
+    private static final int BUFFER_SIZE = 1024;
+    private static final int BUFFER_COUNT = 8;
 
     private final ChannelCallback<? super HttpChannel<R, W>, R, W> channelCallback;
     private final DelegateChannel delegateChannel;
@@ -32,7 +31,7 @@ public final class HttpChannel<R extends HttpMessage, W extends HttpMessage> ext
     public HttpChannel(final Session<?, ByteBuffer, ByteBuffer> session,
                        final ChannelCallback<? super HttpChannel<R, W>, R, W> channelCallback) {
         this.channelCallback = channelCallback;
-        this.delegateChannel = new DelegateChannel(session, 4); //TODO -> this should contain types!
+        this.delegateChannel = new DelegateChannel(session, 4);
     }
 
     public void read(final R httpMessage) {
@@ -75,11 +74,21 @@ public final class HttpChannel<R extends HttpMessage, W extends HttpMessage> ext
     }
 
     private void doRead(final R httpMessage) {
-        channelCallback.onRead(this, httpMessage);
+        try {
+            channelCallback.onRead(this, httpMessage);
+        }
+        catch(final Throwable throwable) {
+            swallow(throwable);
+        }
     }
 
     private void doWrite(final W httpMessage) {
-        channelCallback.onWrite(this, httpMessage);
+        try {
+            channelCallback.onWrite(this, httpMessage);
+        }
+        catch(final Throwable throwable) {
+            swallow(throwable);
+        }
     }
 
     @Override
@@ -87,22 +96,18 @@ public final class HttpChannel<R extends HttpMessage, W extends HttpMessage> ext
         return super.onAbort(throwable);
     }
 
-    //TODO: note this is not thread safe
-    //TODO: Make this request response type aware!!!!
+    //TODO: Note this is not thread safe
     private class DelegateChannel implements Channel<R, W>,
                                              ChannelCallback<Channel<ByteBuffer, ByteBuffer>, ByteBuffer, ByteBuffer> {
 
         private final Channel<ByteBuffer, ByteBuffer> channel;
-        private final Encoder encoder;
         private final Decoder decoder;
-
-        private final int capacity;
+        private final Encoder encoder;
 
         private DelegateChannel(final Session<?, ByteBuffer, ByteBuffer> session, final int capacity) {
-            this.encoder = new Encoder();
-            this.decoder = new Decoder();
             this.channel = session.newChannel(this);
-            this.capacity = capacity;
+            this.decoder = new Decoder();
+            this.encoder = new Encoder();
         }
 
         public void open() {
@@ -154,64 +159,117 @@ public final class HttpChannel<R extends HttpMessage, W extends HttpMessage> ext
         }
 
         private final class Decoder {
+
             private final CircularBlockingQueue<ByteBuffer> byteBufferCircularBlockingQueue;
-            private final BlockingQueue<HttpMessage> httpMessageBlockingQueue;
+            private final CircularBlockingQueue<R> httpMessageCircularBlockingQueue;
             private final DecoderDataInput decoderDataInput;
+            private final Lock decoderLock;
 
             private Decoder() {
-                this.byteBufferCircularBlockingQueue = new SingleProducerSingleConsumerCircularBlockingQueue<ByteBuffer>(16, false);
-                this.httpMessageBlockingQueue = new SingleProducerSingleConsumerBlockingQueue<HttpMessage>(16);
+                this.byteBufferCircularBlockingQueue = allocateByteBuffers(new SingleProducerSingleConsumerCircularBlockingQueue<ByteBuffer>(BUFFER_COUNT, false));
+                this.httpMessageCircularBlockingQueue = new SingleProducerSingleConsumerCircularBlockingQueue<R>(128, false);
                 this.decoderDataInput = new DecoderDataInput();
+                this.decoderLock = new ReentrantLock();
             }
 
-            private void enqueue(final HttpMessage httpMessage) {
-                httpMessageBlockingQueue.add(httpMessage);
+            private void enqueue(final R httpMessage) {
                 try {
-                    httpMessage.decode(decoderDataInput);
-                    flush(httpMessage);
+                    httpMessageCircularBlockingQueue.put(httpMessage);
+                    doDecode();
                 }
-                catch(final Exception e) {
-                    //e.printStackTrace();
-                    //swallow(e);
+                catch(final InterruptedException e) {
+                    throw rethrow(e);
                 }
             }
 
             private void dequeue(final ByteBuffer buffer) {
                 try {
                     byteBufferCircularBlockingQueue.put(buffer);
-                    final HttpMessage httpMessage  = httpMessageBlockingQueue.peek();
-                     if(httpMessage != null) {
-                         httpMessage.decode(decoderDataInput);
-                         flush(httpMessageBlockingQueue.poll());
-                     }
+                    doDecode();
                 }
-                catch(final Exception e) {
-                    //e.printStackTrace();
-                    swallow(e);
+                catch(final InterruptedException e) {
+                    throw rethrow(e);
                 }
             }
 
-            private void flush(final HttpMessage httpMessage) {
-                HttpChannel.this.doRead((R) httpMessage);
+            private void doDecode() {
+                if(decoderLock.tryLock()) {
+                    try {
+                        int count = 0;
+                        if(!httpMessageCircularBlockingQueue.isEmpty()) {
+                            for(R httpMessage = httpMessageCircularBlockingQueue.peek(); httpMessage != null; httpMessage = httpMessageCircularBlockingQueue.peek()) {
+                                final ByteBuffer byteBuffer = byteBufferCircularBlockingQueue.peek();
+                                if(byteBuffer != null) {
+                                    try {
+                                        byteBuffer.mark();
+                                        httpMessage.decode(decoderDataInput);
+                                        //TODO: Change back to normal blocking queue & test perf
+                                        httpMessageCircularBlockingQueue.poll();
+                                        count++;
+                                        continue;
+                                    }
+                                    catch(final IOException e) {
+                                        rewindByteBuffers(byteBuffer);
+                                    }
+                                }
+                                break;
+                            }
+                            flushHttpMessages(count);
+                            flushByteBuffers();
+                        }
+                    }
+                    finally {
+                        decoderLock.unlock();
+                    }
+                }
             }
 
-            private ByteBuffer getByteBuffer() throws IOException {
+            private void flushHttpMessages(final int count) {
+                for(int i = count; i-- != 0;) HttpChannel.this.doRead(httpMessageCircularBlockingQueue.remove());
+            }
+
+            private ByteBuffer getByteBuffer(final int sizeOf) throws IOException {
                 final ByteBuffer byteBuffer = byteBufferCircularBlockingQueue.peek();
                 if(byteBuffer != null) {
-                    if(!byteBuffer.hasRemaining()) {
+                    final int remaining = byteBuffer.remaining();
+                    if(remaining == 0) {
                         byteBufferCircularBlockingQueue.poll();
-                        doRead(byteBufferCircularBlockingQueue.remove());
-                        return getByteBuffer();
+                        return getByteBuffer(sizeOf);
+                    }
+                    else if(byteBuffer.remaining() < sizeOf) {
+                        //TODO: Need to fixup buffers -> data wraps boundary
+                        throw new UnsupportedOperationException();
                     }
                     return byteBuffer;
                 }
-                return allocateByteBuffer(byteBufferCircularBlockingQueue);
+                throw EOF_EXCEPTION;
             }
 
-            private ByteBuffer allocateByteBuffer(final BlockingQueue<ByteBuffer> byteBufferBlockQueue) throws IOException {
-                final ByteBuffer byteBuffer = ByteBuffer.allocate(4096);
-                doRead(byteBuffer);
-                throw new EOFException();
+            private void rewindByteBuffers(final ByteBuffer toByteBuffer) {
+                for(long index = byteBufferCircularBlockingQueue.index(); ;) {
+                    final ByteBuffer byteBuffer = byteBufferCircularBlockingQueue.get(index);
+                    if(byteBuffer == toByteBuffer) {
+                        byteBuffer.reset();
+                        break;
+                    }
+                    else {
+                        byteBuffer.rewind();
+                        byteBufferCircularBlockingQueue.rewind(--index);
+                    }
+                }
+            }
+
+            private void flushByteBuffers() {
+                for(int i = byteBufferCircularBlockingQueue.capacity() - byteBufferCircularBlockingQueue.remainingCapacity() - byteBufferCircularBlockingQueue.size(); i > 0; i--)
+                    doRead((ByteBuffer) byteBufferCircularBlockingQueue.remove().clear());
+            }
+
+            private <T extends BlockingQueue<ByteBuffer>> T allocateByteBuffers(final T blockingQueue) {
+                while(blockingQueue.remainingCapacity() != 0) {
+                    blockingQueue.add(ByteBuffer.allocate(BUFFER_SIZE));
+                    blockingQueue.poll();
+                }
+                return blockingQueue;
             }
 
             private final class DecoderDataInput implements DataInput {
@@ -229,43 +287,43 @@ public final class HttpChannel<R extends HttpMessage, W extends HttpMessage> ext
                 }
 
                 public boolean readBoolean() throws IOException {
-                    return (getByteBuffer().get() == 1);
+                    return (getByteBuffer(1).get() == 1);
                 }
 
                 public byte readByte() throws IOException {
-                    return getByteBuffer().get();
+                    return getByteBuffer(1).get();
                 }
 
                 public int readUnsignedByte() throws IOException {
-                    return getByteBuffer().get();
+                    return getByteBuffer(1).get();
                 }
 
                 public short readShort() throws IOException {
-                    return getByteBuffer().getShort();
+                    return getByteBuffer(2).getShort();
                 }
 
                 public int readUnsignedShort() throws IOException {
-                    return getByteBuffer().getShort();
+                    return getByteBuffer(2).getShort();
                 }
 
                 public char readChar() throws IOException {
-                    return getByteBuffer().getChar();
+                    return getByteBuffer(2).getChar();
                 }
 
                 public int readInt() throws IOException {
-                    return getByteBuffer().getInt();
+                    return getByteBuffer(4).getInt();
                 }
 
                 public long readLong() throws IOException {
-                    return getByteBuffer().getLong();
+                    return getByteBuffer(8).getLong();
                 }
 
                 public float readFloat() throws IOException {
-                    return getByteBuffer().getFloat();
+                    return getByteBuffer(4).getFloat();
                 }
 
                 public double readDouble() throws IOException {
-                    return getByteBuffer().getDouble();
+                    return getByteBuffer(8).getDouble();
                 }
 
                 public String readLine() throws IOException {
@@ -279,65 +337,132 @@ public final class HttpChannel<R extends HttpMessage, W extends HttpMessage> ext
         }
 
         private final class Encoder  {
+
             private final CircularBlockingQueue<ByteBuffer> byteBufferCircularBlockingQueue;
-            private final BlockingQueue<HttpMessage> httpMessageBlockingQueue;
+            private final CircularBlockingQueue<W> httpMessageCircularBlockingQueue;
             private final EncoderDataOutput encoderDataOutput;
+            private final Lock encoderLock;
+
+            private final int[] byteBufferHttpMessageCounts;
+            private volatile int byteBufferHttpMessageCountIndex;
 
             private Encoder() {
-                this.byteBufferCircularBlockingQueue = new SingleProducerSingleConsumerCircularBlockingQueue<ByteBuffer>(16, false);
-                this.httpMessageBlockingQueue = new SingleProducerSingleConsumerBlockingQueue<HttpMessage>(16);
+                this.byteBufferCircularBlockingQueue = allocateByteBuffers(new SingleProducerSingleConsumerCircularBlockingQueue<ByteBuffer>(BUFFER_COUNT, false));
+                this.byteBufferHttpMessageCounts = new int[BUFFER_COUNT];
                 this.encoderDataOutput = new EncoderDataOutput();
+                this.httpMessageCircularBlockingQueue = new SingleProducerSingleConsumerCircularBlockingQueue<W>(128, false);
+                this.encoderLock = new ReentrantLock();
             }
 
-            //TODO: every time we use a byteBuffer -> we push the httpMessage onto the pending queue
-            private void enqueue(final HttpMessage httpMessage) {
+            private void enqueue(final W httpMessage) {
                 try {
-                    httpMessage.encode(encoderDataOutput);
-                    flush(httpMessage);
+                    httpMessageCircularBlockingQueue.put(httpMessage);
+                    doEncode();
                 }
-                catch(final IOException e) {
+                catch(final InterruptedException e) {
                     throw rethrow(e);
                 }
             }
 
-            private void dequeue(final ByteBuffer byteBuffer) {
+            private void dequeue(final ByteBuffer buffer) {
                 try {
-                    byteBufferCircularBlockingQueue.put((ByteBuffer) byteBuffer.clear());
-                    HttpChannel.this.doWrite((W) httpMessageBlockingQueue.poll());
+                    byteBufferCircularBlockingQueue.put((ByteBuffer) buffer.clear());
+                    flushHttpMessages(drainByteBufferHttpMessageCount());
+                    doEncode();
                 }
-                catch(final Exception e) {
-                    swallow(e);
+                catch(final InterruptedException e) {
+                    throw rethrow(e);
                 }
             }
 
-            private void flush(final HttpMessage httpMessage) {
-                //TODO: If spanning multiple bytebuffers -> this might be null or placeholder msg
-                httpMessageBlockingQueue.add(httpMessage);
-                byteBufferCircularBlockingQueue.poll();
-                doWrite(byteBufferCircularBlockingQueue.remove());
+            private void doEncode() {
+                if(encoderLock.tryLock()) {
+                    try {
+                        if(!httpMessageCircularBlockingQueue.isEmpty()) {
+                            for(W httpMessage = httpMessageCircularBlockingQueue.peek(); httpMessage != null; httpMessage = httpMessageCircularBlockingQueue.peek()) {
+                                final ByteBuffer byteBuffer = byteBufferCircularBlockingQueue.peek();
+                                if(byteBuffer != null) {
+                                    try {
+                                        byteBuffer.mark();
+                                        httpMessage.encode(encoderDataOutput);
+                                        incrementByteBufferHttpMessageCount();
+                                        httpMessageCircularBlockingQueue.poll();
+                                        continue;
+                                    }
+                                    catch(final IOException e) {
+                                        rewindByteBuffers(byteBuffer);
+                                    }
+                                }
+                                break;
+                            }
+                            flushByteBuffers();
+                        }
+                    }
+                    finally {
+                        encoderLock.unlock();
+                    }
+                }
             }
 
-            //TODO: delegate to bytebuffer -> assign new buffer upto capacity if run out... -> otherwise
-            //TODO: rewind and throw exception
-            //TODO: If reached overall capacity -> throw fatal message too large exception...
+            private void flushHttpMessages(final int count) {
+                for(int i = count; i-- != 0;)HttpChannel.this.doWrite(httpMessageCircularBlockingQueue.remove());
+            }
+
             private ByteBuffer getByteBuffer(final int sizeOf) throws IOException {
                 final ByteBuffer byteBuffer = byteBufferCircularBlockingQueue.peek();
                 if(byteBuffer != null) {
-                    if(byteBuffer.remaining() >= sizeOf) return byteBuffer;
-                    flush(null);
-                }
-                return allocateByteBuffer(byteBufferCircularBlockingQueue);
-            }
-
-            private ByteBuffer allocateByteBuffer(final BlockingQueue<ByteBuffer> blockingQueue) throws IOException {
-                try {
-                    final ByteBuffer byteBuffer = ByteBuffer.allocate(4096);//TODO: expose as configuration
-                    blockingQueue.put(byteBuffer); //TODO: need to internally count inflight buffer capactity
+                    if(byteBuffer.remaining() < sizeOf) {
+                        byteBufferCircularBlockingQueue.poll();
+                        nextByteBufferHttpMessageCount();
+                        return getByteBuffer(sizeOf);
+                    }
                     return byteBuffer;
                 }
-                catch(final InterruptedException e) {
-                    throw new EOFException();
+                throw EOF_EXCEPTION;
+            }
+
+            private void flushByteBuffers() {
+                final ByteBuffer byteBuffer = byteBufferCircularBlockingQueue.peek();
+                if(byteBuffer != null && byteBuffer.position() != 0) {
+                    byteBufferCircularBlockingQueue.poll();
+                    nextByteBufferHttpMessageCount();
                 }
+                for(int i = byteBufferCircularBlockingQueue.capacity() - byteBufferCircularBlockingQueue.remainingCapacity() - byteBufferCircularBlockingQueue.size(); i > 0; i--)
+                    doWrite(byteBufferCircularBlockingQueue.remove());
+            }
+
+            private <T extends BlockingQueue<ByteBuffer>> T allocateByteBuffers(final T blockingQueue) {
+                while(blockingQueue.remainingCapacity() != 0) blockingQueue.add(ByteBuffer.allocate(BUFFER_SIZE));
+                return blockingQueue;
+            }
+
+            private void rewindByteBuffers(final ByteBuffer toByteBuffer) {
+                for(long index = byteBufferCircularBlockingQueue.index(); ;) {
+                    final ByteBuffer byteBuffer = byteBufferCircularBlockingQueue.get(index);
+                    if(byteBuffer == toByteBuffer) {
+                        byteBuffer.reset();
+                        break;
+                    }
+                    else {
+                        byteBuffer.rewind();
+                        byteBufferCircularBlockingQueue.rewind(--index);
+                    }
+                }
+            }
+
+            private void nextByteBufferHttpMessageCount() {
+                byteBufferHttpMessageCountIndex = ++byteBufferHttpMessageCountIndex % byteBufferHttpMessageCounts.length;
+            }
+
+            private void incrementByteBufferHttpMessageCount() {
+                byteBufferHttpMessageCounts[byteBufferHttpMessageCountIndex]++;
+            }
+
+            private int drainByteBufferHttpMessageCount() {
+                final int index = (byteBufferHttpMessageCountIndex + byteBufferHttpMessageCounts.length - 1) % byteBufferHttpMessageCounts.length;
+                final int count = byteBufferHttpMessageCounts[index];
+                byteBufferHttpMessageCounts[index] = 0;
+                return count;
             }
 
             private final class EncoderDataOutput implements DataOutput {

@@ -159,11 +159,21 @@ public final class FileChannel extends AbstractChannel<ByteBuffer, ByteBuffer> i
     }
 
     private void doRead(final ByteBuffer buffer) {
-        channelCallback.onRead(this, buffer);
+        try {
+            channelCallback.onRead(this, buffer);
+        }
+        catch(final Throwable throwable) {
+            swallow(throwable);
+        }
     }
 
     private void doWrite(final ByteBuffer buffer) {
-        channelCallback.onWrite(this, buffer);
+        try {
+            channelCallback.onWrite(this, buffer);
+        }
+        catch(final Throwable throwable) {
+            swallow(throwable);
+        }
     }
 
     private class MultiplexorHandler implements Multiplexor.Handler<FileChannel> {

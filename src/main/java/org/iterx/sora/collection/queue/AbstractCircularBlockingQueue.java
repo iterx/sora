@@ -85,12 +85,12 @@ public abstract class AbstractCircularBlockingQueue<T> implements CircularBlocki
 
     public T get(final long index) {
         if(!isWithinRange(index)) throw new IllegalArgumentException();
-        return queue[(readIndex - (int) (sequence - index))];
+        return queue[((readIndex - (int) (sequence - index - 1))) % capacity];
     }
 
     public void rewind(final long index) {
         if(!isWithinRange(index)) throw new IllegalArgumentException();
-        final int delta  = (int) (sequence - index);
+        final int delta  = (int) (sequence - index - 1);
         readIndex -= delta;
         sequence -= delta;
     }
@@ -172,6 +172,10 @@ public abstract class AbstractCircularBlockingQueue<T> implements CircularBlocki
         return writeIndex - readIndex;
     }
 
+    public int capacity() {
+        return capacity;
+    }
+
     public int remainingCapacity() {
         return (overwrite)? capacity - (writeIndex - readIndex) : capacity - (writeIndex - removeIndex);
     }
@@ -217,7 +221,7 @@ public abstract class AbstractCircularBlockingQueue<T> implements CircularBlocki
     }
 
     private boolean isWithinRange(final long index) {
-        final long delta = sequence - index;
+        final long delta = sequence - index - 1;
         return (delta > 0 || delta < (capacity - (writeIndex - removeIndex)));
     }
 

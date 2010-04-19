@@ -32,7 +32,6 @@ public final class HttpSession<R extends HttpMessage, W extends HttpMessage> ext
 
     public HttpChannel<R, W> newChannel(final Channel.ChannelCallback<? super HttpChannel<R, W>, R, W> channelCallback) {
         assertState(State.OPEN);
-        //TODO: need to create different instance if acceptor vs connector! -> switch marshallers
         return new HttpChannel<R, W>(delegateSession, channelCallback);
     }
 
