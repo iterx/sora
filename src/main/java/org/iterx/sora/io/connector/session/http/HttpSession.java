@@ -86,26 +86,26 @@ public final class HttpSession<R extends HttpMessage, W extends HttpMessage> ext
 
         private DelegateSession(final Connector connector,
                                 final ConnectorEndpoint connectorEndpoint) {
-            System.out.println(connectorEndpoint);
             session = connector.<Session<Channel<ByteBuffer, ByteBuffer>, ByteBuffer, ByteBuffer>>newSession(this, connectorEndpoint);
         }
 
         private DelegateSession(final Connector connector,
                                 final AcceptorEndpoint acceptorEndpoint) {
-            System.out.println(acceptorEndpoint);
             session = connector.<Session<Channel<ByteBuffer, ByteBuffer>, ByteBuffer, ByteBuffer>>newSession(this, acceptorEndpoint);
         }
 
-        public void open() {
+        public Session<Channel<ByteBuffer, ByteBuffer>, ByteBuffer, ByteBuffer> open() {
             session.open();
+            return this;
         }
 
         public Channel<ByteBuffer, ByteBuffer> newChannel(final Channel.ChannelCallback<? super Channel<ByteBuffer, ByteBuffer>, ByteBuffer, ByteBuffer> channelCallback) {
             return session.newChannel(channelCallback);
         }
 
-        public void close() {
+        public Session<Channel<ByteBuffer, ByteBuffer>, ByteBuffer, ByteBuffer> close() {
             session.close();
+            return this;
         }
 
         public void onOpen(final Session<?, ByteBuffer, ByteBuffer> session) {

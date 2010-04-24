@@ -8,13 +8,13 @@ public interface Session<C extends Channel<R, W>, R, W> {
 
     //TODO: add void setOption() & destroy();
 
-    void open();
+    Session<C, R, W> open();
 
     C newChannel(Channel.ChannelCallback<? super C, R, W> channelCallback);
 
-    void close();
+    Session<C, R, W> close();
 
-    public interface SessionCallback<S extends Session<?, ?, ?>> {
+    public interface SessionCallback<S extends Session> {
 
         void onOpen(S session);
 

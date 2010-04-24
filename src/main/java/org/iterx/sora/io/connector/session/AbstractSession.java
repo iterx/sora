@@ -15,12 +15,14 @@ public abstract class AbstractSession<C extends Channel<R, W>, R, W> implements 
         this.state = State.CLOSED;
     }
 
-    public void open() {
+    public Session<C, R, W> open() {
         changeState(State.OPENING);
+        return this;
     }
 
-    public void close() {
+    public Session<C, R, W> close() {
         changeState(State.CLOSING);
+        return this;
     }
 
     protected State onOpening() {

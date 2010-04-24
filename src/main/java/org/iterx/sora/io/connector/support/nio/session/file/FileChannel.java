@@ -4,11 +4,11 @@ import org.iterx.sora.collection.queue.SingleProducerSingleConsumerBlockingQueue
 import org.iterx.sora.io.IoException;
 import org.iterx.sora.io.connector.multiplexor.Multiplexor;
 import org.iterx.sora.io.connector.session.AbstractChannel;
+import org.iterx.sora.io.connector.session.Channel;
 import org.iterx.sora.io.connector.support.nio.session.NioChannel;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.channels.ClosedChannelException;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
@@ -50,19 +50,22 @@ public final class FileChannel extends AbstractChannel<ByteBuffer, ByteBuffer> i
         return fileChannel;
     }
 
-    public void read(final ByteBuffer buffer) {
+    public Channel<ByteBuffer,ByteBuffer> read(final ByteBuffer buffer) {
         assertState(State.OPEN);
         enqueue(readBlockingQueue, buffer, Multiplexor.READ_OP);
+        return this;
     }
 
-    public void write(final ByteBuffer buffer) {
+    public Channel<ByteBuffer, ByteBuffer> write(final ByteBuffer buffer) {
         assertState(State.OPEN);
         enqueue(writeBlockingQueue, buffer, Multiplexor.WRITE_OP);
+        return this;
     }
 
-    public void flush() {
+    public Channel<ByteBuffer, ByteBuffer> flush() {
         assertState(State.OPEN);
         flush(writeBlockingQueue);
+        return this;
     }
 
     private void enqueue(final BlockingQueue<ByteBuffer> blockingQueue, final ByteBuffer buffer, final int ops) {
@@ -191,10 +194,10 @@ public final class FileChannel extends AbstractChannel<ByteBuffer, ByteBuffer> i
             try {
                 for(ByteBuffer buffer = readBlockingQueue.peek(); buffer != null; buffer = readBlockingQueue.peek()) {
                     OUTER: while(true) {
-                        final int size = fileChannel.read(buffer);
+                        final int size = NioChannel.Helper.read(fileChannel, buffer);
                         switch(size) {
                             case -1:
-                                throw new ClosedChannelException();
+                                doClose();
                             case 0:
                                 break OUTER;
                             default:
@@ -220,10 +223,10 @@ public final class FileChannel extends AbstractChannel<ByteBuffer, ByteBuffer> i
             try {
                 for(ByteBuffer buffer = writeBlockingQueue.peek(); buffer != null; buffer = writeBlockingQueue.peek()) {
                     OUTER: while(true) {
-                        final int size = fileChannel.write(buffer);
+                        final int size = NioChannel.Helper.write(fileChannel, buffer);
                         switch(size) {
                             case -1:
-                                throw new ClosedChannelException();
+                                doClose();
                             case 0:
                                 break OUTER;
                             default:

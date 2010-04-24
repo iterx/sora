@@ -1,15 +1,11 @@
-package org.iterx.sora.io.connector.support.nio.session.udp;
+package org.iterx.sora.io.connector.session.vm;
 
 import org.iterx.sora.collection.queue.SingleProducerSingleConsumerBlockingQueue;
-import org.iterx.sora.io.IoException;
 import org.iterx.sora.io.connector.multiplexor.Multiplexor;
 import org.iterx.sora.io.connector.session.AbstractChannel;
 import org.iterx.sora.io.connector.session.Channel;
-import org.iterx.sora.io.connector.support.nio.session.NioChannel;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.channels.DatagramChannel;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
@@ -18,11 +14,10 @@ import java.util.concurrent.locks.ReentrantLock;
 import static org.iterx.sora.util.Exception.rethrow;
 import static org.iterx.sora.util.Exception.swallow;
 
-public final class UdpChannel extends AbstractChannel<ByteBuffer, ByteBuffer> implements NioChannel<DatagramChannel> {
+public final class VmChannel extends AbstractChannel<ByteBuffer, ByteBuffer> {
 
-    private final Multiplexor<? super NioChannel<DatagramChannel>> multiplexor;
-    private final ChannelCallback<? super UdpChannel, ByteBuffer, ByteBuffer> channelCallback;
-    private final DatagramChannel datagramChannel;
+    private final Multiplexor<? super VmChannel> multiplexor;
+    private final ChannelCallback<? super VmChannel, ByteBuffer, ByteBuffer> channelCallback;
     private final MultiplexorHandler multiplexorHandler;
 
     private final BlockingQueue<ByteBuffer> readBlockingQueue;
@@ -31,11 +26,12 @@ public final class UdpChannel extends AbstractChannel<ByteBuffer, ByteBuffer> im
     private final Lock queueLock;
     private final Condition emptyQueueCondition;
 
+    private final VmChannel vmChannel;
     private volatile int interestOps;
 
-    public UdpChannel(final Multiplexor<? super NioChannel<DatagramChannel>> multiplexor,
-                      final ChannelCallback<? super UdpChannel, ByteBuffer, ByteBuffer> channelCallback,
-                      final DatagramChannel datagramChannel) {
+    public VmChannel(final Multiplexor<? super VmChannel> multiplexor,
+                     final ChannelCallback<? super VmChannel, ByteBuffer, ByteBuffer> channelCallback,
+                     final VmChannel vmChannel) {
         this.readBlockingQueue = new SingleProducerSingleConsumerBlockingQueue<ByteBuffer>(128);
         this.writeBlockingQueue = new SingleProducerSingleConsumerBlockingQueue<ByteBuffer>(128);
         this.queueLock = new ReentrantLock();
@@ -44,11 +40,7 @@ public final class UdpChannel extends AbstractChannel<ByteBuffer, ByteBuffer> im
 
         this.multiplexor = multiplexor;
         this.channelCallback = channelCallback;
-        this.datagramChannel = datagramChannel;
-    }
-
-    public DatagramChannel getChannel() {
-        return datagramChannel;
+        this.vmChannel = vmChannel;
     }
 
     public Channel<ByteBuffer,ByteBuffer> read(final ByteBuffer buffer) {
@@ -68,7 +60,6 @@ public final class UdpChannel extends AbstractChannel<ByteBuffer, ByteBuffer> im
         flush(writeBlockingQueue);
         return this;
     }
-
 
     private void enqueue(final BlockingQueue<ByteBuffer> blockingQueue, final ByteBuffer buffer, final int ops) {
         try {
@@ -128,18 +119,10 @@ public final class UdpChannel extends AbstractChannel<ByteBuffer, ByteBuffer> im
     }
 
     @Override
-    protected State onOpening() {
-        if(datagramChannel.isOpen()) {
-            multiplexor.register(multiplexorHandler, Multiplexor.CLOSE_OP);
-            interestOps |= Multiplexor.CLOSE_OP;
-            return State.OPEN;
-        }
-        return State.CLOSING;
-    }
-
-    @Override
     protected State onOpen() {
         channelCallback.onOpen(this);
+        multiplexor.deregister(multiplexorHandler, Multiplexor.OPEN_OP);
+        interestOps ^= Multiplexor.OPEN_OP;
         return super.onOpen();
     }
 
@@ -147,17 +130,6 @@ public final class UdpChannel extends AbstractChannel<ByteBuffer, ByteBuffer> im
     protected State onAbort(final Throwable throwable) {
         channelCallback.onAbort(this, throwable);
         return super.onAbort(throwable);
-    }
-
-    @Override
-    protected State onClosing() {
-        try {
-            datagramChannel.close();
-            return super.onClosing();
-        }
-        catch(final IOException e) {
-            throw new IoException(e);
-        }
     }
 
     @Override
@@ -184,10 +156,10 @@ public final class UdpChannel extends AbstractChannel<ByteBuffer, ByteBuffer> im
         }
     }
 
-    private class MultiplexorHandler implements Multiplexor.Handler<UdpChannel> {
+    private class MultiplexorHandler implements Multiplexor.Handler<VmChannel> {
 
-        public UdpChannel getChannel() {
-            return UdpChannel.this;
+        public VmChannel getChannel() {
+            return VmChannel.this;
         }
 
         public void doOpen() {
@@ -199,10 +171,11 @@ public final class UdpChannel extends AbstractChannel<ByteBuffer, ByteBuffer> im
             try {
                 for(ByteBuffer buffer = readBlockingQueue.peek(); buffer != null; buffer = readBlockingQueue.peek()) {
                     OUTER: while(true) {
-                        final int size = NioChannel.Helper.read(datagramChannel, buffer);
+                        final int position = buffer.position();
+                        vmChannel.read(buffer);
+
+                        final int size = buffer.position() - position;
                         switch(size) {
-                            case -1:
-                                doClose();
                             case 0:
                                 break OUTER;
                             default:
@@ -210,7 +183,7 @@ public final class UdpChannel extends AbstractChannel<ByteBuffer, ByteBuffer> im
                         }
                     }
                     if(buffer.position() != 0) {
-                        UdpChannel.this.doRead((ByteBuffer) dequeue(readBlockingQueue, Multiplexor.READ_OP).flip());
+                        VmChannel.this.doRead((ByteBuffer) dequeue(readBlockingQueue, Multiplexor.READ_OP).flip());
                         if(!buffer.hasRemaining() && (remaining > 0)) continue;
                     }
                     break;
@@ -228,10 +201,11 @@ public final class UdpChannel extends AbstractChannel<ByteBuffer, ByteBuffer> im
             try {
                 for(ByteBuffer buffer = writeBlockingQueue.peek(); buffer != null; buffer = writeBlockingQueue.peek()) {
                     OUTER: while(true) {
-                        final int size = NioChannel.Helper.write(datagramChannel, buffer);
+                        final int position = buffer.position();
+                        vmChannel.write(buffer);
+
+                        final int size = buffer.position() - position;
                         switch(size) {
-                            case -1:
-                                doClose();                                
                             case 0:
                                 break OUTER;
                             default:
@@ -239,7 +213,7 @@ public final class UdpChannel extends AbstractChannel<ByteBuffer, ByteBuffer> im
                         }
                     }
                     if(buffer.position() != 0) {
-                        UdpChannel.this.doWrite(dequeue(writeBlockingQueue, Multiplexor.WRITE_OP));
+                        VmChannel.this.doWrite(dequeue(writeBlockingQueue, Multiplexor.WRITE_OP));
                         if(!buffer.hasRemaining() && (remaining > 0)) continue;
                     }
                     break;

@@ -62,7 +62,7 @@ public final class SelectableChannelNioSelectorFactory implements SelectorFactor
                                 final SelectionKey selectionKey = selectionKeyIterator.next();
                                 final Multiplexor.Handler<? extends SelectableChannel> handler = (Multiplexor.Handler<? extends SelectableChannel>) selectionKey.attachment();
                                 final SelectableChannel selectableChannel = selectionKey.channel();
-                                if(selectableChannel.isOpen()) {
+                                if(selectionKey.isValid() && selectableChannel.isOpen()) {
                                     final int readyOps = selectionKey.readyOps();
                                     if((readyOps & SelectionKey.OP_CONNECT) != 0) handler.doOpen();
                                     if((readyOps & SelectionKey.OP_ACCEPT) != 0) handler.doOpen();

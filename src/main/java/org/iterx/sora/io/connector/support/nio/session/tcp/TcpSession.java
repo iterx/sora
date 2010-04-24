@@ -7,8 +7,6 @@ import org.iterx.sora.io.connector.endpoint.AcceptorEndpoint;
 import org.iterx.sora.io.connector.endpoint.ConnectorEndpoint;
 import org.iterx.sora.io.connector.session.Channel;
 import org.iterx.sora.io.connector.session.AbstractSession;
-import org.iterx.sora.collection.queue.MultiProducerSingleConsumerBlockingQueue;
-import org.iterx.sora.io.connector.support.nio.session.NioChannel;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -18,28 +16,26 @@ import java.nio.ByteBuffer;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 
-import static org.iterx.sora.util.Exception.swallow;
 
 public final class TcpSession extends AbstractSession<TcpChannel, ByteBuffer, ByteBuffer> {
 
     private final TcpChannelProvider socketChannelProvider;
     private final SessionCallback<? super TcpSession> sessionCallback;
-    private final Multiplexor<? super NioChannel> multiplexor;
 
-    public TcpSession(final Multiplexor<? super NioChannel> multiplexor,
+    public TcpSession(final Multiplexor<? super TcpChannel> multiplexor,
                       final SessionCallback<? super TcpSession> sessionCallback,
                       final AcceptorEndpoint acceptorEndpoint) {
-        this.socketChannelProvider = new AcceptorTcpChannelProvider(acceptorEndpoint);
-        this.multiplexor = multiplexor;
+        this.socketChannelProvider = new AcceptorTcpChannelProvider(multiplexor, acceptorEndpoint);
         this.sessionCallback = sessionCallback;
+
     }
 
-    public TcpSession(final Multiplexor<? super NioChannel> multiplexor,
+    public TcpSession(final Multiplexor<? super TcpChannel> multiplexor,
                       final SessionCallback<? super TcpSession> sessionCallback,
                       final ConnectorEndpoint connectorEndpoint) {
-        this.socketChannelProvider = new ConnectorTcpChannelProvider(connectorEndpoint);
-        this.multiplexor = multiplexor;
+        this.socketChannelProvider = new ConnectorTcpChannelProvider(multiplexor, connectorEndpoint);
         this.sessionCallback = sessionCallback;
+
     }
 
     public TcpChannel newChannel(final Channel.ChannelCallback<? super TcpChannel, ByteBuffer, ByteBuffer> channelCallback) {
@@ -98,15 +94,17 @@ public final class TcpSession extends AbstractSession<TcpChannel, ByteBuffer, By
 
     private final class ConnectorTcpChannelProvider extends TcpChannelProvider {
 
+        private final Multiplexor<? super TcpChannel> multiplexor;
         private final SocketAddress socketAddress;
 
-        private ConnectorTcpChannelProvider(final ConnectorEndpoint connectorEndpoint){
+        private ConnectorTcpChannelProvider(final Multiplexor<? super TcpChannel> multiplexor, final ConnectorEndpoint connectorEndpoint){
             this.socketAddress = toSocketAddress(connectorEndpoint.getUri());
+            this.multiplexor = multiplexor;
         }
 
         public TcpChannel newChannel(final Channel.ChannelCallback<? super TcpChannel, ByteBuffer, ByteBuffer> channelCallback) {
             final SocketChannel socketChannel = newSocketChannel();
-            return new TcpChannel(multiplexor, channelCallback, socketChannel, socketAddress);
+            return new ConnectorTcpChannel(multiplexor, channelCallback, socketChannel, socketAddress);
         }
 
         private SocketChannel newSocketChannel() {
@@ -124,12 +122,13 @@ public final class TcpSession extends AbstractSession<TcpChannel, ByteBuffer, By
 
     private final class AcceptorTcpChannelProvider extends TcpChannelProvider {
 
-        private final MultiProducerSingleConsumerBlockingQueue<SocketChannel> acceptBlockingQueue;
         private final AcceptorTcpChannel acceptorTcpChannel;
 
-        private AcceptorTcpChannelProvider(final AcceptorEndpoint acceptorEndpoint) {
-            this.acceptBlockingQueue = new MultiProducerSingleConsumerBlockingQueue<SocketChannel>(32);
-            this.acceptorTcpChannel = new AcceptorTcpChannel(newServerSocketChannel(),
+        private AcceptorTcpChannelProvider(final Multiplexor<? super TcpChannel> multiplexor,
+                                           final AcceptorEndpoint acceptorEndpoint) {
+            this.acceptorTcpChannel = new AcceptorTcpChannel(multiplexor,
+                                                             new AcceptorTcpChannelCallback(),
+                                                             newServerSocketChannel(),
                                                              toSocketAddress(acceptorEndpoint.getUri()));
         }
 
@@ -144,19 +143,8 @@ public final class TcpSession extends AbstractSession<TcpChannel, ByteBuffer, By
         }
 
         public TcpChannel newChannel(final Channel.ChannelCallback<? super TcpChannel, ByteBuffer, ByteBuffer> channelCallback) {
-            try {
-                final SocketChannel socketChannel = acceptBlockingQueue.poll();
-                if(socketChannel != null) {
-                    socketChannel.setOption(StandardSocketOption.SO_REUSEADDR, true);
-                    return new TcpChannel(multiplexor, channelCallback, socketChannel, socketChannel.getRemoteAddress());
-                }
-                return null;
-            }
-            catch(final IOException e) {
-                throw new IoException(e);
-            }
+            return acceptorTcpChannel.accept(channelCallback);
         }
-
 
         private ServerSocketChannel newServerSocketChannel() {
             try {
@@ -170,93 +158,10 @@ public final class TcpSession extends AbstractSession<TcpChannel, ByteBuffer, By
             }
         }
 
-        private class AcceptorTcpChannel implements NioChannel<ServerSocketChannel> {
+        private class AcceptorTcpChannelCallback implements Channel.AcceptorChannelCallback<TcpChannel, ByteBuffer, ByteBuffer> {
 
-            private final ServerSocketChannel serverSocketChannel;
-            private final SocketAddress socketAddress;
-            private final MultiplexorHandler multiplexorHandler;
-
-            private AcceptorTcpChannel(final ServerSocketChannel serverSocketChannel,
-                                       final SocketAddress socketAddress) {
-                this.multiplexorHandler = new MultiplexorHandler();
-                this.serverSocketChannel = serverSocketChannel;
-                this.socketAddress = socketAddress;
-
-            }
-
-            public ServerSocketChannel getChannel() {
-                return serverSocketChannel;
-            }
-
-            @Override
-            public void open() {
-                try {
-                    serverSocketChannel.bind(socketAddress);
-                    multiplexor.register(multiplexorHandler, Multiplexor.OPEN_OP| Multiplexor.CLOSE_OP);
-                }
-                catch(final IOException e) {
-                    throw new IoException(e);
-                }
-            }
-            public void read(final ByteBuffer value) {
-                throw new UnsupportedOperationException();
-            }
-
-            public void write(final ByteBuffer value) {
-                throw new UnsupportedOperationException();
-            }
-
-            public void flush() {
-                throw new UnsupportedOperationException();
-            }
-
-            @Override
-            public void close() {
-                try {
-                    multiplexor.deregister(multiplexorHandler, Multiplexor.OPEN_OP| Multiplexor.CLOSE_OP);
-                    serverSocketChannel.close();
-                    for(SocketChannel socketChannel = acceptBlockingQueue.poll();
-                        socketChannel != null;
-                        socketChannel = acceptBlockingQueue.poll()) socketChannel.close();
-                }
-                catch(final IOException e) {
-                    throw new IoException(e);
-                }
-            }
-
-            private class MultiplexorHandler implements Multiplexor.Handler<AcceptorTcpChannel> {
-
-                public AcceptorTcpChannel getChannel() {
-                    return AcceptorTcpChannel.this;
-                }
-
-                public void doOpen() {
-                    try {
-                        for(SocketChannel socketChannel = serverSocketChannel.accept();
-                            socketChannel != null;
-                            socketChannel = serverSocketChannel.accept()) {
-                            socketChannel.configureBlocking(false);
-                            acceptBlockingQueue.add(socketChannel);
-                            doAccept();
-                        }
-                    }
-                    catch(final Throwable throwable) {
-                        changeState(State.ABORTING, throwable);
-                        swallow(throwable);
-                    }
-                }
-
-                public int doRead(final int length) {
-                    throw new UnsupportedOperationException();
-                }
-
-                public int doWrite(final int length) {
-                    throw new UnsupportedOperationException();
-                }
-
-                public void doClose() {
-                    changeState(State.CLOSING);
-                }
+            public void onAccept(final TcpChannel channel) {
+                doAccept();
             }
         }
     }

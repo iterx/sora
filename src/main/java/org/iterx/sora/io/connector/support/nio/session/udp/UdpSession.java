@@ -211,10 +211,11 @@ public final class UdpSession extends AbstractSession<UdpChannel, ByteBuffer, By
                 return datagramChannel;
             }
 
-            public void open() {
+            public Channel<ByteBuffer, ByteBuffer> open() {
                 try {
                     datagramChannel.bind(localSocketAddress);
                     multiplexor.register(multiplexorHandler, Multiplexor.READ_OP| Multiplexor.WRITE_OP| Multiplexor.CLOSE_OP);
+                    return this;
                 }
                 catch(final IOException e) {
                     throw new IoException(e);
@@ -225,22 +226,23 @@ public final class UdpSession extends AbstractSession<UdpChannel, ByteBuffer, By
                 return  new ProxyDatagramChannel(multiplexorHandler.accept());
             }
 
-            public void read(final ByteBuffer value) {
+            public Channel<ByteBuffer, ByteBuffer> read(final ByteBuffer value) {
                 throw new UnsupportedOperationException();
             }
 
-            public void write(final ByteBuffer value) {
+            public Channel<ByteBuffer, ByteBuffer> write(final ByteBuffer value) {
                 throw new UnsupportedOperationException();
             }
 
-            public void flush() {
+            public Channel<ByteBuffer, ByteBuffer> flush() {
                 throw new UnsupportedOperationException();
             }
 
-            public void close() {
+            public Channel<ByteBuffer, ByteBuffer> close() {
                 try {
                     multiplexor.deregister(multiplexorHandler, Multiplexor.READ_OP| Multiplexor.WRITE_OP| Multiplexor.CLOSE_OP);
                     datagramChannel.close();
+                    return this;
                 }
                 catch(final IOException e) {
                     throw new IoException(e);

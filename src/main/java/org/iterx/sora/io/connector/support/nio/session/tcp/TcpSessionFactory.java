@@ -10,15 +10,16 @@ import org.iterx.sora.io.connector.session.SessionFactory;
 import org.iterx.sora.io.connector.support.nio.session.NioChannel;
 
 import java.nio.ByteBuffer;
+import java.nio.channels.SelectableChannel;
 import java.util.regex.Pattern;
 
 public final class TcpSessionFactory implements SessionFactory<TcpSession, TcpSession, ByteBuffer, ByteBuffer> {
 
     private static final Pattern URI_PATTERN = Pattern.compile("tcp://([^#]*)?(#.*)?");
 
-    private final Multiplexor<? super NioChannel> multiplexor;
+    private final Multiplexor<? super TcpChannel> multiplexor;
 
-    public TcpSessionFactory(final Multiplexor<? super NioChannel> multiplexor) {
+    public TcpSessionFactory(final Multiplexor<? super TcpChannel> multiplexor) {
         this.multiplexor = multiplexor;
     }
 

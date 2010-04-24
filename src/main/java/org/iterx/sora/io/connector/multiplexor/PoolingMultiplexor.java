@@ -15,7 +15,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import static org.iterx.sora.util.Exception.rethrow;
 import static org.iterx.sora.util.Exception.swallow;
 
-public final class PoolingMultiplexor <T extends Channel<ByteBuffer, ByteBuffer>> implements Multiplexor<T> {
+public final class PoolingMultiplexor<T extends Channel<ByteBuffer, ByteBuffer>> implements Multiplexor<T> {
 
     private final Worker<T> openCloseWorker;
     private final Worker<T> writeWorker;
@@ -29,17 +29,19 @@ public final class PoolingMultiplexor <T extends Channel<ByteBuffer, ByteBuffer>
         this.readWorker = readWorker;
     }
 
+    @SuppressWarnings("unchecked")
     public static <T extends Channel<ByteBuffer, ByteBuffer>> PoolingMultiplexor<T> newSinglePoolingMultiplexor(final ThreadFactory threadFactory,
-                                                                                           final SelectorFactory<T> selectorFactory) {
-        final Worker<T> readWriteOpenCloseWorker = new Worker<T>(threadFactory, selectorFactory.newSelector(), READ_OP|WRITE_OP|OPEN_OP|CLOSE_OP);
+                                                                                                                final SelectorFactory<? super T> selectorFactory) {
+        final Worker<T> readWriteOpenCloseWorker = new Worker<T>(threadFactory, (Selector<T>) selectorFactory.newSelector(), READ_OP|WRITE_OP|OPEN_OP|CLOSE_OP);
         return new PoolingMultiplexor<T>(readWriteOpenCloseWorker, readWriteOpenCloseWorker, readWriteOpenCloseWorker);
     }
 
+    @SuppressWarnings("unchecked")
     public static <T extends Channel<ByteBuffer, ByteBuffer>> PoolingMultiplexor<T> newOpenReadWritePoolingMultiplexor(final ThreadFactory threadFactory,
-                                                                                                  final SelectorFactory<T> selectorFactory) {
-        final Worker<T> readWorker = new Worker<T>(threadFactory, selectorFactory.newSelector(), READ_OP);
-        final Worker<T> writeWorker = new Worker<T>(threadFactory, selectorFactory.newSelector(), WRITE_OP);
-        final Worker<T> openCloseWorker = new Worker<T>(threadFactory, selectorFactory.newSelector(), OPEN_OP|CLOSE_OP);
+                                                                                                                       final SelectorFactory<? super T> selectorFactory) {
+        final Worker<T> readWorker = new Worker<T>(threadFactory, (Selector<T>) selectorFactory.newSelector(), READ_OP);
+        final Worker<T> writeWorker = new Worker<T>(threadFactory, (Selector<T>) selectorFactory.newSelector(), WRITE_OP);
+        final Worker<T> openCloseWorker = new Worker<T>(threadFactory, (Selector<T>) selectorFactory.newSelector(), OPEN_OP|CLOSE_OP);
         return new PoolingMultiplexor<T>(openCloseWorker, writeWorker, readWorker);
     }
 

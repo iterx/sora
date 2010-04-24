@@ -5,19 +5,19 @@ public interface Channel<R, W> {
     @SuppressWarnings("unchecked")
     public static ChannelCallback<Channel<?, ?>, ?, ?> NO_OP_CHANNEL_CALLBACK = new AbstractChannelCallback(){};
 
-    void open();
+    Channel<R, W> open();
 
-    void read(R value);
+    Channel<R, W> read(R value);
 
-    void write(W value);
+    Channel<R, W> write(W value);
 
-    void flush();
+    Channel<R, W> flush();
 
-    void close();
+    Channel<R, W> close();
 
     //TODO: add destroy();   
 
-    public interface ChannelCallback<C extends Channel<R, W>, R, W> {
+    public interface ChannelCallback<C extends Channel<R, W>, R, W> { //TODO: Rename as ConnectorChannelCallback
 
         void onOpen(C channel);
 
@@ -28,6 +28,11 @@ public interface Channel<R, W> {
         void onAbort(C channel, Throwable throwable);
 
         void onClose(C channel);
+    }
+
+    public interface AcceptorChannelCallback<C extends Channel<R, W>, R, W> {
+
+        void onAccept(C channel);
     }
 }
 

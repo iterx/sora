@@ -15,12 +15,14 @@ public abstract class AbstractChannel<R, W> implements Channel<R, W> {
         this.state = State.CLOSED;
     }
 
-    public void open() {
+    public Channel<R, W> open() {
         changeState(State.OPENING);
+        return this;
     }
 
-    public void close() {
+    public Channel<R, W> close() {
         changeState(State.CLOSING);
+        return this;
     }
 
     protected State onOpening() {

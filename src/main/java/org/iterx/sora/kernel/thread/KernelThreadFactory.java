@@ -76,7 +76,7 @@ public final class KernelThreadFactory implements ThreadFactory {
         }
 
         public String newThreadName() {
-            return getName() + "-" + threadIdSequence.incrementAndGet();
+            return getName() + "[" + threadIdSequence.incrementAndGet() + "]";
         }
     }
 }

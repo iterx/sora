@@ -90,7 +90,7 @@ public abstract class AbstractCircularBlockingQueue<T> implements CircularBlocki
 
     public void rewind(final long index) {
         if(!isWithinRange(index)) throw new IllegalArgumentException();
-        final int delta  = (int) (sequence - index - 1);
+        final int delta  = (int) (sequence - index);
         readIndex -= delta;
         sequence -= delta;
     }

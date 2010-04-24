@@ -34,19 +34,22 @@ public final class HttpChannel<R extends HttpMessage, W extends HttpMessage> ext
         this.delegateChannel = new DelegateChannel(session, 4);
     }
 
-    public void read(final R httpMessage) {
+    public Channel<R, W> read(final R httpMessage) {
         assertState(State.OPEN);
         delegateChannel.read(httpMessage);
+        return this;
     }
 
-    public void write(final W httpMessage) {
+    public Channel<R, W> write(final W httpMessage) {
         assertState(State.OPEN);
         delegateChannel.write(httpMessage);
+        return this;
     }
 
-    public void flush() {
+    public Channel<R, W> flush() {
         assertState(State.OPEN);
         delegateChannel.flush();
+        return this;
     }
 
     @Override
@@ -110,24 +113,29 @@ public final class HttpChannel<R extends HttpMessage, W extends HttpMessage> ext
             this.encoder = new Encoder();
         }
 
-        public void open() {
+        public Channel<R, W> open() {
             channel.open();
+            return this;
         }
 
-        public void read(final R httpMessage) {
+        public Channel<R, W> read(final R httpMessage) {
             decoder.enqueue(httpMessage);
+            return this;
         }
 
-        public void write(final W httpMessage) {
+        public Channel<R, W> write(final W httpMessage) {
             encoder.enqueue(httpMessage);
+            return this;
         }
 
-        public void flush() {
+        public Channel<R, W> flush() {
             channel.flush();
+            return this;
         }
 
-        public void close() {
+        public Channel<R, W> close() {
             channel.close();
+            return this;
         }
 
         public void onOpen(final Channel<ByteBuffer, ByteBuffer> channel) {
@@ -244,6 +252,8 @@ public final class HttpChannel<R extends HttpMessage, W extends HttpMessage> ext
                 }
                 throw EOF_EXCEPTION;
             }
+
+            private boolean broken = false;
 
             private void rewindByteBuffers(final ByteBuffer toByteBuffer) {
                 for(long index = byteBufferCircularBlockingQueue.index(); ;) {
@@ -385,6 +395,8 @@ public final class HttpChannel<R extends HttpMessage, W extends HttpMessage> ext
                                     try {
                                         byteBuffer.mark();
                                         httpMessage.encode(encoderDataOutput);
+                                        //TODO: should signal if more data outstanding -> i.e multipart
+                                        //TODO: only poll once message is completely finished!
                                         incrementByteBufferHttpMessageCount();
                                         httpMessageCircularBlockingQueue.poll();
                                         continue;
