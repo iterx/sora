@@ -33,7 +33,7 @@ public final class VmSession extends AbstractSession<VmChannel, ByteBuffer, Byte
     }
 
     public VmChannel newChannel(final Channel.ChannelCallback<? super VmChannel, ByteBuffer, ByteBuffer> channelCallback) {
-        assertState(State.OPEN);
+        assertState(State.OPENED);
         return socketChannelProvider.newChannel(channelCallback);
     }
 
@@ -56,9 +56,9 @@ public final class VmSession extends AbstractSession<VmChannel, ByteBuffer, Byte
     }
 
     @Override
-    protected State onClosed() {
+    protected State onClose() {
         sessionCallback.onClose(this);
-        return super.onClosed();
+        return super.onClose();
     }
 
     @Override
@@ -177,7 +177,7 @@ public final class VmSession extends AbstractSession<VmChannel, ByteBuffer, Byte
                         }
                     }
                     catch(final Throwable throwable) {
-                        changeState(State.ABORTING, throwable);
+                        changeState(State.ABORTED, throwable);
                         swallow(throwable);
                     }
 */

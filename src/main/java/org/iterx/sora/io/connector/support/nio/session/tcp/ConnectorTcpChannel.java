@@ -56,19 +56,19 @@ final class ConnectorTcpChannel extends AbstractChannel<ByteBuffer, ByteBuffer> 
     }
 
     public Channel<ByteBuffer,ByteBuffer> read(final ByteBuffer buffer) {
-        assertState(State.OPEN);
+        assertState(State.OPENED);
         enqueue(readBlockingQueue, buffer, Multiplexor.READ_OP);
         return this;
     }
 
     public Channel<ByteBuffer, ByteBuffer> write(final ByteBuffer buffer) {
-        assertState(State.OPEN);
+        assertState(State.OPENED);
         enqueue(writeBlockingQueue, buffer, Multiplexor.WRITE_OP);
         return this;
     }
 
     public Channel<ByteBuffer, ByteBuffer> flush() {
-        assertState(State.OPEN);
+        assertState(State.OPENED);
         flush(writeBlockingQueue);
         return this;
     }
@@ -185,9 +185,9 @@ final class ConnectorTcpChannel extends AbstractChannel<ByteBuffer, ByteBuffer> 
     }
 
     @Override
-    protected State onClosed() {
+    protected State onClose() {
         channelCallback.onClose(this);
-        return super.onClosed();
+        return super.onClose();
     }
 
     private void doRead(final ByteBuffer buffer) {
@@ -215,7 +215,7 @@ final class ConnectorTcpChannel extends AbstractChannel<ByteBuffer, ByteBuffer> 
         }
 
         public void doOpen() {
-            changeState(State.OPEN);
+            changeState(State.OPENED);
         }
 
         public int doRead(final int length) {
@@ -241,7 +241,7 @@ final class ConnectorTcpChannel extends AbstractChannel<ByteBuffer, ByteBuffer> 
                 }
             }
             catch(final Throwable throwable) {
-                changeState(State.ABORTING, throwable);
+                changeState(State.ABORTED, throwable);
                 swallow(throwable);
             }
             return length - remaining;
@@ -270,14 +270,14 @@ final class ConnectorTcpChannel extends AbstractChannel<ByteBuffer, ByteBuffer> 
                 }
             }
             catch(final Throwable throwable) {
-                changeState(State.ABORTING, throwable);
+                changeState(State.ABORTED, throwable);
                 swallow(throwable);
             }
             return length - remaining;
         }
 
         public void doClose() {
-            changeState(State.CLOSING);
+            changeState(State.CLOSED);
         }
     }
 }

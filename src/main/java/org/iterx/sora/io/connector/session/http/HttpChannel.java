@@ -35,19 +35,19 @@ public final class HttpChannel<R extends HttpMessage, W extends HttpMessage> ext
     }
 
     public Channel<R, W> read(final R httpMessage) {
-        assertState(State.OPEN);
+        assertState(State.OPENED);
         delegateChannel.read(httpMessage);
         return this;
     }
 
     public Channel<R, W> write(final W httpMessage) {
-        assertState(State.OPEN);
+        assertState(State.OPENED);
         delegateChannel.write(httpMessage);
         return this;
     }
 
     public Channel<R, W> flush() {
-        assertState(State.OPEN);
+        assertState(State.OPENED);
         delegateChannel.flush();
         return this;
     }
@@ -67,13 +67,19 @@ public final class HttpChannel<R extends HttpMessage, W extends HttpMessage> ext
     @Override
     protected State onClosing() {
         delegateChannel.close();
-        return State.CLOSING;
+        return null;
     }
 
     @Override
-    protected State onClosed() {
+    protected State onClose() {
         channelCallback.onClose(this);
-        return super.onClosed();
+        return super.onClose();
+    }
+
+    @Override
+    protected State onAbort(final Throwable throwable) {
+        channelCallback.onAbort(this, throwable);
+        return super.onAbort(throwable);
     }
 
     private void doRead(final R httpMessage) {
@@ -92,11 +98,6 @@ public final class HttpChannel<R extends HttpMessage, W extends HttpMessage> ext
         catch(final Throwable throwable) {
             swallow(throwable);
         }
-    }
-
-    @Override
-    protected State onAbort(final Throwable throwable) {
-        return super.onAbort(throwable);
     }
 
     //TODO: Note this is not thread safe
@@ -139,7 +140,7 @@ public final class HttpChannel<R extends HttpMessage, W extends HttpMessage> ext
         }
 
         public void onOpen(final Channel<ByteBuffer, ByteBuffer> channel) {
-            changeState(State.OPEN);
+            changeState(State.OPENED);
         }
 
         public void onWrite(final Channel<ByteBuffer, ByteBuffer> channel, final ByteBuffer buffer) {
@@ -150,12 +151,12 @@ public final class HttpChannel<R extends HttpMessage, W extends HttpMessage> ext
             decoder.dequeue(buffer);
         }
 
-        public void onAbort(final Channel<ByteBuffer, ByteBuffer> channel, final Throwable throwable) {
-            changeState(State.ABORTING, throwable);
+        public void onClose(final Channel<ByteBuffer, ByteBuffer> channel) {
+            changeState(isState(State.OPENED)? State.CLOSING : State.CLOSED);
         }
 
-        public void onClose(final Channel<ByteBuffer, ByteBuffer> channel) {
-            changeState(State.CLOSED);
+        public void onAbort(final Channel<ByteBuffer, ByteBuffer> channel, final Throwable throwable) {
+            changeState(State.ABORTED, throwable);
         }
 
         private void doRead(final ByteBuffer buffer) {

@@ -1,93 +1,78 @@
 package org.iterx.sora.io.connector.session;
 
-import static org.iterx.sora.util.Exception.swallow;
-
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
+import org.iterx.sora.util.state.States;
 
 public abstract class AbstractChannel<R, W> implements Channel<R, W> {
 
-    private final Lock stateLock;
-    private volatile State state;
+    private final States<State, AbstractChannel> states;
 
     protected AbstractChannel() {
-        this.stateLock = new ReentrantLock();
-        this.state = State.CLOSED;
+        states = new States<State, AbstractChannel>(this, State.CLOSED, State.ABORTED);
     }
 
     public Channel<R, W> open() {
-        changeState(State.OPENING);
+        states.changeState(State.OPENED);
         return this;
     }
 
     public Channel<R, W> close() {
-        changeState(State.CLOSING);
+        states.changeState(State.CLOSED);
         return this;
     }
 
     protected State onOpening() {
-        return State.OPEN;
+        return State.OPENED;
     }
 
     protected State onOpen() {
-        return State.OPEN;
+        return State.OPENED;
     }
 
     protected State onClosing() {
         return State.CLOSED;
     }
 
-    protected State onClosed() {
-        return State.DESTROYING;
-    }
-
-    protected State onAbort(final Throwable throwable) {
+    protected State onClose() {
         return State.CLOSED;
     }
 
+    protected State onAbort(final Throwable throwable) {
+        return State.ABORTED;
+    }
+
+    protected boolean isState(final State isState) {
+        return states.isState(isState);
+    }
+
     protected void assertState(final State isState) {
-        if(!state.isSame(isState)) throw new IllegalStateException("Invalid state '" + state + "'");
+        states.assertState(isState);
     }
 
-    protected void changeState(final State newState, final Object... arguments)
-    {
-        stateLock.lock();
-        try {
-            if(state.allowState(newState)) {
-                for(State nextState = newState; nextState != null && state != nextState; ) {
-                    try {
-                        state = nextState;
-                        nextState = state.run(this, arguments);
-                    }
-                    catch(final Throwable throwable) {
-                        changeState(State.ABORTING, throwable);
-                        swallow(throwable);
-                        break;
-                    }
-                }
-            }
-        }
-        finally {
-            stateLock.unlock();
-        }
+    protected void changeState(final State newState, final Object... arguments) {
+        states.changeState(newState, arguments);
     }
 
-    protected enum State {
+    protected enum State implements org.iterx.sora.util.state.State<State, AbstractChannel> {
         CLOSED {
             @Override
-            public boolean allowState(final State newState) {
+            public State depends() {
+                return State.CLOSING;
+            }
+
+            @Override
+            public boolean isAllowed(final State newState) {
                 return newState == OPENING || super.isAllowed(newState);
             }
 
             @Override
             public State run(final AbstractChannel channel, final Object... arguments) {
-                return channel.onClosed();
+                return channel.onClose();
             }
         },
         OPENING {
             @Override
             public boolean isAllowed(final State newState) {
-                return newState == OPEN || super.isAllowed(newState);
+                return newState == OPENED || super.isAllowed(newState);
             }
 
             @Override
@@ -95,9 +80,14 @@ public abstract class AbstractChannel<R, W> implements Channel<R, W> {
                 return channel.onOpening();
             }
         },
-        OPEN {
+        OPENED {
             @Override
-            public boolean allowState(final State newState) {
+            public State depends() {
+                return State.OPENING;
+            }
+            
+            @Override
+            public boolean isAllowed(final State newState) {
                 return newState == CLOSING || super.isAllowed(newState);
             }
 
@@ -108,8 +98,8 @@ public abstract class AbstractChannel<R, W> implements Channel<R, W> {
         },
         CLOSING {
             @Override
-            public boolean allowState(final State newState) {
-                return newState == DESTROYING || super.isAllowed(newState);
+            public boolean isAllowed(final State newState) {
+                return newState == CLOSED || super.isAllowed(newState);
             }
 
             @Override
@@ -117,9 +107,9 @@ public abstract class AbstractChannel<R, W> implements Channel<R, W> {
                 return channel.onClosing();
             }
         },
-        ABORTING {
+        ABORTED {
             @Override
-            public boolean allowState(final State newState) {
+            public boolean isAllowed(final State newState) {
                 return newState == CLOSING || newState == DESTROYING;
             }
 
@@ -131,27 +121,21 @@ public abstract class AbstractChannel<R, W> implements Channel<R, W> {
         },
         DESTROYING {
             @Override
-            public boolean allowState(final State newState) {
+            public boolean isAllowed(final State newState) {
                 return false;
             }
         };
 
-        public boolean allowState(final State newState) {
-            if(isSame(newState)) return false;
-            else if(isAllowed(newState)) return true;
-            throw new IllegalStateException("Invalid state transition from '" + name() + "' to '" + newState.name() + "'");
+        public State depends() {
+            return null;
         }
 
-        protected State run(final AbstractChannel channel, final Object... arguments) {
+        public boolean isAllowed(final State newState) {
+            return (newState == State.ABORTED || newState == State.DESTROYING);
+        }
+
+        public State run(final AbstractChannel channel, final Object... arguments) {
             return this;
-        }
-
-        protected boolean isAllowed(final State newState) {
-            return (newState == State.ABORTING || newState == State.DESTROYING);
-        }
-
-        protected boolean isSame(final State newState) {
-            return (this == newState);
         }
     }
 }

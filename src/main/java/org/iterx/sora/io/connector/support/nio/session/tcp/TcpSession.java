@@ -39,7 +39,7 @@ public final class TcpSession extends AbstractSession<TcpChannel, ByteBuffer, By
     }
 
     public TcpChannel newChannel(final Channel.ChannelCallback<? super TcpChannel, ByteBuffer, ByteBuffer> channelCallback) {
-        assertState(State.OPEN);
+        assertState(State.OPENED);
         return socketChannelProvider.newChannel(channelCallback);
     }
 
@@ -62,9 +62,9 @@ public final class TcpSession extends AbstractSession<TcpChannel, ByteBuffer, By
     }
 
     @Override
-    protected State onClosed() {
+    protected State onClose() {
         sessionCallback.onClose(this);
-        return super.onClosed();
+        return super.onClose();
     }
 
     @Override

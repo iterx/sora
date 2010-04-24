@@ -43,7 +43,7 @@ final class AcceptorTcpChannel extends AbstractChannel<ByteBuffer, ByteBuffer> i
     }
 
     public TcpChannel accept(final ChannelCallback<? super TcpChannel, ByteBuffer, ByteBuffer> channelCallback) {
-        assertState(State.OPEN);
+        assertState(State.OPENED);
         try {
             final SocketChannel socketChannel = acceptBlockingQueue.poll();
             if(socketChannel != null) {
@@ -117,7 +117,7 @@ final class AcceptorTcpChannel extends AbstractChannel<ByteBuffer, ByteBuffer> i
                 }
             }
             catch(final Throwable throwable) {
-                changeState(State.ABORTING, throwable);
+                changeState(State.ABORTED, throwable);
                 swallow(throwable);
             }
         }
@@ -131,7 +131,7 @@ final class AcceptorTcpChannel extends AbstractChannel<ByteBuffer, ByteBuffer> i
         }
 
         public void doClose() {
-            changeState(State.CLOSING);
+            changeState(State.CLOSED);
         }
     }
 }

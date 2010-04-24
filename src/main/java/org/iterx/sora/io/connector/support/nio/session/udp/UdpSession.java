@@ -71,9 +71,9 @@ public final class UdpSession extends AbstractSession<UdpChannel, ByteBuffer, By
     }
 
     @Override
-    protected State onClosed() {
+    protected State onClose() {
         sessionCallback.onClose(this);
-        return super.onClosed();
+        return super.onClose();
     }
 
     @Override

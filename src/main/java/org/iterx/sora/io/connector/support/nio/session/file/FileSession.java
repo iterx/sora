@@ -28,7 +28,7 @@ public final class FileSession extends AbstractSession<FileChannel, ByteBuffer, 
     }
 
     public FileChannel newChannel(final Channel.ChannelCallback<? super FileChannel, ByteBuffer, ByteBuffer> channelCallback) {
-        assertState(State.OPEN);
+        assertState(State.OPENED);
         return fileChannelProvider.newChannel(channelCallback);
     }
 
@@ -51,9 +51,9 @@ public final class FileSession extends AbstractSession<FileChannel, ByteBuffer, 
     }
 
     @Override
-    protected State onClosed() {
+    protected State onClose() {
         sessionCallback.onClose(this);
-        return super.onClosed();
+        return super.onClose();
     }
 
     @Override

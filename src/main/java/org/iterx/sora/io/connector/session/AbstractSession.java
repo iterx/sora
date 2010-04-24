@@ -1,93 +1,80 @@
 package org.iterx.sora.io.connector.session;
 
-import static org.iterx.sora.util.Exception.swallow;
+import org.iterx.sora.util.state.States;
 
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
+import static org.iterx.sora.util.Exception.swallow;
 
 public abstract class AbstractSession<C extends Channel<R, W>, R, W> implements Session<C, R, W> {
 
-    private final Lock stateLock;
-    private volatile State state;
+    private final States<State, AbstractSession> states;
 
     protected AbstractSession() {
-        this.stateLock = new ReentrantLock();
-        this.state = State.CLOSED;
+        states = new States<State, AbstractSession>(this, State.CLOSED, State.ABORTED);
     }
 
     public Session<C, R, W> open() {
-        changeState(State.OPENING);
+        changeState(State.OPENED);
         return this;
     }
 
     public Session<C, R, W> close() {
-        changeState(State.CLOSING);
+        changeState(State.CLOSED);
         return this;
     }
 
     protected State onOpening() {
-        return State.OPEN;
+        return State.OPENED;
     }
 
     protected State onOpen() {
-        return State.OPEN;
+        return State.OPENED;
     }
 
     protected State onClosing() {
         return State.CLOSED;
     }
 
-    protected State onClosed() {
-        return State.DESTROYING;
-    }
-
-    protected State onAbort(final Throwable throwable) {
+    protected State onClose() {
         return State.CLOSED;
     }
 
+    protected State onAbort(final Throwable throwable) {
+        return State.ABORTED;
+    }
+
+    protected boolean isState(final State isState) {
+        return states.isState(isState);
+    }
+    
     protected void assertState(final State isState) {
-        if(!state.isSame(isState)) throw new IllegalStateException("Invalid state '" + state + "'");
+        states.assertState(isState);
     }
 
-    protected void changeState(final State newState, final Object... arguments)
-    {
-        stateLock.lock();
-        try {
-            if(state.allowState(newState)) {
-                for(State nextState = newState; nextState != null && state != nextState; ) {
-                    try {
-                        state = nextState;
-                        nextState = state.run(this, arguments);
-                    }
-                    catch(final Throwable throwable) {
-                        changeState(State.ABORTING, throwable);
-                        swallow(throwable);
-                        break;
-                    }
-                }
-            }
-        }
-        finally {
-            stateLock.unlock();
-        }
+    protected void changeState(final State newState, final Object... arguments) {
+        states.changeState(newState, arguments);
     }
 
-    protected enum State {
+    protected enum State implements org.iterx.sora.util.state.State<State, AbstractSession> {
         CLOSED {
             @Override
-            public boolean allowState(final State newState) {
+            public State depends() {
+                return State.CLOSING;
+            }
+            
+            @Override
+            public boolean isAllowed(final State newState) {
                 return newState == OPENING || super.isAllowed(newState);
             }
 
             @Override
             public State run(final AbstractSession session, final Object... arguments) {
-                return session.onClosed();
+                return session.onClose();
             }
         },
         OPENING {
             @Override
             public boolean isAllowed(final State newState) {
-                return newState == OPEN || super.isAllowed(newState);
+                return newState == OPENED || super.isAllowed(newState);
             }
 
             @Override
@@ -95,9 +82,14 @@ public abstract class AbstractSession<C extends Channel<R, W>, R, W> implements 
                 return session.onOpening();
             }
         },
-        OPEN {
+        OPENED {
             @Override
-            public boolean allowState(final State newState) {
+            public State depends() {
+                return State.OPENING;
+            }
+
+            @Override
+            public boolean isAllowed(final State newState) {
                 return newState == CLOSING || super.isAllowed(newState);
             }
 
@@ -108,8 +100,8 @@ public abstract class AbstractSession<C extends Channel<R, W>, R, W> implements 
         },
         CLOSING {
             @Override
-            public boolean allowState(final State newState) {
-                return newState == DESTROYING || super.isAllowed(newState);
+            public boolean isAllowed(final State newState) {
+                return newState == CLOSED || super.isAllowed(newState);
             }
 
             @Override
@@ -117,9 +109,9 @@ public abstract class AbstractSession<C extends Channel<R, W>, R, W> implements 
                 return session.onClosing();
             }
         },
-        ABORTING {
+        ABORTED {
             @Override
-            public boolean allowState(final State newState) {
+            public boolean isAllowed(final State newState) {
                 return newState == CLOSING || newState == DESTROYING;
             }
 
@@ -127,31 +119,25 @@ public abstract class AbstractSession<C extends Channel<R, W>, R, W> implements 
             public State run(final AbstractSession session, final Object... arguments) {
                 return session.onAbort((Throwable) arguments[0]);
             }
-
         },
         DESTROYING {
             @Override
-            public boolean allowState(final State newState) {
+            public boolean isAllowed(final State newState) {
                 return false;
             }
         };
 
-        public boolean allowState(final State newState) {
-            if(isSame(newState)) return false;
-            else if(isAllowed(newState)) return true;
-            throw new IllegalStateException("Invalid state transition from '" + name() + "' to '" + newState.name() + "'");
+
+        public State depends() {
+            return null;
         }
 
-        protected State run(final AbstractSession session, final Object... arguments) {
+        public boolean isAllowed(final State newState) {
+            return (newState == State.ABORTED || newState == State.DESTROYING);
+        }
+
+        public State run(final AbstractSession session, final Object... arguments) {
             return this;
-        }
-
-        protected boolean isAllowed(final State newState) {
-            return (newState == State.ABORTING || newState == State.DESTROYING);
-        }
-
-        protected boolean isSame(final State newState) {
-            return (this == newState);
         }
     }
 }

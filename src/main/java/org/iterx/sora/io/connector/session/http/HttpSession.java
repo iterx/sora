@@ -31,7 +31,7 @@ public final class HttpSession<R extends HttpMessage, W extends HttpMessage> ext
     }
 
     public HttpChannel<R, W> newChannel(final Channel.ChannelCallback<? super HttpChannel<R, W>, R, W> channelCallback) {
-        assertState(State.OPEN);
+        assertState(State.OPENED);
         return new HttpChannel<R, W>(delegateSession, channelCallback);
     }
 
@@ -54,9 +54,9 @@ public final class HttpSession<R extends HttpMessage, W extends HttpMessage> ext
     }
 
     @Override
-    protected State onClosed() {
+    protected State onClose() {
         sessionCallback.onClose(this);
-        return super.onClosed();
+        return super.onClose();
     }
 
     @Override
@@ -109,7 +109,7 @@ public final class HttpSession<R extends HttpMessage, W extends HttpMessage> ext
         }
 
         public void onOpen(final Session<?, ByteBuffer, ByteBuffer> session) {
-            changeState(State.OPEN);
+            changeState(State.OPENED);
         }
 
         public void onAccept(final Session<?, ByteBuffer, ByteBuffer> session) {
@@ -117,11 +117,11 @@ public final class HttpSession<R extends HttpMessage, W extends HttpMessage> ext
         }
 
         public void onClose(final Session<?, ByteBuffer, ByteBuffer> session) {
-            changeState(State.CLOSED);
+            changeState(isState(State.OPENED)? State.CLOSING : State.CLOSED);
         }
 
         public void onAbort(final Session<?, ByteBuffer, ByteBuffer> session, final Throwable throwable) {
-            changeState(State.ABORTING, throwable);
+            changeState(State.ABORTED, throwable);
         }
     }
 }
